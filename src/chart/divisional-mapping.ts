@@ -1,6 +1,15 @@
+import { Effect, pipe, Schema } from "effect";
 import { Degree, Division, Longitude } from "../types";
 
 export const DIVISIONAL_MAPPING = "ascendant-divisional-mapping" as const;
+
+export class DivisionalMappingError extends Schema.TaggedError<DivisionalMappingError>()(
+  "DivisionalMappingError",
+  {
+    message: Schema.String,
+    cause: Schema.Defect(),
+  },
+) {}
 
 export interface DivisionalTarget {
   readonly signIndex: number;
@@ -8,81 +17,75 @@ export interface DivisionalTarget {
   readonly longitude: Longitude;
 }
 
-export const normalizeLongitude = (longitude: number): Longitude => {
-  if (!Number.isFinite(longitude)) {
-    throw new Error("Longitude must be finite");
-  }
-  const remainder = longitude % 360;
-  return Longitude.make(remainder < 0 ? remainder + 360 : remainder);
-};
+interface SourcePosition {
+  readonly longitude: Longitude;
+  readonly signIndex: number;
+  readonly degree: number;
+}
 
-export const getDivisionalTarget = (
-  longitude: number,
-  division: typeof Division.Type,
-): DivisionalTarget => {
-  const sourceLongitude = normalizeLongitude(longitude);
-  const sourceSignIndex = Math.floor(sourceLongitude / 30);
-  const degreeInSourceSign = sourceLongitude % 30;
+interface Subdivision {
+  readonly partIndex: number;
+  readonly degree: number;
+}
 
-  if (division === 1) {
-    return {
-      signIndex: sourceSignIndex,
-      degree: Degree.make(degreeInSourceSign),
-      longitude: sourceLongitude,
-    };
-  }
+const sourcePositionOf = (longitude: Longitude): SourcePosition => ({
+  longitude,
+  signIndex: Math.floor(longitude / 30),
+  degree: longitude % 30,
+});
 
+const subdivisionOf = (degree: number, division: typeof Division.Type): Subdivision => {
   const partSize = 30 / division;
-  const scaledPart = degreeInSourceSign / partSize;
+  const scaledPart = degree / partSize;
   const nearestPart = Math.round(scaledPart);
   const partPosition =
     nearestPart < division && Math.abs(scaledPart - nearestPart) < 1e-12 ? nearestPart : scaledPart;
   const partIndex = Math.min(division - 1, Math.floor(partPosition));
-  const offsetInPart = partPosition - partIndex;
-  const degree = offsetInPart * 30;
-  let signIndex: number;
+
+  return {
+    partIndex,
+    degree: (partPosition - partIndex) * 30,
+  };
+};
+
+const targetSignOf = (
+  source: SourcePosition,
+  subdivision: Subdivision,
+  division: Exclude<typeof Division.Type, 1>,
+): number => {
+  const { signIndex: sourceSignIndex, degree: degreeInSourceSign } = source;
+  const { partIndex } = subdivision;
   const oddRashi = sourceSignIndex % 2 === 0;
   const movable = sourceSignIndex % 3 === 0;
   const fixed = sourceSignIndex % 3 === 1;
 
   switch (division) {
     case 2:
-      signIndex =
-        sourceSignIndex <= 5
-          ? sourceSignIndex * 2 + partIndex
-          : (sourceSignIndex - 6) * 2 + partIndex;
-      break;
+      return sourceSignIndex <= 5
+        ? sourceSignIndex * 2 + partIndex
+        : (sourceSignIndex - 6) * 2 + partIndex;
     case 3:
-      signIndex = (sourceSignIndex + [0, 4, 8][partIndex]!) % 12;
-      break;
+      return (sourceSignIndex + [0, 4, 8][partIndex]!) % 12;
     case 4:
-      signIndex = (sourceSignIndex + [0, 3, 6, 9][partIndex]!) % 12;
-      break;
+      return (sourceSignIndex + [0, 3, 6, 9][partIndex]!) % 12;
     case 7:
-      signIndex = (sourceSignIndex + (oddRashi ? 0 : 6) + partIndex) % 12;
-      break;
+      return (sourceSignIndex + (oddRashi ? 0 : 6) + partIndex) % 12;
     case 9: {
       const start = movable ? sourceSignIndex : fixed ? sourceSignIndex + 8 : sourceSignIndex + 4;
-      signIndex = (start + partIndex) % 12;
-      break;
+      return (start + partIndex) % 12;
     }
     case 10: {
       const start = oddRashi ? sourceSignIndex : sourceSignIndex + 8;
-      signIndex = (start + partIndex) % 12;
-      break;
+      return (start + partIndex) % 12;
     }
     case 12:
-      signIndex = (sourceSignIndex + partIndex) % 12;
-      break;
+      return (sourceSignIndex + partIndex) % 12;
     case 16:
-      signIndex = ((movable ? 0 : fixed ? 4 : 8) + partIndex) % 12;
-      break;
+      return ((movable ? 0 : fixed ? 4 : 8) + partIndex) % 12;
     case 20:
-      signIndex = ((movable ? 0 : fixed ? 8 : 4) + partIndex) % 12;
-      break;
+      return ((movable ? 0 : fixed ? 8 : 4) + partIndex) % 12;
     case 24:
-      signIndex = ((oddRashi ? 4 : 3) + partIndex) % 12;
-      break;
+      return ((oddRashi ? 4 : 3) + partIndex) % 12;
     case 27: {
       const start =
         sourceSignIndex % 4 === 0
@@ -92,30 +95,70 @@ export const getDivisionalTarget = (
             : sourceSignIndex % 4 === 2
               ? 6
               : 9;
-      signIndex = (start + partIndex) % 12;
-      break;
+      return (start + partIndex) % 12;
     }
     case 30: {
       const targets = oddRashi ? [0, 10, 8, 2, 6] : [1, 5, 11, 9, 7];
       const edges = oddRashi ? [5, 10, 18, 25] : [5, 12, 20, 25];
       const band = edges.findIndex((edge) => degreeInSourceSign < edge);
-      signIndex = targets[band === -1 ? targets.length - 1 : band]!;
-      break;
+      return targets[band === -1 ? targets.length - 1 : band]!;
     }
     case 40:
-      signIndex = ((oddRashi ? 0 : 6) + partIndex) % 12;
-      break;
+      return ((oddRashi ? 0 : 6) + partIndex) % 12;
     case 45:
-      signIndex = ((movable ? 0 : fixed ? 4 : 8) + partIndex) % 12;
-      break;
+      return ((movable ? 0 : fixed ? 4 : 8) + partIndex) % 12;
     case 60:
-      signIndex = (sourceSignIndex + partIndex) % 12;
-      break;
+      return (sourceSignIndex + partIndex) % 12;
+  }
+};
+
+const divisionalTargetOf = ({
+  signIndex,
+  degree,
+}: {
+  readonly signIndex: number;
+  readonly degree: number;
+}): DivisionalTarget => ({
+  signIndex,
+  degree: Degree.make(degree),
+  longitude: Longitude.make(signIndex * 30 + degree),
+});
+
+const identityTargetOf = (source: SourcePosition): DivisionalTarget => ({
+  signIndex: source.signIndex,
+  degree: Degree.make(source.degree),
+  longitude: source.longitude,
+});
+
+export const normalizeLongitude = Effect.fn("DivisionalMapping.normalizeLongitude")(function* (
+  longitude: number,
+) {
+  if (!Number.isFinite(longitude)) {
+    return yield* new DivisionalMappingError({
+      message: "Longitude must be finite",
+      cause: longitude,
+    });
   }
 
-  return {
-    signIndex,
-    degree: Degree.make(degree),
-    longitude: Longitude.make(signIndex * 30 + degree),
-  };
-};
+  return pipe(
+    longitude % 360,
+    (remainder) => (remainder < 0 ? remainder + 360 : remainder),
+    (normalized) => Longitude.make(normalized),
+  );
+});
+
+export const getDivisionalTarget = Effect.fn("DivisionalMapping.getDivisionalTarget")(function* (
+  longitude: number,
+  division: typeof Division.Type,
+) {
+  const source = yield* normalizeLongitude(longitude).pipe(Effect.map(sourcePositionOf));
+
+  if (division === 1) {
+    return pipe(source, identityTargetOf);
+  }
+
+  const subdivision = subdivisionOf(source.degree, division);
+  const signIndex = targetSignOf(source, subdivision, division);
+
+  return pipe({ signIndex, degree: subdivision.degree }, divisionalTargetOf);
+});

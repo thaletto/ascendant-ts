@@ -1,4 +1,4 @@
-import { Context, Effect, Layer } from "effect";
+import { Context, Effect, Layer, pipe, Schema } from "effect";
 import * as Swisseph from "@swisseph/node";
 import {
   Birth,
@@ -34,6 +34,13 @@ const BODY_ENTRIES = [
 ] as const;
 
 const SUPPORTED_DIVISIONS = new Set<number>(Division.literals);
+
+class MissingPlacementError extends Schema.TaggedError<MissingPlacementError>()(
+  "MissingPlacementError",
+  {
+    placement: Schema.Literal("Rahu"),
+  },
+) {}
 
 const isValidInput = (input: LocatedMoment | Birth): boolean =>
   Number.isFinite(input.latitude) &&
@@ -71,42 +78,67 @@ const normalizeDivisions = (
 
 const sign = (name: typeof Rashis.Type): Sign => new Sign({ name, lord: SIGN_LORDS[name] });
 
-const chartFromPlacements = (placements: Placements, division: typeof Division.Type): Chart => {
-  const mappedLagna = getDivisionalTarget(placements.lagna.longitude, division);
-  const lagnaSign = Rashis.literals[mappedLagna.signIndex]!;
-  const lagna = new Lagna({
-    name: "Lagna",
-    longitude: mappedLagna.longitude,
-    degree: mappedLagna.degree,
-    sign: sign(lagnaSign),
-  });
-
-  const mappedPlanets = placements.planets.map((source) => {
-    const mapped = getDivisionalTarget(source.longitude, division);
-    const mappedSign = Rashis.literals[mapped.signIndex]!;
-    return new Planet({
-      name: source.name,
-      longitude: mapped.longitude,
-      degree: mapped.degree,
-      is_retrograde: source.is_retrograde,
-      in_sign: [...inSignStatus(source.name, mappedSign, mapped.degree)],
-      sign: sign(mappedSign),
-    });
-  });
-
+const chartFromMappedPlacements = ({
+  division,
+  lagna,
+  planets,
+}: {
+  readonly division: typeof Division.Type;
+  readonly lagna: Lagna;
+  readonly planets: readonly Planet[];
+}): Chart => {
   const houses = {} as Record<typeof Houses.Type, House>;
+  const lagnaSignIndex = Rashis.literals.indexOf(lagna.sign.name);
   for (let index = 0; index < 12; index++) {
     const house = (index + 1) as typeof Houses.Type;
-    const houseSign = Rashis.literals[(mappedLagna.signIndex + index) % 12]!;
+    const houseSign = Rashis.literals[(lagnaSignIndex + index) % 12]!;
     houses[house] = new House({
       sign: houseSign,
-      planets: mappedPlanets.filter((planet) => planet.sign.name === houseSign),
+      planets: planets.filter((planet) => planet.sign.name === houseSign),
       lagna: house === 1 ? lagna : null,
     });
   }
 
   return new Chart({ division, houses });
 };
+
+const chartFromPlacements = Effect.fn("ChartService.chartFromPlacements")(function* (
+  placements: Placements,
+  division: typeof Division.Type,
+) {
+  const lagna = yield* getDivisionalTarget(placements.lagna.longitude, division).pipe(
+    Effect.map((mapped) => {
+      const mappedSign = Rashis.literals[mapped.signIndex]!;
+      return new Lagna({
+        name: "Lagna",
+        longitude: mapped.longitude,
+        degree: mapped.degree,
+        sign: sign(mappedSign),
+      });
+    }),
+  );
+
+  const planets = yield* Effect.all(
+    placements.planets.map((source) =>
+      getDivisionalTarget(source.longitude, division).pipe(
+        Effect.map((mapped) => {
+          const mappedSign = Rashis.literals[mapped.signIndex]!;
+          return new Planet({
+            name: source.name,
+            longitude: mapped.longitude,
+            degree: mapped.degree,
+            is_retrograde: source.is_retrograde,
+            in_sign: [...inSignStatus(source.name, mappedSign, mapped.degree)],
+            sign: sign(mappedSign),
+          });
+        }),
+      ),
+    ),
+    { concurrency: "unbounded" },
+  );
+
+  return pipe({ division, lagna, planets }, chartFromMappedPlacements);
+});
 
 export class ChartService extends Context.Service<
   ChartService,
@@ -166,62 +198,78 @@ export class ChartService extends Context.Service<
           ),
         );
 
-        const placements = yield* Effect.try({
-          try: () => {
-            const sourcePlanets = placementEvidence.planetEntries.map(
-              ([name, position]) =>
-                new SourcePlanet({
-                  name,
-                  longitude: normalizeLongitude(position.longitude),
-                  is_retrograde: position.longitudeSpeed < 0,
-                  nakshatra: nakshatraOf(position.longitude),
-                }),
-            );
-            const rahu = sourcePlanets.find((planet) => planet.name === "Rahu");
-            if (rahu === undefined) {
-              throw new Error("Rahu is missing from Placements");
-            }
-            const ketuLongitude = normalizeLongitude(rahu.longitude + 180);
-            sourcePlanets.push(
-              new SourcePlanet({
-                name: "Ketu",
-                longitude: ketuLongitude,
-                is_retrograde: rahu.is_retrograde,
-                nakshatra: nakshatraOf(ketuLongitude),
-              }),
-            );
+        const placements = yield* Effect.gen(function* () {
+          const sourcePlanets = yield* Effect.all(
+            placementEvidence.planetEntries.map(([name, position]) =>
+              normalizeLongitude(position.longitude).pipe(
+                Effect.map(
+                  (longitude) =>
+                    new SourcePlanet({
+                      name,
+                      longitude,
+                      is_retrograde: position.longitudeSpeed < 0,
+                      nakshatra: nakshatraOf(longitude),
+                    }),
+                ),
+              ),
+            ),
+            { concurrency: "unbounded" },
+          );
+          const rahu = sourcePlanets.find((planet) => planet.name === "Rahu");
+          if (rahu === undefined) {
+            return yield* new MissingPlacementError({ placement: "Rahu" });
+          }
 
-            const ascendant = normalizeLongitude(placementEvidence.houses.ascendant);
-            return new Placements({
-              lagna: new SourceLagna({
-                name: "Lagna",
-                longitude: ascendant,
-                nakshatra: nakshatraOf(ascendant),
-              }),
-              planets: sourcePlanets,
-            });
-          },
-          catch: (cause) =>
-            new ChartCalculationError({
-              stage: "placements",
-              message: "Could not calculate Placements",
-              cause,
+          const ketuLongitude = yield* normalizeLongitude(rahu.longitude + 180);
+          const planets = [
+            ...sourcePlanets,
+            new SourcePlanet({
+              name: "Ketu",
+              longitude: ketuLongitude,
+              is_retrograde: rahu.is_retrograde,
+              nakshatra: nakshatraOf(ketuLongitude),
             }),
-        });
+          ];
+          const ascendant = yield* normalizeLongitude(placementEvidence.houses.ascendant);
 
-        const charts = yield* Effect.try({
-          try: () =>
-            normalizedDivisions.map((division) => chartFromPlacements(placements, division)) as [
-              Chart,
-              ...Chart[],
-            ],
-          catch: (cause) =>
-            new ChartCalculationError({
-              stage: "mapping",
-              message: "Could not map one or more requested Divisions",
-              cause,
+          return new Placements({
+            lagna: new SourceLagna({
+              name: "Lagna",
+              longitude: ascendant,
+              nakshatra: nakshatraOf(ascendant),
             }),
-        });
+            planets,
+          });
+        }).pipe(
+          Effect.mapError(
+            (cause) =>
+              new ChartCalculationError({
+                stage: "placements",
+                message: "Could not calculate Placements",
+                cause,
+              }),
+          ),
+        );
+
+        const [firstDivision, ...remainingDivisions] = normalizedDivisions;
+        const charts = yield* Effect.gen(function* () {
+          const firstChart = yield* chartFromPlacements(placements, firstDivision);
+          const remainingCharts = yield* Effect.all(
+            remainingDivisions.map((division) => chartFromPlacements(placements, division)),
+            { concurrency: "unbounded" },
+          );
+
+          return [firstChart, ...remainingCharts] as [Chart, ...Chart[]];
+        }).pipe(
+          Effect.mapError(
+            (cause) =>
+              new ChartCalculationError({
+                stage: "mapping",
+                message: "Could not map one or more requested Divisions",
+                cause,
+              }),
+          ),
+        );
 
         return new ChartCalculation({
           placements,
