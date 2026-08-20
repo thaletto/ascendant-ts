@@ -4,6 +4,8 @@
   "module": "index.ts",
   "scripts": {
     "prepare": "effect-language-service patch",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "typecheck": "tsgo --noEmit",
     "lint": "oxlint --type-aware",
     "lint:fix": "oxlint --fix --type-aware",
@@ -16,11 +18,13 @@
   },
   "devDependencies": {
     "@effect/language-service": "^0.87.2",
+    "@effect/vitest": "beta",
     "@types/bun": "latest",
     "@typescript/native-preview": "^7.0.0-dev.20260707.2",
     "oxfmt": "^0.63.0",
     "oxlint": "^1.78.0",
-    "oxlint-tsgolint": "7"
+    "oxlint-tsgolint": "7",
+    "vitest": "latest"
   },
   "peerDependencies": {
     "typescript": "^5"

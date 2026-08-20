@@ -20,8 +20,8 @@ const program = config.pipe(
         latitude,
         longitude,
       });
-      const chart = yield* chartService.generate(birth);
-      yield* Console.log(chart);
+      const calculation = yield* chartService.generate(birth);
+      yield* Console.log(calculation);
     }),
   ),
 );

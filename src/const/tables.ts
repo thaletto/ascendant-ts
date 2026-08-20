@@ -52,6 +52,18 @@ export const MOOLA_TRIKONA: Record<typeof Planets.Type, typeof Rashis.Type> = {
   Ketu: "Scorpio",
 };
 
+const MOOLA_TRIKONA_DEGREES: Partial<
+  Record<typeof Planets.Type, readonly [minimum: number, maximum: number]>
+> = {
+  Sun: [0, 20],
+  Moon: [4, 30],
+  Mars: [0, 12],
+  Mercury: [16, 20],
+  Jupiter: [0, 10],
+  Venus: [0, 15],
+  Saturn: [0, 20],
+};
+
 export const OWN_SIGNS: Record<typeof Planets.Type, readonly (typeof Rashis.Type)[]> = {
   Sun: ["Leo"],
   Moon: ["Cancer"],
@@ -121,12 +133,20 @@ const oppositeSign = (sign: typeof Rashis.Type): typeof Rashis.Type =>
 export const inSignStatus = (
   planet: typeof Planets.Type,
   sign: typeof Rashis.Type,
+  degree: number,
 ): ReadonlyArray<
   "Exalted" | "Moola Trikona" | "Own" | "Friend" | "Neutral" | "Enemy" | "Debilitated"
 > => {
   if (EXALTATION[planet] === sign) return ["Exalted"];
   if (oppositeSign(EXALTATION[planet]) === sign) return ["Debilitated"];
-  if (MOOLA_TRIKONA[planet] === sign) return ["Moola Trikona"];
+  const moolaTrikonaDegrees = MOOLA_TRIKONA_DEGREES[planet];
+  if (
+    MOOLA_TRIKONA[planet] === sign &&
+    (moolaTrikonaDegrees === undefined ||
+      (degree >= moolaTrikonaDegrees[0] && degree < moolaTrikonaDegrees[1]))
+  ) {
+    return ["Moola Trikona"];
+  }
   if (OWN_SIGNS[planet].includes(sign)) return ["Own"];
   return [relationWith(planet, SIGN_LORDS[sign])];
 };

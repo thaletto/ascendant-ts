@@ -5,20 +5,56 @@ A Vedic (Indian) astrology chart generator. Given a moment and geographic locati
 ## Language
 
 **Chart**:
-A snapshot of astrological positions at a given moment and geographic location, arranged into the twelve houses. It captures the house-planets-nakshatra relationship for that moment: each house holds its sign, the grahas placed in it, and (via the sign) its nakshatra. A chart built from a birth is a birth chart; a chart built from a later moment for comparison is a transit.
+A snapshot of astrological positions arranged into twelve houses. A Rashi or divisional Chart identifies its Division; D1 and the divisional charts are derived from the same Placements.
 _Avoid_: Birth wheel, horoscope, kundali (unless the user specifically says these)
+
+**Placements**:
+The exact sidereal longitudes and motion states of the Lagna and grahas at a Moment and geographic location. They are the common source from which the D1 and divisional charts are derived; Placements produced for a Birth are natal placements.
+_Avoid_: D1 chart, raw chart, base chart
+
+**Division**:
+The identity of a chart within the divisional system, written D1, D2, D3, and so on. D1 identifies the Rashi chart; the other supported values identify divisional charts.
+_Avoid_: Chart type, Varga number
+
+**D1 / Rashi chart**:
+The sign-based D1 chart derived from Placements. Its twelve houses are counted from the Lagna sign; it is distinct from a Bhava chart.
+_Avoid_: Base chart, raw chart
+
+**Divisional chart**:
+A sign-based chart derived from Placements by applying the mapping for its Division to the Lagna and grahas. Its twelve houses are counted from the resulting Lagna sign.
+_Avoid_: Derived D1, harmonic chart
+
+**Degree**:
+A placement's position within its sign, from zero up to but not including thirty degrees. In D1 it is the source degree within the Rashi; in a divisional chart it is the degree produced by the divisional mapping.
+_Avoid_: Absolute longitude, source longitude
+
+**Bhava chart**:
+A house-cusp representation produced using a configured House system. It is separate from the D1 / Rashi chart and from divisional charts.
+_Avoid_: D1, Rashi chart
+
+**Chart calculation**:
+The D1 and requested divisional charts derived together from the same Placements. A Chart calculation always contains D1; one produced for a Birth is a natal calculation.
+_Avoid_: Chart bundle, chart pack
 
 **Moment**:
 The point in time at which planetary positions are computed. A chart is built from a birth Moment; a transit is computed at some other Moment (e.g. now) against that chart. A Moment is separate from configuration: it is per-computation input, not a setting.
 _Avoid_: Time, timestamp, epoch (unless you mean something else)
 
+**Located Moment**:
+A Moment paired with the latitude and longitude at which Placements are calculated. A Birth is a Located Moment with natal meaning.
+_Avoid_: Chart input, event data
+
 **AstroParams**:
-The parameters of the astrological computation: ayanamsa and house system. Separate from the Moment and the Birth; a chart is computed from a Birth plus the AstroParams.
+The parameters of the astrological computation: ayanamsa and house system. Separate from the Moment and location; the house system applies to a Bhava chart, not to D1 or divisional charts.
 _Avoid_: AstroConfig, settings, options, chart config
 
 **Planet**:
-A graha's placement in the chart: its longitude, sign, house, nakshatra, and retrograde state at the chart's moment. A Planet connects to the house it is in and the nakshatra it is in. The nakshatra a planet falls in (within its house) is what matters, so nakshatra lives on the Planet, not the Sign.
+A graha's mapped placement in a Chart: its longitude, Degree, sign, dignity, and inherited retrograde state. Its longitude and Degree belong to that Chart's Division; the source nakshatra and pada remain on the Placements from which the Chart was derived.
 _Avoid_: Body, celestial body, position
+
+**Nakshatra placement**:
+The nakshatra and pada determined by a graha's source sidereal longitude. It belongs to Placements and is not recalculated from a divisional Chart's mapped longitude.
+_Avoid_: Divisional nakshatra, Sign nakshatra
 
 **Sign**:
 One of the twelve zodiac signs a graha can occupy: its name and lord. A sign spans several nakshatras, so it does not carry a nakshatra itself.
@@ -33,11 +69,11 @@ The sidereal reference frame used to align tropical longitudes to the fixed zodi
 _Avoid_: Reference frame, zodiac offset
 
 **House system**:
-The method for dividing the twelve houses (e.g. Whole Sign, Placidus). Configurable per chart, with a default.
+The method for dividing a Bhava chart into twelve houses (e.g. Whole Sign, Placidus). It does not change the sign-based houses of D1 or divisional charts.
 _Avoid_: House division, cusps method
 
 **Birth**:
-The birth Moment plus the latitude and longitude where it occurred. Kept separate from configuration; a chart is computed from a Birth plus the chosen config (ayanamsa, house system).
+A Located Moment representing a birth. It remains separate from AstroParams.
 _Avoid_: Birth data, birth info, birth details
 
 **Rahu / Ketu**:
