@@ -33,3 +33,17 @@ format-check: ## Check project formatting
 	bun run fmt:check
 
 check: typecheck test lint format-check ## Run all verification checks
+
+add-effect: ## Add `effect` repository as a git subtree
+	git subtree add \
+  	--prefix=repos/effect \
+  	https://github.com/Effect-TS/effect.git \
+  	main \
+  	--squash
+
+pull-effect: ## Pull latest changes from `effect` repository into the subtree
+	git subtree pull \
+  	--prefix=repos/effect \
+  	https://github.com/Effect-TS/effect.git \
+  	main \
+  	--squash
