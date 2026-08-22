@@ -24,6 +24,10 @@
       "types": "./dist/chart/divisional-mapping.d.ts",
       "import": "./dist/chart/divisional-mapping.js"
     },
+    "./dasha": {
+      "types": "./dist/dasha/index.d.ts",
+      "import": "./dist/dasha/index.js"
+    },
     "./ephemeris": {
       "types": "./dist/ephemeris/index.d.ts",
       "import": "./dist/ephemeris/index.js"
