@@ -6,7 +6,7 @@ import * as Swisseph from "../src/swisseph/index.js";
 describe("Swiss Ephemeris adapter", () => {
   it.effect("translates native results into Ascendant-owned values", () =>
     Effect.gen(function* () {
-      const ephemeris = yield* Ephemeris.Service;
+      const ephemeris = yield* Effect.service(Ephemeris.Service);
       const julianDay = yield* ephemeris.dateToJulianDay(new Date("2000-01-01T12:00:00.000Z"));
       const position = yield* ephemeris.calculatePosition(julianDay, "Sun", "Lahiri");
       const houses = yield* ephemeris.calculateHouses(
@@ -28,7 +28,7 @@ describe("Swiss Ephemeris adapter", () => {
 
   it.effect("maps native failures to EphemerisError", () =>
     Effect.gen(function* () {
-      const ephemeris = yield* Ephemeris.Service;
+      const ephemeris = yield* Effect.service(Ephemeris.Service);
       const error = yield* ephemeris.dateToJulianDay(new Date(Number.NaN)).pipe(Effect.flip);
 
       expect(error).toMatchObject({

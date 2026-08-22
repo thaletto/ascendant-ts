@@ -1,8 +1,8 @@
 import { Effect } from "effect";
-import { Service as AstroParams } from "../astro-params/service.js";
+import type { Service as AstroParams } from "../astro-params/service.js";
 import { type CelestialBody } from "../ephemeris/model.js";
-import { Service as Ephemeris } from "../ephemeris/service.js";
-import { ChartCalculationError } from "./error.js";
+import type { Service as Ephemeris } from "../ephemeris/service.js";
+import { ChartCalculationError, LocatedMomentValidationError } from "./error.js";
 import { chartsFromPlacements } from "./charts.js";
 import { ChartCalculation, Division, LocatedMoment, Planets } from "./model.js";
 import { placementsFromEvidence, type PlacementEvidence } from "./placements.js";
@@ -31,8 +31,7 @@ const validateInput = Effect.fn("Chart.validateInput")(function* (input: Located
     Number.isFinite(input.moment.date.getTime());
 
   if (!valid) {
-    return yield* new ChartCalculationError({
-      stage: "validation",
+    return yield* new LocatedMomentValidationError({
       message: "Moment and geographic coordinates must be valid",
       cause: input,
     });
@@ -57,7 +56,7 @@ const normalizeDivisions = Effect.fn("Chart.normalizeDivisions")(function* (
   ];
 });
 
-export function makeGenerate(ephemeris: Ephemeris["Service"], astroParams: AstroParams["Service"]) {
+export function makeGenerate(ephemeris: Ephemeris, astroParams: AstroParams) {
   const calculatePlacementEvidence = Effect.fn("Chart.calculatePlacementEvidence")(
     function* (input: LocatedMoment) {
       const julianDay = yield* ephemeris.dateToJulianDay(input.moment.date);

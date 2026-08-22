@@ -8,21 +8,20 @@ import {
   type PlanetaryPosition,
 } from "./model.js";
 
-export class Service extends Context.Service<
-  Service,
-  {
-    readonly dateToJulianDay: (date: Date) => Effect.Effect<JulianDay, EphemerisError>;
-    readonly calculatePosition: (
-      julianDay: JulianDay,
-      body: CelestialBody,
-      ayanamsa: typeof Ayanamsa.Type,
-    ) => Effect.Effect<PlanetaryPosition, EphemerisError>;
-    readonly calculateHouses: (
-      julianDay: JulianDay,
-      latitude: number,
-      longitude: number,
-      houseSystem: typeof HouseSystem.Type,
-      ayanamsa: typeof Ayanamsa.Type,
-    ) => Effect.Effect<HouseData, EphemerisError>;
-  }
->()("astro-ascendant/ephemeris/Service") {}
+export interface Service {
+  readonly dateToJulianDay: (date: Date) => Effect.Effect<JulianDay, EphemerisError>;
+  readonly calculatePosition: (
+    julianDay: JulianDay,
+    body: CelestialBody,
+    ayanamsa: typeof Ayanamsa.Type,
+  ) => Effect.Effect<PlanetaryPosition, EphemerisError>;
+  readonly calculateHouses: (
+    julianDay: JulianDay,
+    latitude: number,
+    longitude: number,
+    houseSystem: typeof HouseSystem.Type,
+    ayanamsa: typeof Ayanamsa.Type,
+  ) => Effect.Effect<HouseData, EphemerisError>;
+}
+
+export const Service = Context.Service<Service>("astro-ascendant/ephemeris/Service");

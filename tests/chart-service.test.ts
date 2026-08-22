@@ -112,7 +112,7 @@ const input = new Chart.LocatedMoment({
 describe("Chart.Service.generate", () => {
   it.effect("returns D1 as an identity mapping from shared Placements", () =>
     Effect.gen(function* () {
-      const charts = yield* Chart.Service;
+      const charts = yield* Effect.service(Chart.Service);
       const calculation = yield* charts.generate(input, []);
 
       expect(calculation.charts).toHaveLength(1);
@@ -134,7 +134,7 @@ describe("Chart.Service.generate", () => {
 
   it.effect("returns requested Divisions once in deterministic order", () =>
     Effect.gen(function* () {
-      const charts = yield* Chart.Service;
+      const charts = yield* Effect.service(Chart.Service);
       const calculation = yield* charts.generate(input, [10, 9, 10]);
 
       expect(calculation.charts.map((chart) => chart.division)).toEqual([1, 9, 10]);
@@ -154,7 +154,7 @@ describe("Chart.Service.generate", () => {
 
   it.effect("recomputes dignity from the mapped sign and Degree", () =>
     Effect.gen(function* () {
-      const charts = yield* Chart.Service;
+      const charts = yield* Effect.service(Chart.Service);
       const calculation = yield* charts.generate(input, [3]);
       const d3 = calculation.charts[1]!;
       const sun = Object.values(d3.houses)
@@ -171,7 +171,7 @@ describe("Chart.Service.generate", () => {
 
   it.effect("returns a complete Chart for every supported Division", () =>
     Effect.gen(function* () {
-      const charts = yield* Chart.Service;
+      const charts = yield* Effect.service(Chart.Service);
       const calculation = yield* charts.generate(input, Chart.Division.literals);
 
       expect(calculation.charts.map((chart) => chart.division)).toEqual(Chart.Division.literals);
@@ -204,7 +204,7 @@ describe("Chart.Service.generate", () => {
 
   it.effect("rejects unsupported Divisions before returning any Charts", () =>
     Effect.gen(function* () {
-      const charts = yield* Chart.Service;
+      const charts = yield* Effect.service(Chart.Service);
       const error = yield* charts.generate(input, [9, 8]).pipe(Effect.flip);
 
       expect(error).toMatchObject({
@@ -217,7 +217,7 @@ describe("Chart.Service.generate", () => {
 
   it.effect("accepts an arbitrary Moment and geographic location", () =>
     Effect.gen(function* () {
-      const charts = yield* Chart.Service;
+      const charts = yield* Effect.service(Chart.Service);
       const transitInput = new Chart.LocatedMoment({
         moment: new Chart.Moment({ date: new Date("2026-08-21T00:00:00.000Z") }),
         latitude: 0,
@@ -231,7 +231,7 @@ describe("Chart.Service.generate", () => {
 
   it.effect("derives Ketu opposite Rahu in shared Placements", () =>
     Effect.gen(function* () {
-      const charts = yield* Chart.Service;
+      const charts = yield* Effect.service(Chart.Service);
       const calculation = yield* charts.generate(input);
       const rahu = calculation.placements.planets.find((planet) => planet.name === "Rahu")!;
       const ketu = calculation.placements.planets.find((planet) => planet.name === "Ketu")!;
@@ -243,7 +243,7 @@ describe("Chart.Service.generate", () => {
 
   it.effect("fails atomically when Placements cannot be calculated", () =>
     Effect.gen(function* () {
-      const charts = yield* Chart.Service;
+      const charts = yield* Effect.service(Chart.Service);
       const error = yield* charts.generate(input, [9, 10]).pipe(Effect.flip);
 
       expect(error).toMatchObject({
@@ -256,10 +256,10 @@ describe("Chart.Service.generate", () => {
 
   it.effect("rejects invalid calculation inputs before calculating Placements", () =>
     Effect.gen(function* () {
-      const charts = yield* Chart.Service;
+      const charts = yield* Effect.service(Chart.Service);
       const invalidInputs = [
-        new Chart.LocatedMoment({ moment: input.moment, latitude: 91, longitude: input.longitude }),
-        new Chart.LocatedMoment({ moment: input.moment, latitude: input.latitude, longitude: 181 }),
+        { moment: input.moment, latitude: 91, longitude: input.longitude } as Chart.LocatedMoment,
+        { moment: input.moment, latitude: input.latitude, longitude: 181 } as Chart.LocatedMoment,
         {
           moment: { date: new Date(Number.NaN) },
           latitude: input.latitude,
@@ -270,8 +270,7 @@ describe("Chart.Service.generate", () => {
       for (const invalidInput of invalidInputs) {
         const error = yield* charts.generate(invalidInput, [9]).pipe(Effect.flip);
         expect(error).toMatchObject({
-          _tag: "ChartCalculationError",
-          stage: "validation",
+          _tag: "LocatedMomentValidationError",
         });
       }
     }).pipe(Effect.provide(chartServiceTestLayer)),
@@ -279,7 +278,7 @@ describe("Chart.Service.generate", () => {
 
   it.effect("converts an invalid Lagna into a structured atomic failure", () =>
     Effect.gen(function* () {
-      const charts = yield* Chart.Service;
+      const charts = yield* Effect.service(Chart.Service);
       const error = yield* charts.generate(input, [9]).pipe(Effect.flip);
 
       expect(error).toMatchObject({
@@ -292,7 +291,7 @@ describe("Chart.Service.generate", () => {
 
   it.effect("converts invalid ephemeris placements into a structured atomic failure", () =>
     Effect.gen(function* () {
-      const charts = yield* Chart.Service;
+      const charts = yield* Effect.service(Chart.Service);
       const error = yield* charts.generate(input, [9]).pipe(Effect.flip);
 
       expect(error).toMatchObject({
@@ -307,7 +306,7 @@ describe("Chart.Service.generate", () => {
     const observedAyanamsas: Array<"Lahiri" | "Raman"> = [];
     const observedHouseSystems: Array<"Placidus" | "WholeSign"> = [];
     const run = Effect.gen(function* () {
-      const charts = yield* Chart.Service;
+      const charts = yield* Effect.service(Chart.Service);
       return yield* charts.generate(input, [9]);
     });
     const layer = (ayanamsa: "Lahiri" | "Raman", houseSystem: "Placidus" | "WholeSign") =>
@@ -333,7 +332,7 @@ describe("Chart.Service.generate", () => {
 
   it.effect("rejects a decoded Chart calculation that does not begin with D1", () =>
     Effect.gen(function* () {
-      const charts = yield* Chart.Service;
+      const charts = yield* Effect.service(Chart.Service);
       const calculation = yield* charts.generate(input, [9]);
 
       expect(() =>
