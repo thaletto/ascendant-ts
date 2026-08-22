@@ -1,27 +1,30 @@
 import { Context, Effect, Layer } from "effect";
-import { AstroParams } from "../config/astro-params";
-import { Ephemeris } from "../ephemeris/service";
-import { ChartCalculation, ChartCalculationError, LocatedMoment } from "../types";
-import { makeGenerate } from "./functions";
+import { Service as AstroParams } from "../astro-params/service.js";
+import { Service as Ephemeris } from "../ephemeris/service.js";
+import { ChartCalculationError } from "./error.js";
+import { makeGenerate } from "./generate.js";
+import { ChartCalculation, LocatedMoment } from "./model.js";
 
-export class ChartService extends Context.Service<
-  ChartService,
+export class Service extends Context.Service<
+  Service,
   {
     readonly generate: (
       input: LocatedMoment,
       divisions?: readonly number[],
     ) => Effect.Effect<ChartCalculation, ChartCalculationError>;
   }
->()("@app/ChartService") {
+>()("astro-ascendant/chart/Service") {
   static readonly layer = Layer.effect(
-    ChartService,
+    Service,
     Effect.gen(function* () {
       const ephemeris = yield* Ephemeris;
       const astroParams = yield* AstroParams;
 
-      return ChartService.of({
+      return Service.of({
         generate: makeGenerate(ephemeris, astroParams),
       });
     }),
   );
 }
+
+export const layer = Service.layer;

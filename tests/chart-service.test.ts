@@ -1,18 +1,16 @@
 import { describe, expect, it } from "@effect/vitest";
-import * as Swisseph from "@swisseph/node";
 import { Effect, Layer, Schema } from "effect";
-import { ChartService } from "../src/chart";
-import { AstroParams } from "../src/config/astro-params";
-import { Ephemeris, EphemerisError } from "../src/ephemeris/service";
-import { ChartCalculation, Division, JulianDay, LocatedMoment, Moment } from "../src/types";
+import * as AstroParams from "../src/astro-params/index.js";
+import * as Chart from "../src/chart/index.js";
+import * as Ephemeris from "../src/ephemeris/index.js";
 
 interface EphemerisTestOptions {
   readonly sunLongitude?: number;
   readonly failHouses?: boolean;
   readonly ascendant?: number;
-  readonly invalidBody?: Swisseph.CelestialBody;
+  readonly invalidBody?: Ephemeris.CelestialBody;
   readonly onAyanamsa?: (ayanamsa: "Lahiri" | "Raman") => void;
-  readonly onHouseSystem?: (houseSystem: Swisseph.HouseSystem) => void;
+  readonly onHouseSystem?: (houseSystem: "Placidus" | "WholeSign") => void;
 }
 
 const ephemerisTestLayer = (options: EphemerisTestOptions = {}) => {
@@ -24,26 +22,26 @@ const ephemerisTestLayer = (options: EphemerisTestOptions = {}) => {
     onAyanamsa,
     onHouseSystem,
   } = options;
-  const longitudes = new Map<Swisseph.CelestialBody, number>([
-    [Swisseph.Planet.Sun, sunLongitude],
-    [Swisseph.Planet.Moon, 45],
-    [Swisseph.Planet.Mars, 80],
-    [Swisseph.Planet.Mercury, 110],
-    [Swisseph.Planet.Venus, 145],
-    [Swisseph.Planet.Jupiter, 200],
-    [Swisseph.Planet.Saturn, 250],
-    [Swisseph.LunarPoint.TrueNode, 300],
+  const longitudes = new Map<Ephemeris.CelestialBody, number>([
+    ["Sun", sunLongitude],
+    ["Moon", 45],
+    ["Mars", 80],
+    ["Mercury", 110],
+    ["Venus", 145],
+    ["Jupiter", 200],
+    ["Saturn", 250],
+    ["TrueNode", 300],
   ]);
 
-  return Layer.succeed(Ephemeris, {
-    dateToJulianDay: () => Effect.succeed(JulianDay.make(2_451_545)),
+  return Layer.succeed(Ephemeris.Service, {
+    dateToJulianDay: () => Effect.succeed(Ephemeris.JulianDay.make(2_451_545)),
     calculatePosition: (_julianDay, body, ayanamsa) => {
       onAyanamsa?.(ayanamsa);
       return Effect.succeed({
         longitude: body === invalidBody ? Number.NaN : longitudes.get(body)!,
         latitude: 0,
         distance: 1,
-        longitudeSpeed: body === Swisseph.Planet.Saturn ? -0.1 : 0.1,
+        longitudeSpeed: body === "Saturn" ? -0.1 : 0.1,
         latitudeSpeed: 0,
         distanceSpeed: 0,
         flags: 0,
@@ -54,7 +52,7 @@ const ephemerisTestLayer = (options: EphemerisTestOptions = {}) => {
       onHouseSystem?.(houseSystem);
       if (failHouses) {
         return Effect.fail(
-          new EphemerisError({ operation: "calculateHouses", cause: "test failure" }),
+          new Ephemeris.EphemerisError({ operation: "calculateHouses", cause: "test failure" }),
         );
       }
       return Effect.succeed({
@@ -78,43 +76,43 @@ const ephemerisTestLayer = (options: EphemerisTestOptions = {}) => {
 const astroParamsTestLayer = (
   ayanamsa: "Lahiri" | "Raman" = "Lahiri",
   houseSystem: "Placidus" | "WholeSign" = "Placidus",
-) => Layer.succeed(AstroParams, { ayanamsa, houseSystem });
+) => AstroParams.layer({ ayanamsa, houseSystem });
 
-const chartServiceTestLayer = ChartService.layer.pipe(
+const chartServiceTestLayer = Chart.layer.pipe(
   Layer.provideMerge(ephemerisTestLayer()),
   Layer.provideMerge(astroParamsTestLayer()),
 );
 
-const lateLeoSunTestLayer = ChartService.layer.pipe(
+const lateLeoSunTestLayer = Chart.layer.pipe(
   Layer.provideMerge(ephemerisTestLayer({ sunLongitude: 19 })),
   Layer.provideMerge(astroParamsTestLayer()),
 );
 
-const failingEphemerisTestLayer = ChartService.layer.pipe(
+const failingEphemerisTestLayer = Chart.layer.pipe(
   Layer.provideMerge(ephemerisTestLayer({ failHouses: true })),
   Layer.provideMerge(astroParamsTestLayer()),
 );
 
-const invalidPlacementTestLayer = ChartService.layer.pipe(
-  Layer.provideMerge(ephemerisTestLayer({ invalidBody: Swisseph.Planet.Sun })),
+const invalidPlacementTestLayer = Chart.layer.pipe(
+  Layer.provideMerge(ephemerisTestLayer({ invalidBody: "Sun" })),
   Layer.provideMerge(astroParamsTestLayer()),
 );
 
-const invalidLagnaTestLayer = ChartService.layer.pipe(
+const invalidLagnaTestLayer = Chart.layer.pipe(
   Layer.provideMerge(ephemerisTestLayer({ ascendant: Number.NaN })),
   Layer.provideMerge(astroParamsTestLayer()),
 );
 
-const input = new LocatedMoment({
-  moment: new Moment({ date: new Date("2000-01-01T12:00:00.000Z") }),
+const input = new Chart.LocatedMoment({
+  moment: new Chart.Moment({ date: new Date("2000-01-01T12:00:00.000Z") }),
   latitude: 12.9716,
   longitude: 77.5946,
 });
 
-describe("ChartService.generate", () => {
+describe("Chart.Service.generate", () => {
   it.effect("returns D1 as an identity mapping from shared Placements", () =>
     Effect.gen(function* () {
-      const charts = yield* ChartService;
+      const charts = yield* Chart.Service;
       const calculation = yield* charts.generate(input, []);
 
       expect(calculation.charts).toHaveLength(1);
@@ -136,7 +134,7 @@ describe("ChartService.generate", () => {
 
   it.effect("returns requested Divisions once in deterministic order", () =>
     Effect.gen(function* () {
-      const charts = yield* ChartService;
+      const charts = yield* Chart.Service;
       const calculation = yield* charts.generate(input, [10, 9, 10]);
 
       expect(calculation.charts.map((chart) => chart.division)).toEqual([1, 9, 10]);
@@ -156,7 +154,7 @@ describe("ChartService.generate", () => {
 
   it.effect("recomputes dignity from the mapped sign and Degree", () =>
     Effect.gen(function* () {
-      const charts = yield* ChartService;
+      const charts = yield* Chart.Service;
       const calculation = yield* charts.generate(input, [3]);
       const d3 = calculation.charts[1]!;
       const sun = Object.values(d3.houses)
@@ -173,10 +171,10 @@ describe("ChartService.generate", () => {
 
   it.effect("returns a complete Chart for every supported Division", () =>
     Effect.gen(function* () {
-      const charts = yield* ChartService;
-      const calculation = yield* charts.generate(input, Division.literals);
+      const charts = yield* Chart.Service;
+      const calculation = yield* charts.generate(input, Chart.Division.literals);
 
-      expect(calculation.charts.map((chart) => chart.division)).toEqual(Division.literals);
+      expect(calculation.charts.map((chart) => chart.division)).toEqual(Chart.Division.literals);
 
       for (const chart of calculation.charts) {
         expect(Object.keys(chart.houses)).toHaveLength(12);
@@ -206,7 +204,7 @@ describe("ChartService.generate", () => {
 
   it.effect("rejects unsupported Divisions before returning any Charts", () =>
     Effect.gen(function* () {
-      const charts = yield* ChartService;
+      const charts = yield* Chart.Service;
       const error = yield* charts.generate(input, [9, 8]).pipe(Effect.flip);
 
       expect(error).toMatchObject({
@@ -219,9 +217,9 @@ describe("ChartService.generate", () => {
 
   it.effect("accepts an arbitrary Moment and geographic location", () =>
     Effect.gen(function* () {
-      const charts = yield* ChartService;
-      const transitInput = new LocatedMoment({
-        moment: new Moment({ date: new Date("2026-08-21T00:00:00.000Z") }),
+      const charts = yield* Chart.Service;
+      const transitInput = new Chart.LocatedMoment({
+        moment: new Chart.Moment({ date: new Date("2026-08-21T00:00:00.000Z") }),
         latitude: 0,
         longitude: 0,
       });
@@ -233,7 +231,7 @@ describe("ChartService.generate", () => {
 
   it.effect("derives Ketu opposite Rahu in shared Placements", () =>
     Effect.gen(function* () {
-      const charts = yield* ChartService;
+      const charts = yield* Chart.Service;
       const calculation = yield* charts.generate(input);
       const rahu = calculation.placements.planets.find((planet) => planet.name === "Rahu")!;
       const ketu = calculation.placements.planets.find((planet) => planet.name === "Ketu")!;
@@ -245,7 +243,7 @@ describe("ChartService.generate", () => {
 
   it.effect("fails atomically when Placements cannot be calculated", () =>
     Effect.gen(function* () {
-      const charts = yield* ChartService;
+      const charts = yield* Chart.Service;
       const error = yield* charts.generate(input, [9, 10]).pipe(Effect.flip);
 
       expect(error).toMatchObject({
@@ -258,15 +256,15 @@ describe("ChartService.generate", () => {
 
   it.effect("rejects invalid calculation inputs before calculating Placements", () =>
     Effect.gen(function* () {
-      const charts = yield* ChartService;
+      const charts = yield* Chart.Service;
       const invalidInputs = [
-        new LocatedMoment({ moment: input.moment, latitude: 91, longitude: input.longitude }),
-        new LocatedMoment({ moment: input.moment, latitude: input.latitude, longitude: 181 }),
+        new Chart.LocatedMoment({ moment: input.moment, latitude: 91, longitude: input.longitude }),
+        new Chart.LocatedMoment({ moment: input.moment, latitude: input.latitude, longitude: 181 }),
         {
           moment: { date: new Date(Number.NaN) },
           latitude: input.latitude,
           longitude: input.longitude,
-        } as LocatedMoment,
+        } as Chart.LocatedMoment,
       ];
 
       for (const invalidInput of invalidInputs) {
@@ -281,7 +279,7 @@ describe("ChartService.generate", () => {
 
   it.effect("converts an invalid Lagna into a structured atomic failure", () =>
     Effect.gen(function* () {
-      const charts = yield* ChartService;
+      const charts = yield* Chart.Service;
       const error = yield* charts.generate(input, [9]).pipe(Effect.flip);
 
       expect(error).toMatchObject({
@@ -294,7 +292,7 @@ describe("ChartService.generate", () => {
 
   it.effect("converts invalid ephemeris placements into a structured atomic failure", () =>
     Effect.gen(function* () {
-      const charts = yield* ChartService;
+      const charts = yield* Chart.Service;
       const error = yield* charts.generate(input, [9]).pipe(Effect.flip);
 
       expect(error).toMatchObject({
@@ -307,13 +305,13 @@ describe("ChartService.generate", () => {
 
   it.effect("uses configured ayanamsa but always builds sign-based Charts", () => {
     const observedAyanamsas: Array<"Lahiri" | "Raman"> = [];
-    const observedHouseSystems: Swisseph.HouseSystem[] = [];
+    const observedHouseSystems: Array<"Placidus" | "WholeSign"> = [];
     const run = Effect.gen(function* () {
-      const charts = yield* ChartService;
+      const charts = yield* Chart.Service;
       return yield* charts.generate(input, [9]);
     });
     const layer = (ayanamsa: "Lahiri" | "Raman", houseSystem: "Placidus" | "WholeSign") =>
-      ChartService.layer.pipe(
+      Chart.layer.pipe(
         Layer.provideMerge(
           ephemerisTestLayer({
             onAyanamsa: (observed) => observedAyanamsas.push(observed),
@@ -328,21 +326,18 @@ describe("ChartService.generate", () => {
       const raman = yield* run.pipe(Effect.provide(layer("Raman", "WholeSign")));
 
       expect(new Set(observedAyanamsas)).toEqual(new Set(["Lahiri", "Raman"]));
-      expect(observedHouseSystems).toEqual([
-        Swisseph.HouseSystem.WholeSign,
-        Swisseph.HouseSystem.WholeSign,
-      ]);
+      expect(observedHouseSystems).toEqual(["WholeSign", "WholeSign"]);
       expect(lahiri.charts).toEqual(raman.charts);
     });
   });
 
   it.effect("rejects a decoded Chart calculation that does not begin with D1", () =>
     Effect.gen(function* () {
-      const charts = yield* ChartService;
+      const charts = yield* Chart.Service;
       const calculation = yield* charts.generate(input, [9]);
 
       expect(() =>
-        Schema.decodeUnknownSync(ChartCalculation)({
+        Schema.decodeUnknownSync(Chart.ChartCalculation)({
           placements: calculation.placements,
           charts: [calculation.charts[1]],
         }),

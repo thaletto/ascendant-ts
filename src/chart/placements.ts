@@ -1,0 +1,73 @@
+import { Effect, Schema } from "effect";
+import { type HouseData, type PlanetaryPosition } from "../ephemeris/model.js";
+import { ChartCalculationError } from "./error.js";
+import { type Planets, Placements, SourceLagna, SourcePlanet } from "./model.js";
+import { normalizeLongitude } from "./divisional-mapping.js";
+import { nakshatraOf } from "./tables.js";
+
+export interface PlacementEvidence {
+  readonly houses: HouseData;
+  readonly planetEntries: readonly (readonly [typeof Planets.Type, PlanetaryPosition])[];
+}
+
+class MissingPlacementError extends Schema.TaggedError<MissingPlacementError>()(
+  "MissingPlacementError",
+  {
+    placement: Schema.Literal("Rahu"),
+  },
+) {}
+
+export const placementsFromEvidence = Effect.fn("Chart.placementsFromEvidence")(
+  function* (evidence: PlacementEvidence) {
+    const sourcePlanets = yield* Effect.all(
+      evidence.planetEntries.map(([name, position]) =>
+        normalizeLongitude(position.longitude).pipe(
+          Effect.map(
+            (longitude) =>
+              new SourcePlanet({
+                name,
+                longitude,
+                is_retrograde: position.longitudeSpeed < 0,
+                nakshatra: nakshatraOf(longitude),
+              }),
+          ),
+        ),
+      ),
+      { concurrency: "unbounded" },
+    );
+
+    const rahu = sourcePlanets.find((planet) => planet.name === "Rahu");
+    if (rahu === undefined) {
+      return yield* new MissingPlacementError({ placement: "Rahu" });
+    }
+
+    const ketuLongitude = yield* normalizeLongitude(rahu.longitude + 180);
+    const ascendant = yield* normalizeLongitude(evidence.houses.ascendant);
+    const planets = [
+      ...sourcePlanets,
+      new SourcePlanet({
+        name: "Ketu",
+        longitude: ketuLongitude,
+        is_retrograde: rahu.is_retrograde,
+        nakshatra: nakshatraOf(ketuLongitude),
+      }),
+    ];
+
+    return new Placements({
+      lagna: new SourceLagna({
+        name: "Lagna",
+        longitude: ascendant,
+        nakshatra: nakshatraOf(ascendant),
+      }),
+      planets,
+    });
+  },
+  Effect.mapError(
+    (cause) =>
+      new ChartCalculationError({
+        stage: "placements",
+        message: "Could not calculate Placements",
+        cause,
+      }),
+  ),
+);

@@ -1,5 +1,5 @@
 import { Effect, pipe, Schema } from "effect";
-import { Degree, Division, Longitude } from "../types";
+import { Degree, Division, Longitude } from "./model.js";
 
 export const DIVISIONAL_MAPPING = "ascendant-divisional-mapping" as const;
 
@@ -130,35 +130,34 @@ const identityTargetOf = (source: SourcePosition): DivisionalTarget => ({
   longitude: source.longitude,
 });
 
-export const normalizeLongitude = Effect.fn("DivisionalMapping.normalizeLongitude")(function* (
-  longitude: number,
-) {
-  if (!Number.isFinite(longitude)) {
-    return yield* new DivisionalMappingError({
-      message: "Longitude must be finite",
-      cause: longitude,
-    });
-  }
+export const normalizeLongitude = Effect.fn("Chart.DivisionalMapping.normalizeLongitude")(
+  function* (longitude: number) {
+    if (!Number.isFinite(longitude)) {
+      return yield* new DivisionalMappingError({
+        message: "Longitude must be finite",
+        cause: longitude,
+      });
+    }
 
-  return pipe(
-    longitude % 360,
-    (remainder) => (remainder < 0 ? remainder + 360 : remainder),
-    (normalized) => Longitude.make(normalized),
-  );
-});
+    return pipe(
+      longitude % 360,
+      (remainder) => (remainder < 0 ? remainder + 360 : remainder),
+      (normalized) => Longitude.make(normalized),
+    );
+  },
+);
 
-export const getDivisionalTarget = Effect.fn("DivisionalMapping.getDivisionalTarget")(function* (
-  longitude: number,
-  division: typeof Division.Type,
-) {
-  const source = yield* normalizeLongitude(longitude).pipe(Effect.map(sourcePositionOf));
+export const getDivisionalTarget = Effect.fn("Chart.DivisionalMapping.getDivisionalTarget")(
+  function* (longitude: number, division: typeof Division.Type) {
+    const source = yield* normalizeLongitude(longitude).pipe(Effect.map(sourcePositionOf));
 
-  if (division === 1) {
-    return pipe(source, identityTargetOf);
-  }
+    if (division === 1) {
+      return pipe(source, identityTargetOf);
+    }
 
-  const subdivision = subdivisionOf(source.degree, division);
-  const signIndex = targetSignOf(source, subdivision, division);
+    const subdivision = subdivisionOf(source.degree, division);
+    const signIndex = targetSignOf(source, subdivision, division);
 
-  return pipe({ signIndex, degree: subdivision.degree }, divisionalTargetOf);
-});
+    return pipe({ signIndex, degree: subdivision.degree }, divisionalTargetOf);
+  },
+);

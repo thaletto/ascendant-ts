@@ -1,5 +1,5 @@
-import { NAKSHATRA_NAMES, RASHI_NAMES } from "./index";
-import { Planets, RashiLords, Rashis, Nakshatra } from "../types";
+import { Nakshatra, type Planets, type RashiLords, type Rashis } from "./model.js";
+import { NAKSHATRA_NAMES, RASHI_NAMES } from "./literals.js";
 
 export const SIGN_LORDS: Record<typeof Rashis.Type, typeof RashiLords.Type> = {
   Aries: "Mars",
@@ -102,12 +102,15 @@ export const ENEMIES: Record<typeof Planets.Type, readonly (typeof Planets.Type)
 
 const NAKSHATRA_SPAN = 360 / NAKSHATRA_NAMES.length;
 
-const normalize = (longitude: number): number => ((longitude % 360) + 360) % 360;
+function normalize(longitude: number): number {
+  return ((longitude % 360) + 360) % 360;
+}
 
-export const signOf = (longitude: number): typeof Rashis.Type =>
-  RASHI_NAMES[Math.floor(normalize(longitude) / 30)]!;
+export function signOf(longitude: number): typeof Rashis.Type {
+  return RASHI_NAMES[Math.floor(normalize(longitude) / 30)]!;
+}
 
-export const nakshatraOf = (longitude: number): Nakshatra => {
+export function nakshatraOf(longitude: number): Nakshatra {
   const position = normalize(longitude);
   const index = Math.floor(position / NAKSHATRA_SPAN);
   const pada = Math.floor(((position % NAKSHATRA_SPAN) / NAKSHATRA_SPAN) * 4) + 1;
@@ -116,27 +119,28 @@ export const nakshatraOf = (longitude: number): Nakshatra => {
     lord: NAKSHATRA_LORD_CYCLE[index % NAKSHATRA_LORD_CYCLE.length]!,
     pada: pada as 1 | 2 | 3 | 4,
   });
-};
+}
 
-export const relationWith = (
+export function relationWith(
   planet: typeof Planets.Type,
   lord: typeof Planets.Type,
-): "Friend" | "Neutral" | "Enemy" => {
+): "Friend" | "Neutral" | "Enemy" {
   if (FRIENDS[planet].includes(lord)) return "Friend";
   if (ENEMIES[planet].includes(lord)) return "Enemy";
   return "Neutral";
-};
+}
 
-const oppositeSign = (sign: typeof Rashis.Type): typeof Rashis.Type =>
-  RASHI_NAMES[(RASHI_NAMES.indexOf(sign) + 6) % 12]!;
+function oppositeSign(sign: typeof Rashis.Type): typeof Rashis.Type {
+  return RASHI_NAMES[(RASHI_NAMES.indexOf(sign) + 6) % 12]!;
+}
 
-export const inSignStatus = (
+export function inSignStatus(
   planet: typeof Planets.Type,
   sign: typeof Rashis.Type,
   degree: number,
 ): ReadonlyArray<
   "Exalted" | "Moola Trikona" | "Own" | "Friend" | "Neutral" | "Enemy" | "Debilitated"
-> => {
+> {
   if (EXALTATION[planet] === sign) return ["Exalted"];
   if (oppositeSign(EXALTATION[planet]) === sign) return ["Debilitated"];
   const moolaTrikonaDegrees = MOOLA_TRIKONA_DEGREES[planet];
@@ -149,4 +153,4 @@ export const inSignStatus = (
   }
   if (OWN_SIGNS[planet].includes(sign)) return ["Own"];
   return [relationWith(planet, SIGN_LORDS[sign])];
-};
+}
