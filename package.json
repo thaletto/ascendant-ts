@@ -32,6 +32,10 @@
       "types": "./dist/ephemeris/index.d.ts",
       "import": "./dist/ephemeris/index.js"
     },
+    "./sav": {
+      "types": "./dist/sav/index.d.ts",
+      "import": "./dist/sav/index.js"
+    },
     "./astro-params": {
       "types": "./dist/astro-params/index.d.ts",
       "import": "./dist/astro-params/index.js"
