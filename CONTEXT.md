@@ -9,7 +9,7 @@ A snapshot of astrological positions arranged into twelve houses. A Rashi or div
 _Avoid_: Birth wheel, horoscope, kundali (unless the user specifically says these)
 
 **Placements**:
-The exact sidereal longitudes and motion states of the Lagna and grahas at a Moment and geographic location. They are the common source from which the D1 and divisional charts are derived; Placements produced for a Birth are natal placements.
+The exact sidereal longitudes and motion states of the Lagna and grahas at a Located Moment. They are the common source from which the D1 and divisional charts are derived; Placements given natal meaning are natal placements.
 _Avoid_: D1 chart, raw chart, base chart
 
 **Division**:
@@ -33,16 +33,16 @@ A house-cusp representation produced using a configured House system. It is sepa
 _Avoid_: D1, Rashi chart
 
 **Chart calculation**:
-The D1 and requested divisional charts derived together from the same Placements. A Chart calculation always contains D1; one produced for a Birth is a natal calculation.
+The D1 and requested divisional charts derived together from the same Placements. A Chart calculation always contains D1; one given natal meaning is a natal calculation.
 _Avoid_: Chart bundle, chart pack
 
 **Moment**:
-The point in time at which planetary positions are computed. A chart is built from a birth Moment; a transit is computed at some other Moment (e.g. now) against that chart. A Moment is separate from configuration: it is per-computation input, not a setting.
+The point in time at which planetary positions are computed. It may represent a birth, a transit, or another event. A Moment is separate from configuration: it is per-computation input, not a setting.
 _Avoid_: Time, timestamp, epoch (unless you mean something else)
 
 **Located Moment**:
-A Moment paired with the latitude and longitude at which Placements are calculated. A Birth is a Located Moment with natal meaning.
-_Avoid_: Chart input, event data
+A Moment paired with the latitude and longitude at which Placements are calculated. It is the canonical input for any Chart calculation and may be given natal, transit, or other event meaning.
+_Avoid_: Birth, birth data, chart input, event data
 
 **AstroParams**:
 The parameters of the astrological computation: ayanamsa and house system. Separate from the Moment and location; the house system applies to a Bhava chart, not to D1 or divisional charts.
@@ -71,10 +71,6 @@ _Avoid_: Reference frame, zodiac offset
 **House system**:
 The method for dividing a Bhava chart into twelve houses (e.g. Whole Sign, Placidus). It does not change the sign-based houses of D1 or divisional charts.
 _Avoid_: House division, cusps method
-
-**Birth**:
-A Located Moment representing a birth. It remains separate from AstroParams.
-_Avoid_: Birth data, birth info, birth details
 
 **Rahu / Ketu**:
 The lunar nodes, grahas that behave like planets in every way except sign ownership: they do not rule a sign.
