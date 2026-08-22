@@ -1,33 +1,81 @@
 {
-  "name": "ascendant",
+  "name": "astro-ascendant",
+  "version": "0.1.0",
+  "license": "AGPL-3.0-or-later",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "type": "module",
-  "module": "index.ts",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./chart": {
+      "types": "./dist/chart/index.d.ts",
+      "import": "./dist/chart/index.js"
+    },
+    "./chart/divisional-mapping": {
+      "types": "./dist/chart/divisional-mapping.d.ts",
+      "import": "./dist/chart/divisional-mapping.js"
+    },
+    "./ephemeris": {
+      "types": "./dist/ephemeris/index.d.ts",
+      "import": "./dist/ephemeris/index.js"
+    },
+    "./astro-params": {
+      "types": "./dist/astro-params/index.d.ts",
+      "import": "./dist/astro-params/index.js"
+    },
+    "./swisseph": {
+      "types": "./dist/swisseph/index.d.ts",
+      "import": "./dist/swisseph/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "scripts": {
     "prepare": "effect-language-service patch",
+    "build": "tsgo -p tsconfig.build.json",
+    "prepack": "bun run build",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsgo --noEmit",
-    "lint": "oxlint --type-aware --ignore-pattern='repos/**'",
-    "lint:fix": "oxlint --fix --type-aware --ignore-pattern='repos/**'",
-    "fmt": "oxfmt . '!repos/**'",
-    "fmt:check": "oxfmt --check . '!repos/**'"
-  },
-  "dependencies": {
-    "@swisseph/node": "^1.3.1",
-    "effect": "^4.0.0-rc.109"
+    "lint": "oxlint --type-aware --ignore-pattern='repos/**' --ignore-pattern='dist/**'",
+    "lint:fix": "oxlint --fix --type-aware --ignore-pattern='repos/**' --ignore-pattern='dist/**'",
+    "fmt": "oxfmt .",
+    "fmt:check": "oxfmt --check .",
+    "package:check": "bun run build && tsgo -p tsconfig.package.json && bun tests/package/runtime.mjs && bun pm pack --dry-run",
+    "check": "bun run typecheck && bun run test && bun run lint && bun run fmt:check && bun run build"
   },
   "devDependencies": {
     "@effect/language-service": "^0.87.2",
     "@effect/vitest": "beta",
+    "@swisseph/node": "^1.3.1",
     "@types/bun": "latest",
     "@typescript/native-preview": "^7.0.0-dev.20260707.2",
+    "effect": "^4.0.0-rc.109",
     "oxfmt": "^0.63.0",
     "oxlint": "^1.78.0",
     "oxlint-tsgolint": "7",
     "vitest": "latest"
   },
   "peerDependencies": {
-    "typescript": "^5"
+    "@swisseph/node": "^1.3.1",
+    "effect": "^4.0.0-rc.109"
+  },
+  "peerDependenciesMeta": {
+    "@swisseph/node": {
+      "optional": true
+    }
   },
   "trustedDependencies": [
     "@swisseph/node",
