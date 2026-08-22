@@ -1,6 +1,6 @@
 # astro-ascendant
 
-`astro-ascendant` is an Effect-first Vedic astrology library. Given a Moment and geographic location, it calculates shared Placements, the D1/Rashi Chart, and requested divisional Charts. `Dasha.Service` uses those shared Placements to calculate and query a Vimshottari Dasha timeline.
+`astro-ascendant` is an Effect-first Vedic astrology library. Given a Moment and geographic location, it calculates shared Placements, the D1/Rashi Chart, and requested divisional Charts. `Dasha.Service` uses those shared Placements to calculate and query a Vimshottari Dasha timeline. `SAV.Service` derives classical Parashari Bhinnashtakavarga, Sarvashtakavarga, reduced scores, and Shodhya Pinda from the same Placements.
 
 The core package is runtime-neutral. Install `@swisseph/node` and import `astro-ascendant/swisseph` when using the bundled Node/Bun Swiss Ephemeris adapter.
 
@@ -26,6 +26,6 @@ const layer = Chart.layer.pipe(
 );
 ```
 
-The package exports `astro-ascendant/chart`, `astro-ascendant/chart/divisional-mapping`, `astro-ascendant/dasha`, `astro-ascendant/ephemeris`, `astro-ascendant/astro-params`, and `astro-ascendant/swisseph` for focused imports.
+The package exports `astro-ascendant/chart`, `astro-ascendant/chart/divisional-mapping`, `astro-ascendant/dasha`, `astro-ascendant/sav`, `astro-ascendant/ephemeris`, `astro-ascendant/astro-params`, and `astro-ascendant/swisseph` for focused imports.
 
-For local development, use `bun run build`, `bun run test`, or `make check`. The executable examples are `examples/basic.ts` and `examples/dasha.ts`; both read `MOMENT_DATE`, `LATITUDE`, and `LONGITUDE` from their runtime configuration.
+For local development, use `bun run build`, `bun run test`, or `make check`. The executable examples are `examples/basic.ts`, `examples/dasha.ts`, and `examples/sav.ts`; all read `MOMENT_DATE`, `LATITUDE`, and `LONGITUDE` from their runtime configuration.
