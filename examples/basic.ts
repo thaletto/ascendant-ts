@@ -1,4 +1,5 @@
 import { Config, Effect, Layer } from "effect";
+import { DevTools } from "effect/unstable/devtools";
 import { AstroParams, Chart } from "../src/index.ts";
 import * as Swisseph from "../src/swisseph/index.ts";
 import { printChartCalculation } from "./chart-calculation-table.ts";
@@ -12,7 +13,7 @@ const config = Effect.gen(function* () {
 
 const program = Effect.gen(function* () {
   const { date, latitude, longitude } = yield* config;
-  const chart = yield* Chart.Service;
+  const chart = yield* Effect.service(Chart.Service);
 
   yield* chart
     .generate(
@@ -31,6 +32,8 @@ const layer = Chart.layer.pipe(
   Layer.provide(Swisseph.layer),
 );
 
-Effect.runPromise(program.pipe(Effect.provide(layer))).catch((error) => {
+const runtimeLayer = Layer.merge(layer, DevTools.layer());
+
+Effect.runPromise(program.pipe(Effect.provide(runtimeLayer))).catch((error) => {
   console.error(error);
 });
