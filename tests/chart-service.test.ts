@@ -6,25 +6,33 @@ import * as Ephemeris from "../src/ephemeris/index.js";
 
 interface EphemerisTestOptions {
   readonly sunLongitude?: number;
+  readonly moonLongitude?: number;
+  readonly cusps?: readonly number[];
   readonly failHouses?: boolean;
   readonly ascendant?: number;
   readonly invalidBody?: Ephemeris.CelestialBody;
-  readonly onAyanamsa?: (ayanamsa: "Lahiri" | "Raman") => void;
-  readonly onHouseSystem?: (houseSystem: "Placidus" | "WholeSign") => void;
+  readonly varyCuspsByHouseSystem?: boolean;
+  readonly varyLongitudesByAyanamsa?: boolean;
+  readonly onAyanamsa?: (ayanamsa: typeof AstroParams.Ayanamsa.Type) => void;
+  readonly onHouseSystem?: (houseSystem: typeof AstroParams.HouseSystem.Type) => void;
 }
 
 const ephemerisTestLayer = (options: EphemerisTestOptions = {}) => {
   const {
     sunLongitude = 10,
+    moonLongitude = 45,
+    cusps,
     failHouses = false,
     ascendant = 100,
     invalidBody,
+    varyCuspsByHouseSystem = false,
+    varyLongitudesByAyanamsa = false,
     onAyanamsa,
     onHouseSystem,
   } = options;
   const longitudes = new Map<Ephemeris.CelestialBody, number>([
     ["Sun", sunLongitude],
-    ["Moon", 45],
+    ["Moon", moonLongitude],
     ["Mars", 80],
     ["Mercury", 110],
     ["Venus", 145],
@@ -37,8 +45,13 @@ const ephemerisTestLayer = (options: EphemerisTestOptions = {}) => {
     dateToJulianDay: () => Effect.succeed(Ephemeris.JulianDay.make(2_451_545)),
     calculatePosition: (_julianDay, body, ayanamsa) => {
       onAyanamsa?.(ayanamsa);
+      const longitude = longitudes.get(body);
+      const ayanamsaOffset = varyLongitudesByAyanamsa && ayanamsa === "Raman" ? 5 : 0;
       return Effect.succeed({
-        longitude: body === invalidBody ? Number.NaN : longitudes.get(body)!,
+        longitude:
+          body === invalidBody || longitude === undefined
+            ? Number.NaN
+            : (longitude + ayanamsaOffset) % 360,
         latitude: 0,
         distance: 1,
         longitudeSpeed: body === "Saturn" ? -0.1 : 0.1,
@@ -55,18 +68,21 @@ const ephemerisTestLayer = (options: EphemerisTestOptions = {}) => {
           new Ephemeris.EphemerisError({ operation: "calculateHouses", cause: "test failure" }),
         );
       }
+      const firstCusp = varyCuspsByHouseSystem && houseSystem === "Placidus" ? 95 : 90;
       return Effect.succeed({
-        cusps: Array.from({ length: 13 }, (_, index) =>
-          index === 0 ? 0 : (90 + index * 30) % 360,
-        ),
+        cusps:
+          cusps ??
+          Array.from({ length: 13 }, (_, index) =>
+            index === 0 ? 0 : (firstCusp + (index - 1) * 30) % 360,
+          ),
         ascendant,
-        mc: 0,
-        armc: 0,
-        vertex: 0,
-        equatorialAscendant: 0,
-        coAscendant1: 0,
-        coAscendant2: 0,
-        polarAscendant: 0,
+        mc: 210,
+        armc: 200,
+        vertex: 15,
+        equatorialAscendant: 20,
+        coAscendant1: 25,
+        coAscendant2: 30,
+        polarAscendant: 35,
         houseSystem,
       });
     },
@@ -110,6 +126,60 @@ const input = new Chart.LocatedMoment({
 });
 
 describe("Chart.Service.generate", () => {
+  it.effect("returns the configured Bhava chart and resolved AstroParams", () =>
+    Effect.gen(function* () {
+      const charts = yield* Effect.service(Chart.Service);
+      const calculation = yield* charts.generate(input);
+
+      expect(calculation.astroParams).toEqual({
+        ayanamsa: "Lahiri",
+        houseSystem: "Placidus",
+      });
+      expect(Object.keys(calculation.bhava.houses)).toHaveLength(12);
+      expect(calculation.bhava.houses[1]).toMatchObject({
+        cusp: 90,
+        lagna: { name: "Lagna", longitude: 100 },
+      });
+      expect(calculation.bhava.houses[10].planets).toContainEqual(
+        expect.objectContaining({ name: "Sun", longitude: 10, degree: 10 }),
+      );
+      expect(calculation.bhava.angles).toEqual({
+        ascendant: 100,
+        mc: 210,
+        armc: 200,
+        vertex: 15,
+        equatorialAscendant: 20,
+        coAscendant1: 25,
+        coAscendant2: 30,
+        polarAscendant: 35,
+      });
+    }).pipe(Effect.provide(chartServiceTestLayer)),
+  );
+
+  it.effect("assigns Bhava placements at exact cusps and across the zodiac boundary", () => {
+    const boundaryLayer = Chart.layer.pipe(
+      Layer.provideMerge(
+        ephemerisTestLayer({
+          sunLongitude: 10,
+          moonLongitude: 20,
+          ascendant: 355,
+          cusps: [0, 350, 20, 50, 80, 110, 140, 170, 200, 230, 260, 290, 320],
+        }),
+      ),
+      Layer.provideMerge(astroParamsTestLayer()),
+    );
+
+    return Effect.gen(function* () {
+      const charts = yield* Effect.service(Chart.Service);
+      const calculation = yield* charts.generate(input);
+
+      expect(calculation.bhava.houses[1].planets.map((planet) => planet.name)).toContain("Sun");
+      expect(calculation.bhava.houses[2].planets.map((planet) => planet.name)).toContain("Moon");
+      expect(calculation.bhava.houses[1].lagna?.longitude).toBe(355);
+      expect(calculation.bhava.houses[2].lagna).toBeNull();
+    }).pipe(Effect.provide(boundaryLayer));
+  });
+
   it.effect("returns D1 as an identity mapping from shared Placements", () =>
     Effect.gen(function* () {
       const charts = yield* Effect.service(Chart.Service);
@@ -302,31 +372,59 @@ describe("Chart.Service.generate", () => {
     }).pipe(Effect.provide(invalidPlacementTestLayer)),
   );
 
-  it.effect("uses configured ayanamsa but always builds sign-based Charts", () => {
-    const observedAyanamsas: Array<"Lahiri" | "Raman"> = [];
-    const observedHouseSystems: Array<"Placidus" | "WholeSign"> = [];
+  it.effect("changes only Bhava when the configured house system changes", () => {
+    const observedHouseSystems: Array<typeof AstroParams.HouseSystem.Type> = [];
     const run = Effect.gen(function* () {
       const charts = yield* Effect.service(Chart.Service);
       return yield* charts.generate(input, [9]);
     });
-    const layer = (ayanamsa: "Lahiri" | "Raman", houseSystem: "Placidus" | "WholeSign") =>
+    const layer = (houseSystem: "Placidus" | "WholeSign") =>
       Chart.layer.pipe(
         Layer.provideMerge(
           ephemerisTestLayer({
-            onAyanamsa: (observed) => observedAyanamsas.push(observed),
+            varyCuspsByHouseSystem: true,
             onHouseSystem: (observed) => observedHouseSystems.push(observed),
           }),
         ),
-        Layer.provideMerge(astroParamsTestLayer(ayanamsa, houseSystem)),
+        Layer.provideMerge(astroParamsTestLayer("Lahiri", houseSystem)),
       );
 
     return Effect.gen(function* () {
-      const lahiri = yield* run.pipe(Effect.provide(layer("Lahiri", "Placidus")));
-      const raman = yield* run.pipe(Effect.provide(layer("Raman", "WholeSign")));
+      const placidus = yield* run.pipe(Effect.provide(layer("Placidus")));
+      const wholeSign = yield* run.pipe(Effect.provide(layer("WholeSign")));
+
+      expect(observedHouseSystems).toEqual(["Placidus", "WholeSign"]);
+      expect(placidus.placements).toEqual(wholeSign.placements);
+      expect(placidus.charts).toEqual(wholeSign.charts);
+      expect(placidus.bhava.houses[1].cusp).toBe(95);
+      expect(wholeSign.bhava.houses[1].cusp).toBe(90);
+    });
+  });
+
+  it.effect("propagates ayanamsa changes into Placements and sign-based Charts", () => {
+    const observedAyanamsas: Array<typeof AstroParams.Ayanamsa.Type> = [];
+    const run = Effect.gen(function* () {
+      const charts = yield* Effect.service(Chart.Service);
+      return yield* charts.generate(input, [9]);
+    });
+    const layer = (ayanamsa: "Lahiri" | "Raman") =>
+      Chart.layer.pipe(
+        Layer.provideMerge(
+          ephemerisTestLayer({
+            varyLongitudesByAyanamsa: true,
+            onAyanamsa: (observed) => observedAyanamsas.push(observed),
+          }),
+        ),
+        Layer.provideMerge(astroParamsTestLayer(ayanamsa, "WholeSign")),
+      );
+
+    return Effect.gen(function* () {
+      const lahiri = yield* run.pipe(Effect.provide(layer("Lahiri")));
+      const raman = yield* run.pipe(Effect.provide(layer("Raman")));
 
       expect(new Set(observedAyanamsas)).toEqual(new Set(["Lahiri", "Raman"]));
-      expect(observedHouseSystems).toEqual(["WholeSign", "WholeSign"]);
-      expect(lahiri.charts).toEqual(raman.charts);
+      expect(lahiri.placements).not.toEqual(raman.placements);
+      expect(lahiri.charts).not.toEqual(raman.charts);
     });
   });
 
@@ -339,6 +437,8 @@ describe("Chart.Service.generate", () => {
         Schema.decodeUnknownSync(Chart.ChartCalculation)({
           placements: calculation.placements,
           charts: [calculation.charts[1]],
+          bhava: calculation.bhava,
+          astroParams: calculation.astroParams,
         }),
       ).toThrow();
     }).pipe(Effect.provide(chartServiceTestLayer)),

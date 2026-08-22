@@ -12,6 +12,30 @@ _Avoid_: Birth wheel, horoscope, kundali (unless the user specifically says thes
 The exact sidereal longitudes and motion states of the Lagna and grahas at a Located Moment. They are the common source from which the D1 and divisional charts are derived; Placements given natal meaning are natal placements.
 _Avoid_: D1 chart, raw chart, base chart
 
+**Ashtakavarga**:
+A classical Parashari scoring system derived from the Rashi positions of the Sun, Moon, Mars, Mercury, Jupiter, Venus, Saturn, and Lagna in Placements. It produces Bhinnashtakavarga tables, Sarvashtakavarga, reduced Bhinnashtakavarga, and Shodhya Pinda.
+_Avoid_: Compatibility score, probability, prediction
+
+**Bindu**:
+A benefic contribution assigned to one Rashi for an assessed Ashtakavarga entity by one contributor. An Ashtakavarga sign score is the number of bindus assigned to that Rashi.
+_Avoid_: Degree, longitude, weighted point
+
+**Bhinnashtakavarga / BAV**:
+The twelve Rashi scores for one assessed entity, formed from the bindus contributed by the seven classical planets and Lagna. There is one BAV table for each of those eight entities.
+_Avoid_: SAV, planetary placement, house score
+
+**Sarvashtakavarga / SAV**:
+The twelve Rashi scores formed by adding the seven planetary BAV tables. The Lagna BAV is excluded; under the classical Parashari table the twelve SAV scores total 337.
+_Avoid_: Lagna-inclusive total, compatibility score, universal strength
+
+**Reduced Bhinnashtakavarga**:
+The seven planetary BAV tables after Trikona reduction followed by Ekadhipatya reduction. It is the basis for Shodhya Pinda and is distinct from raw BAV and SAV.
+_Avoid_: Reduced SAV, normalized score
+
+**Shodhya Pinda**:
+The weighted total for one classical planet derived from its reduced BAV. It is the sum of Rashi Pinda, which weights signs, and Graha Pinda, which weights the signs occupied by the seven classical planets.
+_Avoid_: SAV total, probability, standalone prediction
+
 **Division**:
 The identity of a chart within the divisional system, written D1, D2, D3, and so on. D1 identifies the Rashi chart; the other supported values identify divisional charts.
 _Avoid_: Chart type, Varga number
@@ -29,11 +53,15 @@ A placement's position within its sign, from zero up to but not including thirty
 _Avoid_: Absolute longitude, source longitude
 
 **Bhava chart**:
-A house-cusp representation produced using a configured House system. It is separate from the D1 / Rashi chart and from divisional charts.
+A twelve-house cusp representation produced using a configured House system. It assigns each placement to the house whose cusp begins the placement's half-open zodiac interval, exposes the calculation's eight house angles, and is separate from the D1 / Rashi chart and divisional charts.
 _Avoid_: D1, Rashi chart
 
+**Bhava house**:
+One of the twelve cusp-bounded sections of a Bhava chart. It owns the cusp at its beginning and the placements from that cusp up to, but not including, the next cusp.
+_Avoid_: Sign, Rashi, Whole Sign house
+
 **Chart calculation**:
-The D1 and requested divisional charts derived together from the same Placements. A Chart calculation always contains D1; one given natal meaning is a natal calculation.
+The Placements, D1, requested divisional charts, and configured Bhava chart derived together under the same AstroParams. A Chart calculation always contains D1 and records its AstroParams; one given natal meaning is a natal calculation.
 _Avoid_: Chart bundle, chart pack
 
 **Moment**:
@@ -65,11 +93,11 @@ All chart relationships are one-directional to keep the data small. A House list
 _Avoid_: Two-way connections, back-references, cycles
 
 **Ayanamsa**:
-The sidereal reference frame used to align tropical longitudes to the fixed zodiac. Configurable: it is a per-chart input (e.g. Lahiri, Raman), not a fixed table.
+The sidereal reference frame used to align tropical longitudes to the fixed zodiac. It is selected from the supported predefined methodologies in AstroParams and recorded on each Chart calculation.
 _Avoid_: Reference frame, zodiac offset
 
 **House system**:
-The method for dividing a Bhava chart into twelve houses (e.g. Whole Sign, Placidus). It does not change the sign-based houses of D1 or divisional charts.
+The method selected in AstroParams for dividing a Bhava chart into twelve houses. It is recorded on each Chart calculation and does not change the sign-based houses of D1 or divisional charts.
 _Avoid_: House division, cusps method
 
 **Rahu / Ketu**:
