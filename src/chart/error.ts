@@ -14,5 +14,5 @@ export class LocatedMomentValidationError extends Schema.TaggedError<LocatedMome
   {
     message: Schema.String,
     cause: Schema.Defect(),
-  }
+  },
 ) {}
