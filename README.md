@@ -145,10 +145,10 @@ The executable examples read `MOMENT_DATE`, `LATITUDE`, and `LONGITUDE` from the
 MOMENT_DATE=2000-01-01T12:00:00.000Z \
 LATITUDE=12.9716 \
 LONGITUDE=77.5946 \
-bun run examples/basic.ts
+bun run examples/chart.ts
 ```
 
-Replace `basic.ts` with `dasha.ts` or `sav.ts` to print the corresponding tables.
+Replace `chart.ts` with `dasha.ts` or `sav.ts` to print the corresponding tables.
 
 ## Development
 
