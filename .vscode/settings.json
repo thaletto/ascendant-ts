@@ -7,7 +7,13 @@
     ".vscode": true,
     "bun.lock": true,
     "node_modules": true,
-    "repos/**": true
+    "repos/**": true,
+    "AGENTS.md": true,
+    ".oxfmtrc.json": true,
+    "LICENSE": true,
+    "tsconfig.*": true,
+    "vitest.*": true,
+    "Makefile": true,
   },
 
   "js/ts.preferences.autoImportFileExcludePatterns": ["repos/**"],
