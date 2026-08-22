@@ -13,6 +13,10 @@ const savService = SAV.Service;
 const savLayer = FocusedSAV.layer;
 const mapping = DivisionalMapping.getDivisionalTarget;
 const swissephLayer = Swisseph.layer;
+const bhavaSchema = Chart.BhavaChart;
+const circleAngleSchema = Chart.CircleAngle;
+const ayanamsas = AstroParams.Ayanamsa.literals;
+const houseSystems = AstroParams.HouseSystem.literals;
 
 void chartLayer;
 void paramsLayer;
@@ -23,3 +27,7 @@ void savService;
 void savLayer;
 void mapping;
 void swissephLayer;
+void bhavaSchema;
+void circleAngleSchema;
+void ayanamsas;
+void houseSystems;

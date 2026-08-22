@@ -1,4 +1,5 @@
 import { Schema } from "effect";
+import { Options as AstroParamsOptions } from "../astro-params/model.js";
 import { NAKSHATRA_NAMES, PLANET_NAMES, RASHI_NAMES } from "./literals.js";
 
 export const Planets = Schema.Literals(PLANET_NAMES);
@@ -34,6 +35,11 @@ export const Longitude = Schema.Finite.check(
   Schema.isBetween({ minimum: 0, maximum: 360, exclusiveMaximum: true }),
 ).pipe(Schema.brand("Longitude"));
 export type Longitude = typeof Longitude.Type;
+
+export const CircleAngle = Schema.Finite.check(
+  Schema.isBetween({ minimum: 0, maximum: 360, exclusiveMaximum: true }),
+).pipe(Schema.brand("CircleAngle"));
+export type CircleAngle = typeof CircleAngle.Type;
 
 export const Degree = Schema.Finite.check(
   Schema.isBetween({ minimum: 0, maximum: 30, exclusiveMaximum: true }),
@@ -98,6 +104,30 @@ export class Chart extends Schema.Class<Chart>("Chart")({
   houses: ChartHouses,
 }) {}
 
+export class BhavaHouse extends Schema.Class<BhavaHouse>("BhavaHouse")({
+  cusp: Longitude,
+  planets: Schema.Array(Planet),
+  lagna: Schema.NullOr(Lagna),
+}) {}
+
+export const BhavaHouses = Schema.Record(Houses, BhavaHouse);
+
+export class BhavaAngles extends Schema.Class<BhavaAngles>("BhavaAngles")({
+  ascendant: CircleAngle,
+  mc: CircleAngle,
+  armc: CircleAngle,
+  vertex: CircleAngle,
+  equatorialAscendant: CircleAngle,
+  coAscendant1: CircleAngle,
+  coAscendant2: CircleAngle,
+  polarAscendant: CircleAngle,
+}) {}
+
+export class BhavaChart extends Schema.Class<BhavaChart>("BhavaChart")({
+  houses: BhavaHouses,
+  angles: BhavaAngles,
+}) {}
+
 export const CalculationCharts = Schema.NonEmptyArray(Chart).check(
   Schema.makeFilter((charts) => charts[0].division === 1, {
     expected: "a non-empty Chart collection beginning with D1",
@@ -107,6 +137,8 @@ export const CalculationCharts = Schema.NonEmptyArray(Chart).check(
 export class ChartCalculation extends Schema.Class<ChartCalculation>("ChartCalculation")({
   placements: Placements,
   charts: CalculationCharts,
+  bhava: BhavaChart,
+  astroParams: AstroParamsOptions,
 }) {}
 
 export class Moment extends Schema.Class<Moment>("Moment")({

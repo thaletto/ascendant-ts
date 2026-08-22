@@ -2,10 +2,13 @@
   "js/ts.tsdk.path": "node_modules/typescript/lib",
 
   "files.exclude": {
+    ".github": true,
     ".gitignore": true,
     ".zed": true,
     ".vscode": true,
     "bun.lock": true,
+    "CODE_OF_CONDUCT.md": true,
+    "dist": true,
     "node_modules": true,
     "repos/**": true,
     "AGENTS.md": true,

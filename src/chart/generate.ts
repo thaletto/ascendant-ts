@@ -3,6 +3,7 @@ import type { Service as AstroParams } from "../astro-params/service.js";
 import { type CelestialBody } from "../ephemeris/model.js";
 import type { Service as Ephemeris } from "../ephemeris/service.js";
 import { ChartCalculationError, LocatedMomentValidationError } from "./error.js";
+import { bhavaFromHouseData } from "./bhava.js";
 import { chartsFromPlacements } from "./charts.js";
 import { ChartCalculation, Division, LocatedMoment, Planets } from "./model.js";
 import { placementsFromEvidence, type PlacementEvidence } from "./placements.js";
@@ -64,7 +65,7 @@ export function makeGenerate(ephemeris: Ephemeris, astroParams: AstroParams) {
         julianDay,
         input.latitude,
         input.longitude,
-        "WholeSign",
+        astroParams.houseSystem,
         astroParams.ayanamsa,
       );
       const planetEntries = yield* Effect.all(
@@ -97,10 +98,13 @@ export function makeGenerate(ephemeris: Ephemeris, astroParams: AstroParams) {
     const evidence = yield* calculatePlacementEvidence(input);
     const placements = yield* placementsFromEvidence(evidence);
     const charts = yield* chartsFromPlacements(placements, normalizedDivisions);
+    const bhava = yield* bhavaFromHouseData(evidence.houses, charts[0]);
 
     return new ChartCalculation({
       placements,
       charts,
+      bhava,
+      astroParams,
     });
   });
 }

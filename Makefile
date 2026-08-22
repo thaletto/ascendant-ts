@@ -8,8 +8,8 @@ help: ## Show available commands
 install: ## Install dependencies
 	bun install
 
-run: ## Run the basic example (requires moment environment variables)
-	bun run examples/basic.ts
+run: ## Run the chart example (requires moment environment variables)
+	bun run examples/chart.ts
 
 build: ## Build the npm package into dist/
 	bun run build
