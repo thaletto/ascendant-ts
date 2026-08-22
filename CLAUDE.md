@@ -12,11 +12,14 @@ Topics: quick-start, project-setup, tsconfig, basics, services-and-layers, data-
 
 Never guess at Effect patterns - check the guide first.
 
-## Local Effect Source
+## Vendored Repositories
 
-The Effect v4 repository is cloned to `~/.local/share/effect-solutions/effect` for reference.
-Use this to explore APIs, find usage examples, and understand implementation
-details when the documentation isn't enough.
+This project vendors external repositories under @repos/
+
+- Use vendored repositories as read-only reference material when working with related libraries
+- Prefer examples and patterns from the vendored source code over generated guesses or web search results
+- Do not edit files under @repos/ unless explicitly asked
+- Do not import from @repos/ - application code should continue importing from normal package dependencies
 
 ## Agent skills
 
