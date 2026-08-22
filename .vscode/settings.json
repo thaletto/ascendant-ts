@@ -1,0 +1,10 @@
+{
+    "js/ts.tsdk.path": "node_modules/typescript/lib",
+    "files.exclude": {
+        ".gitignore": true,
+        ".zed": true,
+        ".vscode": true,
+        "bun.lock": true,
+        "node_modules": true
+    }
+}
