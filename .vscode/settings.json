@@ -1,10 +1,22 @@
 {
   "js/ts.tsdk.path": "node_modules/typescript/lib",
+
   "files.exclude": {
     ".gitignore": true,
     ".zed": true,
     ".vscode": true,
     "bun.lock": true,
-    "node_modules": true
+    "node_modules": true,
+    "repos/**": true
+  },
+
+  "js/ts.preferences.autoImportFileExcludePatterns": ["repos/**"],
+
+  "files.watcherExclude": {
+    "repos/**": true
+  },
+
+  "search.exclude": {
+    "repos/**": true
   }
 }
