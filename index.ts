@@ -2,12 +2,12 @@ import { Config, Console, Effect, Layer } from "effect";
 import { ChartService } from "./src/chart";
 import { AstroParams } from "./src/config/astro-params";
 import { Ephemeris } from "./src/ephemeris/service";
-import { Birth, Moment } from "./src/types";
+import { LocatedMoment, Moment } from "./src/types";
 
 const config = Effect.gen(function* () {
-  const date = yield* Config.string("BIRTH_DATE");
-  const latitude = yield* Config.number("BIRTH_LATITUDE");
-  const longitude = yield* Config.number("BIRTH_LONGITUDE");
+  const date = yield* Config.string("MOMENT_DATE");
+  const latitude = yield* Config.number("LATITUDE");
+  const longitude = yield* Config.number("LONGITUDE");
   return { date, latitude, longitude };
 });
 
@@ -15,12 +15,12 @@ const program = config.pipe(
   Effect.flatMap(({ date, latitude, longitude }) =>
     Effect.gen(function* () {
       const chartService = yield* ChartService;
-      const birth = new Birth({
+      const locatedMoment = new LocatedMoment({
         moment: new Moment({ date: new Date(date) }),
         latitude,
         longitude,
       });
-      const calculation = yield* chartService.generate(birth);
+      const calculation = yield* chartService.generate(locatedMoment);
       yield* Console.log(calculation);
     }),
   ),

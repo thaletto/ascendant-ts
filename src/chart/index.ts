@@ -1,7 +1,6 @@
 import { Context, Effect, Layer, pipe, Schema } from "effect";
 import * as Swisseph from "@swisseph/node";
 import {
-  Birth,
   Chart,
   ChartCalculation,
   ChartCalculationError,
@@ -42,7 +41,7 @@ class MissingPlacementError extends Schema.TaggedError<MissingPlacementError>()(
   },
 ) {}
 
-const isValidInput = (input: LocatedMoment | Birth): boolean =>
+const isValidInput = (input: LocatedMoment): boolean =>
   Number.isFinite(input.latitude) &&
   input.latitude >= -90 &&
   input.latitude <= 90 &&
@@ -144,7 +143,7 @@ export class ChartService extends Context.Service<
   ChartService,
   {
     readonly generate: (
-      input: LocatedMoment | Birth,
+      input: LocatedMoment,
       divisions?: readonly number[],
     ) => Effect.Effect<ChartCalculation, ChartCalculationError>;
   }
@@ -156,7 +155,7 @@ export class ChartService extends Context.Service<
       const astroParams = yield* AstroParams;
 
       const generate = Effect.fn("ChartService.generate")(function* (
-        input: LocatedMoment | Birth,
+        input: LocatedMoment,
         divisions: readonly number[] = [],
       ) {
         if (!isValidInput(input)) {

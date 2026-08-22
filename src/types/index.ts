@@ -189,8 +189,6 @@ export class LocatedMoment extends Schema.Class<LocatedMoment>("LocatedMoment")(
   locatedMomentFields,
 ) {}
 
-export class Birth extends Schema.Class<Birth>("Birth")(locatedMomentFields) {}
-
 export class AstroParams extends Schema.Class<AstroParams>("AstroParams")({
   ayanamsa: Ayanamsa,
   houseSystem: HouseSystemName,

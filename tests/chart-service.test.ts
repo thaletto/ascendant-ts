@@ -4,7 +4,7 @@ import { Effect, Layer, Schema } from "effect";
 import { ChartService } from "../src/chart";
 import { AstroParams } from "../src/config/astro-params";
 import { Ephemeris, EphemerisError } from "../src/ephemeris/service";
-import { Birth, ChartCalculation, Division, JulianDay, LocatedMoment, Moment } from "../src/types";
+import { ChartCalculation, Division, JulianDay, LocatedMoment, Moment } from "../src/types";
 
 interface EphemerisTestOptions {
   readonly sunLongitude?: number;
@@ -105,7 +105,7 @@ const invalidLagnaTestLayer = ChartService.layer.pipe(
   Layer.provideMerge(astroParamsTestLayer()),
 );
 
-const input = new Birth({
+const input = new LocatedMoment({
   moment: new Moment({ date: new Date("2000-01-01T12:00:00.000Z") }),
   latitude: 12.9716,
   longitude: 77.5946,
