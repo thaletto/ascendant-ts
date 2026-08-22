@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help install run test test-watch typecheck lint lint-fix format format-check check
+.PHONY: help install run build test test-watch typecheck lint lint-fix format format-check package-check check
 
 help: ## Show available commands
 	@awk 'BEGIN {FS = ":.*## "; printf "Usage: make <target>\n\nTargets:\n"} /^[a-zA-Z_-]+:.*## / {printf "  %-14s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -8,8 +8,11 @@ help: ## Show available commands
 install: ## Install dependencies
 	bun install
 
-run: ## Run the chart generator (requires birth environment variables)
-	bun run index.ts
+run: ## Run the basic example (requires moment environment variables)
+	bun run examples/basic.ts
+
+build: ## Build the npm package into dist/
+	bun run build
 
 test: ## Run the test suite once
 	bun run test
@@ -32,7 +35,10 @@ format: ## Format project files
 format-check: ## Check project formatting
 	bun run fmt:check
 
-check: typecheck test lint format-check ## Run all verification checks
+package-check: build ## Inspect the npm package contents
+	bun run package:check
+
+check: typecheck test lint format-check build ## Run all verification checks
 
 add-effect: ## Add `effect` repository as a git subtree
 	git subtree add \
@@ -43,7 +49,7 @@ add-effect: ## Add `effect` repository as a git subtree
 
 pull-effect: ## Pull latest changes from `effect` repository into the subtree
 	git subtree pull \
-  	--prefix=repos/effect \
-  	https://github.com/Effect-TS/effect.git \
-  	main \
-  	--squash
+		--prefix=repos/effect \
+		https://github.com/Effect-TS/effect.git \
+		main \
+		--squash
