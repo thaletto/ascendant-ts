@@ -11,6 +11,7 @@ The library calculates planetary positions once for a Located Moment. Chart, Das
 - **Methodologies**: 39 predefined ayanamsas and 13 house systems
 - **Vimshottari Dasha**: Mahadasha and Antardasha timelines with date queries
 - **Ashtakavarga**: BAV, SAV, reduced BAV, and Shodhya Pinda
+- **Yogas**: classical Yoga catalog with structured evidence and bounded concurrency
 - **Effect integration**: typed services, layers, schemas, and domain errors
 - **Runtime-neutral core**: use the bundled Node/Bun adapter or provide another ephemeris service
 
@@ -85,6 +86,29 @@ The Dasha service also provides `current`, `mahadasha`, and `antardasha` queries
 - `shodhya_pinda`: Rashi, Graha, and total Shodhya Pinda by planet
 - `totals`: classical BAV checksums and the SAV total of 337
 
+## Evaluate Yogas
+
+Evaluate the built-in Yoga catalog against an existing Chart calculation. The service preflights the required divisions, then runs the rules with bounded concurrency and returns structured evidence per rule.
+
+```typescript
+import { Yoga } from "astro-ascendant";
+
+const yogaProgram = Effect.gen(function* () {
+  const yoga = yield* Yoga.Service;
+  const evaluation = yield* yoga.evaluateAll(calculation);
+
+  for (const { yoga: descriptor, present } of evaluation.results) {
+    if (present) console.log(descriptor.name);
+  }
+
+  return yield* yoga.evaluateSelected(calculation, ["gajakesari", "sunapha"]);
+});
+
+const yogaEvaluation = await Effect.runPromise(yogaProgram.pipe(Effect.provide(Yoga.layer)));
+```
+
+`yoga.catalog` lists every rule's descriptor without running any calculation. Unknown, duplicate, or empty selections and missing Chart divisions fail through the typed error channel before rules start. Each result carries a `YogaEvidence` tree that `Yoga.formatEvidence` renders as text.
+
 ## Configure calculation parameters
 
 `AstroParams.defaultLayer` uses Lahiri ayanamsa and Whole Sign houses. Provide another layer for a different supported methodology.
@@ -132,6 +156,7 @@ Import namespaces from the package root or use focused entry points:
 | `astro-ascendant/chart`                    | Chart models, schemas, errors, service, and layer                  |
 | `astro-ascendant/dasha`                    | Vimshottari Dasha models, errors, service, and layer               |
 | `astro-ascendant/sav`                      | Ashtakavarga models, errors, service, and layer                    |
+| `astro-ascendant/yoga`                     | Yoga models, catalog, errors, service, and layer                   |
 | `astro-ascendant/astro-params`             | Calculation parameter models and layers                            |
 | `astro-ascendant/ephemeris`                | Runtime-neutral ephemeris contract and models                      |
 | `astro-ascendant/swisseph`                 | Swiss Ephemeris adapter for Node.js and Bun                        |
@@ -148,7 +173,8 @@ LONGITUDE=77.5946 \
 bun run examples/chart.ts
 ```
 
-Replace `chart.ts` with `dasha.ts`, `sav.ts`, or `jaimini.ts` to print the corresponding tables.
+Replace `chart.ts` with `dasha.ts`, `sav.ts`, `yoga.ts`, or `jaimini.ts` to print the
+corresponding tables.
 The Jaimini example composes Chara Karakas, Rashi Drishti, Karakamsha, Arudha Pada,
 Upapada, and Argala through their separately named services.
 
@@ -162,6 +188,9 @@ make check
 ```
 
 Use `make help` to list the available development commands.
+
+Run the non-gating Yoga benchmark with `bun run benchmark:yoga`; see
+[benchmarks/README.md](benchmarks/README.md) for methodology and recent numbers.
 
 ## License
 
