@@ -1,7 +1,10 @@
 import * as AstroAscendant from "astro-ascendant";
 
 const exports = Object.keys(AstroAscendant).sort();
-if (exports.join(",") !== "AstroParams,Chart,Dasha,Ephemeris,SAV") {
+if (
+  exports.join(",") !==
+  "Argala,ArudhaPada,AstroParams,CharaKarakas,Chart,Dasha,Ephemeris,Karakamsha,RashiDrishti,SAV,Upapada"
+) {
   throw new Error(`Unexpected root exports: ${exports.join(",")}`);
 }
 

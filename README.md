@@ -148,7 +148,9 @@ LONGITUDE=77.5946 \
 bun run examples/chart.ts
 ```
 
-Replace `chart.ts` with `dasha.ts` or `sav.ts` to print the corresponding tables.
+Replace `chart.ts` with `dasha.ts`, `sav.ts`, or `jaimini.ts` to print the corresponding tables.
+The Jaimini example composes Chara Karakas, Rashi Drishti, Karakamsha, Arudha Pada,
+Upapada, and Argala through their separately named services.
 
 ## Development
 

@@ -187,6 +187,10 @@ describe("Chart.Service.generate", () => {
 
       expect(calculation.charts).toHaveLength(1);
       const d1 = calculation.charts[0]!;
+      expect(d1.provenance).toEqual({
+        method: "ascendant-divisional-mapping",
+        version: 1,
+      });
       expect(d1.division).toBe(1);
       expect(d1.houses[1].sign).toBe("Cancer");
       expect(d1.houses[1].lagna).toMatchObject({ longitude: 100, degree: 10 });
@@ -210,6 +214,10 @@ describe("Chart.Service.generate", () => {
       expect(calculation.charts.map((chart) => chart.division)).toEqual([1, 9, 10]);
 
       const d9 = calculation.charts[1]!;
+      expect(d9.provenance).toEqual({
+        method: "ascendant-divisional-mapping",
+        version: 1,
+      });
       expect(d9.houses[1]).toMatchObject({
         sign: "Libra",
         lagna: { longitude: 180, degree: 0 },

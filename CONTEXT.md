@@ -16,6 +16,34 @@ _Avoid_: D1 chart, raw chart, base chart
 A classical Parashari scoring system derived from the Rashi positions of the Sun, Moon, Mars, Mercury, Jupiter, Venus, Saturn, and Lagna in Placements. It produces Bhinnashtakavarga tables, Sarvashtakavarga, reduced Bhinnashtakavarga, and Shodhya Pinda.
 _Avoid_: Compatibility score, probability, prediction
 
+**Jaimini**:
+A school of Jyotisha containing distinct calculations such as Chara Karakas, Rashi Drishti, Karakamsha, Arudha Padas, Upapada, and Argala. It identifies a method's provenance, not a calculation requested as a whole.
+_Avoid_: Jaimini calculation, Jaimini mode, Jaimini core as a user request
+
+**Chara Karakas**:
+Seven planetary roles assigned in descending order from the Degrees derived exactly from the classical planets' stored D1 longitudes. Planets at the same position within their Signs jointly hold every role occupied by their tied ranks.
+_Avoid_: requesting Jaimini, approximate tie, arbitrary tiebreaker, Rahu tie fallback
+
+**Rashi Drishti**:
+The signs influenced by one reference Sign under a Jaimini sign-aspect method.
+_Avoid_: Planetary aspect, degree orb, all-sign table as the required result
+
+**Karakamsha**:
+The D9 Sign occupied by each planet holding the Atmakaraka role. When tied planets jointly hold Atmakaraka, every corresponding D9 Sign is a Karakamsha result; the supporting Chara Karakas are not returned unless separately requested.
+_Avoid_: Another natal chart, implicit Chara Karaka result
+
+**Arudha Pada**:
+The projected Sign reached by repeating the distance from one D1 house's Sign to its lord. This plain projection does not include exceptional source-Sign or seventh-Sign adjustments.
+_Avoid_: All-house table as the required result, literal status or ownership
+
+**Upapada**:
+The Arudha Pada of the twelfth D1 house, available as its own requested calculation.
+_Avoid_: Generic Arudha request, another person's intent
+
+**Argala**:
+The supporting and obstructing relationships around one explicit reference under an Argala method. A Sign reference uses the ordinary direction, while a Ketu reference uses the reverse direction from Ketu's occupied Sign.
+_Avoid_: All-sign table as the required result, deterministic score or prediction
+
 **Bindu**:
 A benefic contribution assigned to one Rashi for an assessed Ashtakavarga entity by one contributor. An Ashtakavarga sign score is the number of bindus assigned to that Rashi.
 _Avoid_: Degree, longitude, weighted point
