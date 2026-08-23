@@ -10,6 +10,7 @@ import {
   RashiDrishti,
   SAV,
   Upapada,
+  Yoga,
 } from "astro-ascendant";
 import * as FocusedArgala from "astro-ascendant/argala";
 import * as FocusedArudhaPada from "astro-ascendant/arudha-pada";
@@ -21,6 +22,7 @@ import * as FocusedRashiDrishti from "astro-ascendant/rashi-drishti";
 import * as FocusedSAV from "astro-ascendant/sav";
 import * as Swisseph from "astro-ascendant/swisseph";
 import * as FocusedUpapada from "astro-ascendant/upapada";
+import * as FocusedYoga from "astro-ascendant/yoga";
 
 const chartLayer = Chart.layer;
 const paramsLayer = AstroParams.defaultLayer;
@@ -29,6 +31,12 @@ const dashaService = Dasha.Service;
 const dashaLayer = FocusedDasha.layer;
 const savService = SAV.Service;
 const savLayer = FocusedSAV.layer;
+const yogaService = Yoga.Service;
+const yogaLayer = FocusedYoga.layer;
+const yogaCatalog = FocusedYoga.catalog;
+const yogaEvaluationSchema = Yoga.YogaEvaluation;
+const yogaEvidenceSchema = FocusedYoga.YogaEvidence;
+const unknownYogaError = FocusedYoga.UnknownYogaError;
 const mapping = DivisionalMapping.getDivisionalTarget;
 const swissephLayer = Swisseph.layer;
 const bhavaSchema = Chart.BhavaChart;
@@ -57,6 +65,12 @@ void dashaService;
 void dashaLayer;
 void savService;
 void savLayer;
+void yogaService;
+void yogaLayer;
+void yogaCatalog;
+void yogaEvaluationSchema;
+void yogaEvidenceSchema;
+void unknownYogaError;
 void mapping;
 void swissephLayer;
 void bhavaSchema;

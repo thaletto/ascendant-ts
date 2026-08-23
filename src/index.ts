@@ -9,3 +9,4 @@ export * as Karakamsha from "./jaimini/karakamsha.js";
 export * as RashiDrishti from "./jaimini/rashi-drishti.js";
 export * as SAV from "./sav/index.js";
 export * as Upapada from "./jaimini/upapada.js";
+export * as Yoga from "./yoga/index.js";
