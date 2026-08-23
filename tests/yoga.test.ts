@@ -1,9 +1,9 @@
 import { describe, expect, it } from "@effect/vitest";
-import { Cause, Deferred, Effect, Fiber, Ref, Schema } from "effect";
+import { Cause, Deferred, Effect, Fiber, Layer, Ref, Schema } from "effect";
 import * as Chart from "../src/chart/index.js";
 import * as Yoga from "../src/yoga/index.js";
-import { definitions, makeCatalog } from "../src/yoga/catalog.js";
-import type { YogaDefinition } from "../src/yoga/internal.js";
+import { definitions } from "../src/yoga/catalog.js";
+import { YogaCondition, type YogaDefinition, YogaStrategy } from "../src/yoga/internal.js";
 import { makeLayer } from "../src/yoga/service.js";
 
 const signs = Chart.Rashis.literals;
@@ -650,14 +650,15 @@ describe("Yoga.Service", () => {
       const d9Definition: YogaDefinition = {
         ...definitions[0]!,
         requiredDivisions: [9],
-        condition: {
-          _tag: "BodyPositionsCondition",
-          division: 9,
-          referenceBody: "Moon",
-          bodies: ["Jupiter"],
-          expectedRelativeHouses: [1, 4, 7, 10],
-          quantifier: "All",
-        },
+        strategy: YogaStrategy.Condition({
+          condition: YogaCondition.BodyPositionsCondition({
+            division: 9,
+            referenceBody: "Moon",
+            bodies: ["Jupiter"],
+            expectedRelativeHouses: [1, 4, 7, 10],
+            quantifier: "All",
+          }),
+        }),
       };
       const testLayer = makeLayer([d9Definition], {
         hooks: {
@@ -678,6 +679,25 @@ describe("Yoga.Service", () => {
       );
       expect(yield* Ref.get(starts)).toBe(0);
     }),
+  );
+
+  it.effect("reports malformed Chart evidence as a typed evaluation failure", () =>
+    Effect.gen(function* () {
+      const source = calculation({});
+      const [d1] = source.charts;
+      const malformed = new Chart.ChartCalculation({
+        placements: source.placements,
+        charts: [d1, d1],
+        bhava: source.bhava,
+        astroParams: source.astroParams,
+      });
+      const yoga = yield* Yoga.Service;
+      const error = yield* yoga.evaluateAll(malformed).pipe(Effect.flip);
+      expect(error).toMatchObject({
+        _tag: "InvalidYogaEvidenceError",
+        message: "Duplicate D1 Chart in Yoga evaluation input",
+      });
+    }).pipe(Effect.provide(Yoga.layer)),
   );
 
   it.effect("runs no more than four rule evaluations concurrently and preserves order", () =>
@@ -718,13 +738,10 @@ describe("Yoga.Service", () => {
       const defective: YogaDefinition = {
         yoga: definitions[0]!.yoga,
         requiredDivisions: [1],
-        evaluator: {
+        strategy: YogaStrategy.Evaluator({
           name: "defective-test-evaluator",
-          evaluate: () => {
-            throw new Error("test evaluator invariant");
-          },
-        },
-        sources: ["test"],
+          evaluate: () => Effect.die(new Error("test evaluator invariant")),
+        }),
       };
       const exit = yield* Effect.gen(function* () {
         const yoga = yield* Yoga.Service;
@@ -738,31 +755,55 @@ describe("Yoga.Service", () => {
     }),
   );
 
-  it("rejects duplicate IDs and aliases while assembling an internal catalog", () => {
-    expect(() => makeCatalog([definitions[0]!, definitions[0]!])).toThrow(
-      "Duplicate Yoga ID: gajakesari",
-    );
-    const second = definitions[1]!.yoga;
-    const duplicateAlias: YogaDefinition = {
-      ...definitions[1]!,
-      yoga: {
-        id: second.id,
-        name: second.name,
-        aliases: [definitions[0]!.yoga.aliases[0]!],
-        classification: second.classification,
-        description: second.description,
-      },
-    };
-    expect(() => makeCatalog([definitions[0]!, duplicateAlias])).toThrow(
-      "Duplicate or empty Yoga alias: GajaKesari",
-    );
-    expect(() =>
-      makeCatalog([
-        {
-          ...definitions[0]!,
-          requiredDivisions: [1, 9],
+  it.effect("reports invalid catalogs and service options through layer acquisition", () =>
+    Effect.gen(function* () {
+      const duplicateId = yield* Layer.build(makeLayer([definitions[0]!, definitions[0]!])).pipe(
+        Effect.scoped,
+        Effect.flip,
+      );
+      expect(duplicateId).toMatchObject({
+        _tag: "InvalidYogaCatalogError",
+        yogaId: "gajakesari",
+        issue: "DuplicateId",
+      });
+
+      const second = definitions[1]!.yoga;
+      const duplicateAlias: YogaDefinition = {
+        ...definitions[1]!,
+        yoga: {
+          id: second.id,
+          name: second.name,
+          aliases: [definitions[0]!.yoga.aliases[0]!],
+          classification: second.classification,
+          description: second.description,
         },
-      ]),
-    ).toThrow("Yoga gajakesari condition and required Divisions disagree");
-  });
+      };
+      const aliasError = yield* Layer.build(makeLayer([definitions[0]!, duplicateAlias])).pipe(
+        Effect.scoped,
+        Effect.flip,
+      );
+      expect(aliasError).toMatchObject({
+        _tag: "InvalidYogaCatalogError",
+        yogaId: "sunapha",
+        issue: "DuplicateAlias",
+      });
+
+      const divisionError = yield* Layer.build(
+        makeLayer([{ ...definitions[0]!, requiredDivisions: [1, 9] }]),
+      ).pipe(Effect.scoped, Effect.flip);
+      expect(divisionError).toMatchObject({
+        _tag: "InvalidYogaCatalogError",
+        yogaId: "gajakesari",
+        issue: "DivisionMismatch",
+      });
+
+      const configurationError = yield* Layer.build(makeLayer(undefined, { concurrency: 0 })).pipe(
+        Effect.scoped,
+        Effect.flip,
+      );
+      expect(configurationError).toEqual(
+        new Yoga.InvalidYogaServiceConfigurationError({ concurrency: 0 }),
+      );
+    }),
+  );
 });

@@ -111,12 +111,9 @@ function syntheticCatalog(size: number): readonly YogaDefinition[] {
         description: source.yoga.description,
       },
       requiredDivisions: source.requiredDivisions,
-      sources: ["benchmark"],
+      strategy: source.strategy,
     };
-    if (source.condition !== undefined) return { ...common, condition: source.condition };
-    const evaluator = source.evaluator;
-    if (evaluator === undefined) throw new Error(`Missing evaluator for ${source.yoga.id}`);
-    return { ...common, evaluator };
+    return common;
   });
 }
 
