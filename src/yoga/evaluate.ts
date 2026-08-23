@@ -15,7 +15,7 @@ import {
   type YogaCondition,
   type YogaDefinition,
 } from "./internal.js";
-import type { YogaEvidence, YogaResult } from "./model.js";
+import type { YogaEvidence } from "./model.js";
 
 function normalizeHouse(value: number): typeof Houses.Type {
   return Schema.decodeUnknownSync(Houses)(((((value - 1) % 12) + 12) % 12) + 1);
@@ -103,10 +103,7 @@ export function makeEvaluationIndex(calculation: ChartCalculation): EvaluationIn
   });
 }
 
-function requireDivision(
-  index: EvaluationIndex,
-  division: typeof Division.Type,
-): Effect.Effect<IndexedDivision, InvalidYogaEvidenceError> {
+function requireDivision(index: EvaluationIndex, division: typeof Division.Type) {
   return Effect.suspend(() => {
     const result = index.forDivision(division);
     return Result.isSuccess(result) ? Effect.succeed(result.success) : Effect.fail(result.failure);
@@ -184,7 +181,7 @@ export const evaluateCondition = Effect.fn("Yoga.evaluateCondition")(function* (
 export const evaluateDefinition = Effect.fn("Yoga.evaluateDefinition")(function* (
   definition: YogaDefinition,
   index: EvaluationIndex,
-): Effect.fn.Return<YogaResult, InvalidYogaEvidenceError> {
+) {
   const evidence = yield* YogaStrategy.$match(definition.strategy, {
     Condition: ({ condition }) => evaluateCondition(condition, index),
     Evaluator: ({ evaluate }) => evaluate(index),

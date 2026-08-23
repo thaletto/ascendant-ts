@@ -141,11 +141,11 @@ const syntheticSequential = await measure(synthetic, syntheticIterations, 1);
 const syntheticBounded = await measure(synthetic, syntheticIterations, 4);
 
 console.log(`Yoga Service pilot (${pilotIterations} ten-rule evaluations)`);
-console.log(`concurrency 1: ${pilotSequential.toFixed(2)} ms`);
-console.log(`concurrency 4: ${pilotBounded.toFixed(2)} ms`);
+console.log(`concurrency 1: ${(pilotSequential / 1000).toFixed(2)} s`);
+console.log(`concurrency 4: ${(pilotBounded / 1000).toFixed(2)} s`);
 console.log(`Yoga Service scale sample (${syntheticIterations} 300-rule evaluations)`);
-console.log(`concurrency 1: ${syntheticSequential.toFixed(2)} ms`);
-console.log(`concurrency 4: ${syntheticBounded.toFixed(2)} ms`);
+console.log(`concurrency 1: ${(syntheticSequential / 1000).toFixed(2)} s`);
+console.log(`concurrency 4: ${(syntheticBounded / 1000).toFixed(2)} s`);
 console.log(
   "This benchmark is non-gating. Fiber concurrency does not imply four-core execution for synchronous predicates.",
 );
