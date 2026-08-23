@@ -40,6 +40,30 @@
       "types": "./dist/astro-params/index.d.ts",
       "import": "./dist/astro-params/index.js"
     },
+    "./argala": {
+      "types": "./dist/argala.d.ts",
+      "import": "./dist/argala.js"
+    },
+    "./arudha-pada": {
+      "types": "./dist/arudha-pada.d.ts",
+      "import": "./dist/arudha-pada.js"
+    },
+    "./chara-karakas": {
+      "types": "./dist/chara-karakas.d.ts",
+      "import": "./dist/chara-karakas.js"
+    },
+    "./karakamsha": {
+      "types": "./dist/karakamsha.d.ts",
+      "import": "./dist/karakamsha.js"
+    },
+    "./rashi-drishti": {
+      "types": "./dist/rashi-drishti.d.ts",
+      "import": "./dist/rashi-drishti.js"
+    },
+    "./upapada": {
+      "types": "./dist/upapada.d.ts",
+      "import": "./dist/upapada.js"
+    },
     "./swisseph": {
       "types": "./dist/swisseph/index.d.ts",
       "import": "./dist/swisseph/index.js"
