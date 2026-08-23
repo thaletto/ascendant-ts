@@ -1,5 +1,5 @@
 import { RASHI_NAMES } from "../chart/literals.js";
-import { Rashis } from "../chart/model.js";
+import { type Longitude, Rashis } from "../chart/model.js";
 
 export function signAt(index: number): typeof Rashis.Type {
   const normalized = ((index % RASHI_NAMES.length) + RASHI_NAMES.length) % RASHI_NAMES.length;
@@ -8,6 +8,6 @@ export function signAt(index: number): typeof Rashis.Type {
   return sign;
 }
 
-export function signIndexOf(longitude: number): number {
+export function signIndexOf(longitude: Longitude): number {
   return Math.floor(longitude / 30) % RASHI_NAMES.length;
 }

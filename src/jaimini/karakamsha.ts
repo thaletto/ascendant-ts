@@ -1,8 +1,8 @@
 import { Context, Effect, Layer, Schema } from "effect";
 import * as CharaKarakas from "./chara-karakas.js";
-import { getDivisionalTarget } from "./chart/divisional-mapping.js";
-import { RASHI_NAMES } from "./chart/literals.js";
-import { Rashis, type Placements } from "./chart/model.js";
+import { getDivisionalTarget } from "../chart/divisional-mapping.js";
+import { RASHI_NAMES } from "../chart/literals.js";
+import { Rashis, type Placements } from "../chart/model.js";
 
 export const Provenance = Schema.Struct({
   school: Schema.Literal("Jaimini"),

@@ -39,7 +39,14 @@ function chartFromMappedPlacements({
     });
   }
 
-  return new Chart({ division, houses });
+  return new Chart({
+    provenance: {
+      method: "ascendant-divisional-mapping",
+      version: 1,
+    },
+    division,
+    houses,
+  });
 }
 
 export const chartFromPlacements = Effect.fn("Chart.chartFromPlacements")(function* (

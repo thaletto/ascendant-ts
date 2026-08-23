@@ -1,6 +1,6 @@
 import { describe, expect, it } from "@effect/vitest";
 import { Effect } from "effect";
-import * as RashiDrishti from "../src/rashi-drishti.js";
+import * as RashiDrishti from "../src/jaimini/rashi-drishti.js";
 
 describe("RashiDrishti.Service.calculate", () => {
   it.effect("returns the non-adjacent fixed Signs influenced by a movable Sign", () =>

@@ -41,28 +41,28 @@
       "import": "./dist/astro-params/index.js"
     },
     "./argala": {
-      "types": "./dist/argala.d.ts",
-      "import": "./dist/argala.js"
+      "types": "./dist/jaimini/argala.d.ts",
+      "import": "./dist/jaimini/argala.js"
     },
     "./arudha-pada": {
-      "types": "./dist/arudha-pada.d.ts",
-      "import": "./dist/arudha-pada.js"
+      "types": "./dist/jaimini/arudha-pada.d.ts",
+      "import": "./dist/jaimini/arudha-pada.js"
     },
     "./chara-karakas": {
-      "types": "./dist/chara-karakas.d.ts",
-      "import": "./dist/chara-karakas.js"
+      "types": "./dist/jaimini/chara-karakas.d.ts",
+      "import": "./dist/jaimini/chara-karakas.js"
     },
     "./karakamsha": {
-      "types": "./dist/karakamsha.d.ts",
-      "import": "./dist/karakamsha.js"
+      "types": "./dist/jaimini/karakamsha.d.ts",
+      "import": "./dist/jaimini/karakamsha.js"
     },
     "./rashi-drishti": {
-      "types": "./dist/rashi-drishti.d.ts",
-      "import": "./dist/rashi-drishti.js"
+      "types": "./dist/jaimini/rashi-drishti.d.ts",
+      "import": "./dist/jaimini/rashi-drishti.js"
     },
     "./upapada": {
-      "types": "./dist/upapada.d.ts",
-      "import": "./dist/upapada.js"
+      "types": "./dist/jaimini/upapada.d.ts",
+      "import": "./dist/jaimini/upapada.js"
     },
     "./swisseph": {
       "types": "./dist/swisseph/index.d.ts",

@@ -1,7 +1,7 @@
 import { Context, Effect, Layer, Schema } from "effect";
-import { RASHI_NAMES } from "./chart/literals.js";
-import { Rashis } from "./chart/model.js";
-import { signAt } from "./internal/sign-position.js";
+import { RASHI_NAMES } from "../chart/literals.js";
+import { Rashis } from "../chart/model.js";
+import { signAt } from "../internal/sign-position.js";
 
 export const Provenance = Schema.Struct({
   school: Schema.Literal("Jaimini"),

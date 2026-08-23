@@ -99,7 +99,14 @@ export class Placements extends Schema.Class<Placements>("Placements")({
   planets: Schema.Array(SourcePlanet),
 }) {}
 
+export const Provenance = Schema.Struct({
+  method: Schema.Literal("ascendant-divisional-mapping"),
+  version: Schema.Literal(1),
+});
+export interface Provenance extends Schema.Schema.Type<typeof Provenance> {}
+
 export class Chart extends Schema.Class<Chart>("Chart")({
+  provenance: Provenance,
   division: Division,
   houses: ChartHouses,
 }) {}

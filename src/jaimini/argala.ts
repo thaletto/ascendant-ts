@@ -1,7 +1,7 @@
 import { Context, Effect, Layer, Schema } from "effect";
-import { PLANET_NAMES, RASHI_NAMES } from "./chart/literals.js";
-import { Planets, Rashis, type Placements } from "./chart/model.js";
-import { signAt, signIndexOf } from "./internal/sign-position.js";
+import { PLANET_NAMES, RASHI_NAMES } from "../chart/literals.js";
+import { Planets, Rashis, type Placements } from "../chart/model.js";
+import { signAt, signIndexOf } from "../internal/sign-position.js";
 
 export const SignReference = Schema.Struct({
   kind: Schema.Literal("Sign"),

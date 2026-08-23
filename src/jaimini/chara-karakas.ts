@@ -1,5 +1,5 @@
 import { Context, Effect, Layer, Schema } from "effect";
-import { Degree, type Longitude, type Placements } from "./chart/model.js";
+import { Degree, type Longitude, type Placements } from "../chart/model.js";
 
 export const ClassicalPlanets = Schema.Literals([
   "Sun",

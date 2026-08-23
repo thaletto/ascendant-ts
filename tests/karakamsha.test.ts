@@ -1,7 +1,7 @@
 import { describe, expect, it } from "@effect/vitest";
 import { Effect } from "effect";
 import * as Chart from "../src/chart/index.js";
-import * as Karakamsha from "../src/karakamsha.js";
+import * as Karakamsha from "../src/jaimini/karakamsha.js";
 
 function sourcePlanet(name: typeof Chart.Planets.Type, longitude: number): Chart.SourcePlanet {
   return new Chart.SourcePlanet({
