@@ -36,6 +36,10 @@
       "types": "./dist/sav/index.d.ts",
       "import": "./dist/sav/index.js"
     },
+    "./yoga": {
+      "types": "./dist/yoga/index.d.ts",
+      "import": "./dist/yoga/index.js"
+    },
     "./astro-params": {
       "types": "./dist/astro-params/index.d.ts",
       "import": "./dist/astro-params/index.js"
@@ -86,6 +90,7 @@
     "fmt": "oxfmt .",
     "fmt:check": "oxfmt --check .",
     "package:check": "bun run build && tsc -p tsconfig.package.json && bun tests/package/runtime.mjs && bun pm pack --dry-run",
+    "benchmark:yoga": "bun benchmarks/yoga.ts",
     "check": "bun run typecheck && bun run test && bun run lint && bun run fmt:check && bun run build"
   },
   "devDependencies": {
