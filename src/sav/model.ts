@@ -1,6 +1,6 @@
 import { Schema } from "effect";
 
-import { LagnaName, Rashis } from "../chart/model.js";
+import { LagnaName, Rashis } from "../internal/model.js";
 
 export const AshtakavargaPlanets = Schema.Literals([
   "Sun",
@@ -11,22 +11,29 @@ export const AshtakavargaPlanets = Schema.Literals([
   "Venus",
   "Saturn",
 ] as const);
+export type AshtakavargaPlanets = typeof AshtakavargaPlanets.Type;
 
 export const AshtakavargaEntities = Schema.Union([AshtakavargaPlanets, LagnaName]);
+export type AshtakavargaEntities = typeof AshtakavargaEntities.Type;
 
 export const SignScores = Schema.Record(Rashis, Schema.Int);
+export type SignScores = typeof SignScores.Type;
 
 export const BhinnaAshtakavarga = Schema.Record(AshtakavargaEntities, SignScores);
+export type BhinnaAshtakavarga = typeof BhinnaAshtakavarga.Type;
 
 export const ReducedAshtakavarga = Schema.Record(AshtakavargaPlanets, SignScores);
+export type ReducedAshtakavarga = typeof ReducedAshtakavarga.Type;
 
 export const Pinda = Schema.Struct({
   rashi_pinda: Schema.Int,
   graha_pinda: Schema.Int,
   shodhya_pinda: Schema.Int,
 });
+export type Pinda = typeof Pinda.Type;
 
 export const ShodhyaPinda = Schema.Record(AshtakavargaPlanets, Pinda);
+export type ShodhyaPinda = typeof ShodhyaPinda.Type;
 
 export const AshtakavargaTotals = Schema.Struct({
   Sun: Schema.Int,
@@ -39,6 +46,7 @@ export const AshtakavargaTotals = Schema.Struct({
   Lagna: Schema.Int,
   sarva: Schema.Int,
 });
+export type AshtakavargaTotals = typeof AshtakavargaTotals.Type;
 
 export const AshtakavargaResult = Schema.Struct({
   bhinna: BhinnaAshtakavarga,
@@ -47,3 +55,4 @@ export const AshtakavargaResult = Schema.Struct({
   shodhya_pinda: ShodhyaPinda,
   totals: AshtakavargaTotals,
 });
+export type AshtakavargaResult = typeof AshtakavargaResult.Type;

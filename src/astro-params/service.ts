@@ -1,4 +1,4 @@
-import { Config, Context, Effect, Layer } from "effect";
+import { Context, Layer } from "effect";
 
 import { Ayanamsa, HouseSystem, type Options } from "./model.js";
 
@@ -18,17 +18,5 @@ const defaultLayer = layer({
   ayanamsa: "Lahiri",
   houseSystem: "WholeSign",
 });
-
-// function layerConfig(config: Config.Wrap<Options>) {
-//   return Layer.effect(
-//     Service,
-//     Config.unwrap(config).pipe(Effect.map((options) => Service.of(options))),
-//   );
-// }
-
-// const environmentConfig = {
-//   ayanamsa: Config.schema(Ayanamsa, "AYANAMSA").pipe(Config.withDefault("Lahiri")),
-//   houseSystem: Config.schema(HouseSystem, "HOUSE_SYSTEM").pipe(Config.withDefault("WholeSign")),
-// };
 
 export { Service as AstroParams, defaultLayer as DefaultAstroParams };
