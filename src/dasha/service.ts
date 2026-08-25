@@ -1,61 +1,168 @@
-import { Clock, Context, Effect, Layer } from "effect";
+import { Context, Effect, Layer, DateTime } from "effect";
+
 import type { Moment, Placements } from "../chart/model.js";
-import { makeCalculate } from "./calculate.js";
+import { calculate } from "./calculate.js";
 import { DashaTimelineError, type DashaCalculationError } from "./error.js";
 import type { AntarDasha, CurrentDasha, MahaDasha, VimshottariDasha } from "./model.js";
-import { DashaTimeline } from "./timeline.js";
 
-export interface Service {
-  readonly calculate: (
-    moment: Moment,
-    placements: Placements,
-  ) => Effect.Effect<VimshottariDasha, DashaCalculationError>;
-  readonly current: (
-    timeline: VimshottariDasha,
-    when?: string | Date,
-  ) => Effect.Effect<CurrentDasha, DashaTimelineError>;
-  readonly mahadasha: (
-    timeline: VimshottariDasha,
-    offset?: number,
-    when?: string | Date,
-  ) => Effect.Effect<MahaDasha | null, DashaTimelineError>;
-  readonly antardasha: (
-    timeline: VimshottariDasha,
-    offset?: number,
-    when?: string | Date,
-  ) => Effect.Effect<AntarDasha | null, DashaTimelineError>;
-}
+class Service extends Context.Service<
+  Service,
+  {
+    readonly calculate: (
+      moment: Moment,
+      placements: Placements,
+    ) => Effect.Effect<VimshottariDasha, DashaCalculationError>;
+    readonly current: (
+      timeline: VimshottariDasha,
+    ) => Effect.Effect<CurrentDasha | null, DashaTimelineError>;
+    readonly mahadasha: (
+      timeline: VimshottariDasha,
+      offset?: number,
+      when?: DateTime.Utc,
+    ) => Effect.Effect<MahaDasha | null, DashaTimelineError>;
+    readonly antardasha: (
+      timeline: VimshottariDasha,
+      offset?: number,
+      when?: DateTime.Utc,
+    ) => Effect.Effect<AntarDasha | null, DashaTimelineError>;
+  }
+>()("astro-ascendant/dasha/service") {}
 
-export const Service = Context.Service<Service>("astro-ascendant/dasha/Service");
+const parseDate = Effect.fn(function* (value: string) {
+  const [day, month, year] = value.split("-").map(Number);
 
-const queryDate = Effect.fn("Dasha.queryDate")(function* (when: string | Date | undefined) {
-  return when ?? new Date(yield* Clock.currentTimeMillis);
+  if (day === undefined || month === undefined || year === undefined) {
+    return yield* DashaTimelineError.make({
+      operation: "current",
+      cause: value,
+    });
+  }
+
+  return DateTime.makeUnsafe({
+    year,
+    month,
+    day,
+  });
 });
 
-export const layer = Layer.succeed(
+const contains = Effect.fn(function* (period: { start: string; end: string }, when: DateTime.Utc) {
+  const start = yield* parseDate(period.start);
+  const end = yield* parseDate(period.end);
+  return (
+    start.epochMilliseconds <= when.epochMilliseconds &&
+    when.epochMilliseconds < end.epochMilliseconds
+  );
+});
+
+const resolveWhen = Effect.fn(function* (when?: DateTime.Utc) {
+  if (when === undefined) {
+    return yield* DateTime.now;
+  }
+  return when;
+});
+
+const current = Effect.fn("astro-ascendant/dasha/current")(
+  function* (timeline: VimshottariDasha) {
+    let currentMahadasha: MahaDasha | null = null;
+
+    const now = yield* DateTime.now;
+
+    for (const mahadasha of timeline) {
+      const isCurrentMahadasha = yield* contains(
+        {
+          start: mahadasha.start,
+          end: mahadasha.end,
+        },
+        now,
+      );
+
+      if (isCurrentMahadasha) {
+        currentMahadasha = mahadasha;
+        break;
+      }
+    }
+
+    if (currentMahadasha === null) {
+      return null;
+    }
+
+    for (const antardasha of currentMahadasha.antardashas) {
+      const isCurrentAntardasha = yield* contains(
+        {
+          start: antardasha.start,
+          end: antardasha.end,
+        },
+        now,
+      );
+
+      if (isCurrentAntardasha) {
+        return {
+          mahadasha: currentMahadasha,
+          antardasha,
+        } satisfies CurrentDasha;
+      }
+    }
+
+    return null;
+  },
+  Effect.mapError((cause) =>
+    DashaTimelineError.make({
+      operation: "current",
+      cause,
+    }),
+  ),
+);
+
+const mahadasha = Effect.fn("astro-ascendant/dasha/mahadasha")(
+  function* (timeline: VimshottariDasha, offset = 0, when?: DateTime.Utc) {
+    let index = -1;
+    const at = yield* resolveWhen(when);
+    for (let i = 0; i < timeline.length; i++) {
+      if (yield* contains(timeline[i] as { start: string; end: string }, at)) {
+        index = i;
+        break;
+      }
+    }
+    if (index === -1) return null;
+    return timeline[index + offset] ?? null;
+  },
+  Effect.mapError((cause) => DashaTimelineError.make({ operation: "mahadasha", cause })),
+);
+
+const antardasha = Effect.fn("astro-ascendant/dasha/antardasha")(
+  function* (timeline: VimshottariDasha, offset = 0, when?: DateTime.Utc) {
+    const at = yield* resolveWhen(when);
+    let mahadashaPeriod: MahaDasha | null = null;
+
+    for (const mahadasha of timeline) {
+      if (yield* contains(mahadasha as { start: string; end: string }, at)) {
+        mahadashaPeriod = mahadasha;
+        break;
+      }
+    }
+    if (mahadashaPeriod === null) return null;
+
+    let index = -1;
+    for (let i = 0; i < mahadashaPeriod.antardashas.length; i++) {
+      if (yield* contains(mahadashaPeriod.antardashas[i] as { start: string; end: string }, at)) {
+        index = i;
+        break;
+      }
+    }
+    if (index === -1) return null;
+    return mahadashaPeriod.antardashas[index + offset] ?? null;
+  },
+  Effect.mapError((cause) => DashaTimelineError.make({ operation: "antardasha", cause })),
+);
+
+const layer = Layer.succeed(
   Service,
   Service.of({
-    calculate: makeCalculate(),
-    current: Effect.fn("Dasha.current")(function* (timeline, when) {
-      const target = yield* queryDate(when);
-      return yield* Effect.try({
-        try: () => new DashaTimeline(timeline).current(target),
-        catch: (cause) => new DashaTimelineError({ operation: "current", cause }),
-      });
-    }),
-    mahadasha: Effect.fn("Dasha.mahadasha")(function* (timeline, offset = 0, when) {
-      const target = yield* queryDate(when);
-      return yield* Effect.try({
-        try: () => new DashaTimeline(timeline).mahadasha(offset, target),
-        catch: (cause) => new DashaTimelineError({ operation: "mahadasha", cause }),
-      });
-    }),
-    antardasha: Effect.fn("Dasha.antardasha")(function* (timeline, offset = 0, when) {
-      const target = yield* queryDate(when);
-      return yield* Effect.try({
-        try: () => new DashaTimeline(timeline).antardasha(offset, target),
-        catch: (cause) => new DashaTimelineError({ operation: "antardasha", cause }),
-      });
-    }),
+    calculate,
+    current,
+    mahadasha,
+    antardasha,
   }),
 );
+
+export { Service as Dasha, layer as DashaLayer };
