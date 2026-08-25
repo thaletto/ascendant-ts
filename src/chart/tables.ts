@@ -1,5 +1,5 @@
-import { Nakshatra, type Planets, type RashiLords, type Rashis } from "./model.js";
 import { NAKSHATRA_NAMES, RASHI_NAMES } from "./literals.js";
+import { Nakshatra, type Planets, type RashiLords, type Rashis } from "./model.js";
 
 export const SIGN_LORDS: Record<typeof Rashis.Type, typeof RashiLords.Type> = {
   Aries: "Mars",

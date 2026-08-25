@@ -1,27 +1,30 @@
 import { Context, Effect, Layer } from "effect";
-import { Service as AstroParams } from "../astro-params/service.js";
-import { Service as Ephemeris } from "../ephemeris/service.js";
+
+import { AstroParams } from "../astro-params/service.js";
+import { Ephemeris } from "../ephemeris/service.js";
 import { ChartCalculationError, LocatedMomentValidationError } from "./error.js";
-import { makeGenerate } from "./generate.js";
-import { ChartCalculation, LocatedMoment } from "./model.js";
+import { generate } from "./generate.js";
+import { ChartCalculation, LocatedMoment, Division } from "./model.js";
 
-export interface Service {
-  readonly generate: (
-    input: LocatedMoment,
-    divisions?: readonly number[],
-  ) => Effect.Effect<ChartCalculation, ChartCalculationError | LocatedMomentValidationError>;
-}
-
-export const Service = Context.Service<Service>("astro-ascendant/chart/Service");
-
-export const layer = Layer.effect(
+class Service extends Context.Service<
   Service,
-  Effect.gen(function* () {
-    const ephemeris = yield* Effect.service(Ephemeris);
-    const astroParams = yield* Effect.service(AstroParams);
+  {
+    readonly generate: (
+      input: LocatedMoment,
+      divisions: readonly [typeof Division.Type, ...(typeof Division.Type)[]],
+    ) => Effect.Effect<
+      ChartCalculation,
+      ChartCalculationError | LocatedMomentValidationError,
+      AstroParams | Ephemeris
+    >;
+  }
+>()("astro-ascendant/chart/service") {}
 
-    return Service.of({
-      generate: makeGenerate(ephemeris, astroParams),
-    });
+const layer = Layer.succeed(
+  Service,
+  Service.of({
+    generate,
   }),
 );
+
+export { Service as Chart, layer as ChartLayer };

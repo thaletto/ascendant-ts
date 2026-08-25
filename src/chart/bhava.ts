@@ -1,4 +1,5 @@
 import { Effect, Schema } from "effect";
+
 import type { HouseData } from "../ephemeris/model.js";
 import { ChartCalculationError } from "./error.js";
 import {
@@ -43,7 +44,7 @@ export const bhavaFromHouseData = Effect.fn("Chart.Bhava.fromHouseData")(functio
     rawCusps.some((cusp) => !Number.isFinite(cusp)) ||
     rawAngles.some((angle) => !Number.isFinite(angle))
   ) {
-    return yield* new ChartCalculationError({
+    return yield* ChartCalculationError.make({
       stage: "mapping",
       message: "Could not calculate Bhava chart",
       cause: houses,
@@ -57,7 +58,7 @@ export const bhavaFromHouseData = Effect.fn("Chart.Bhava.fromHouseData")(functio
   });
   const fullCircle = spans.reduce((total, span) => total + span, 0);
   if (spans.some((span) => span === 0) || Math.abs(fullCircle - 360) > 1e-7) {
-    return yield* new ChartCalculationError({
+    return yield* ChartCalculationError.make({
       stage: "mapping",
       message: "Could not calculate Bhava chart",
       cause: houses.cusps,
@@ -67,28 +68,30 @@ export const bhavaFromHouseData = Effect.fn("Chart.Bhava.fromHouseData")(functio
   const planets = Object.values(d1.houses).flatMap((house) => house.planets);
   const lagna = d1.houses[1].lagna;
   if (lagna === null) {
-    return yield* new ChartCalculationError({
+    return yield* ChartCalculationError.make({
       stage: "mapping",
       message: "Could not calculate Bhava chart",
       cause: d1,
     });
   }
 
-  const houseFor = (longitude: number): number =>
-    cusps.findIndex((cusp, index) => {
+  function houseFor(longitude: number): number {
+    return cusps.findIndex((cusp, index) => {
       const span = spans[index];
       return span !== undefined && forwardDistance(cusp, longitude) < span;
     });
+  }
 
   const planetsByHouse: Array<Array<Planet>> = Array.from(
     { length: HOUSE_NUMBERS.length },
     () => [],
   );
+
   for (const planet of planets) {
     const houseIndex = houseFor(planet.longitude);
     const housePlanets = planetsByHouse[houseIndex];
     if (housePlanets === undefined) {
-      return yield* new ChartCalculationError({
+      return yield* ChartCalculationError.make({
         stage: "mapping",
         message: "Could not calculate Bhava chart",
         cause: houses.cusps,
@@ -102,7 +105,7 @@ export const bhavaFromHouseData = Effect.fn("Chart.Bhava.fromHouseData")(functio
     const cusp = cusps[index];
     const housePlanets = planetsByHouse[index];
     if (cusp === undefined || housePlanets === undefined) {
-      return yield* new ChartCalculationError({
+      return yield* ChartCalculationError.make({
         stage: "mapping",
         message: "Could not calculate Bhava chart",
         cause: houses.cusps,
@@ -110,7 +113,7 @@ export const bhavaFromHouseData = Effect.fn("Chart.Bhava.fromHouseData")(functio
     }
     bhavaHouseEntries.push([
       houseNumber,
-      new BhavaHouse({
+      BhavaHouse.make({
         cusp: Longitude.make(cusp),
         planets: housePlanets,
         lagna: index === 0 ? lagna : null,
@@ -121,19 +124,18 @@ export const bhavaFromHouseData = Effect.fn("Chart.Bhava.fromHouseData")(functio
   const bhavaHouses = yield* Schema.decodeUnknownEffect(BhavaHouses)(
     Object.fromEntries(bhavaHouseEntries),
   ).pipe(
-    Effect.mapError(
-      (cause) =>
-        new ChartCalculationError({
-          stage: "mapping",
-          message: "Could not calculate Bhava chart",
-          cause,
-        }),
+    Effect.mapError((cause) =>
+      ChartCalculationError.make({
+        stage: "mapping",
+        message: "Could not calculate Bhava chart",
+        cause,
+      }),
     ),
   );
 
-  return new BhavaChart({
+  return BhavaChart.make({
     houses: bhavaHouses,
-    angles: new BhavaAngles({
+    angles: BhavaAngles.make({
       ascendant: CircleAngle.make(normalizeAngle(houses.ascendant)),
       mc: CircleAngle.make(normalizeAngle(houses.mc)),
       armc: CircleAngle.make(normalizeAngle(houses.armc)),

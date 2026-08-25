@@ -1,8 +1,9 @@
 import { Effect, Schema } from "effect";
+
 import { type HouseData, type PlanetaryPosition } from "../ephemeris/model.js";
+import { normalizeLongitude } from "./divisional-mapping.js";
 import { ChartCalculationError } from "./error.js";
 import { type Planets, Placements, SourceLagna, SourcePlanet } from "./model.js";
-import { normalizeLongitude } from "./divisional-mapping.js";
 import { nakshatraOf } from "./tables.js";
 
 export interface PlacementEvidence {
@@ -22,14 +23,13 @@ export const placementsFromEvidence = Effect.fn("Chart.placementsFromEvidence")(
     const sourcePlanets = yield* Effect.all(
       evidence.planetEntries.map(([name, position]) =>
         normalizeLongitude(position.longitude).pipe(
-          Effect.map(
-            (longitude) =>
-              new SourcePlanet({
-                name,
-                longitude,
-                is_retrograde: position.longitudeSpeed < 0,
-                nakshatra: nakshatraOf(longitude),
-              }),
+          Effect.map((longitude) =>
+            SourcePlanet.make({
+              name,
+              longitude,
+              is_retrograde: position.longitudeSpeed < 0,
+              nakshatra: nakshatraOf(longitude),
+            }),
           ),
         ),
       ),
@@ -38,14 +38,14 @@ export const placementsFromEvidence = Effect.fn("Chart.placementsFromEvidence")(
 
     const rahu = sourcePlanets.find((planet) => planet.name === "Rahu");
     if (rahu === undefined) {
-      return yield* new MissingPlacementError({ placement: "Rahu" });
+      return yield* MissingPlacementError.make({ placement: "Rahu" });
     }
 
     const ketuLongitude = yield* normalizeLongitude(rahu.longitude + 180);
     const ascendant = yield* normalizeLongitude(evidence.houses.ascendant);
     const planets = [
       ...sourcePlanets,
-      new SourcePlanet({
+      SourcePlanet.make({
         name: "Ketu",
         longitude: ketuLongitude,
         is_retrograde: rahu.is_retrograde,
@@ -53,8 +53,8 @@ export const placementsFromEvidence = Effect.fn("Chart.placementsFromEvidence")(
       }),
     ];
 
-    return new Placements({
-      lagna: new SourceLagna({
+    return Placements.make({
+      lagna: SourceLagna.make({
         name: "Lagna",
         longitude: ascendant,
         nakshatra: nakshatraOf(ascendant),
@@ -62,12 +62,11 @@ export const placementsFromEvidence = Effect.fn("Chart.placementsFromEvidence")(
       planets,
     });
   },
-  Effect.mapError(
-    (cause) =>
-      new ChartCalculationError({
-        stage: "placements",
-        message: "Could not calculate Placements",
-        cause,
-      }),
+  Effect.mapError((cause) =>
+    ChartCalculationError.make({
+      stage: "placements",
+      message: "Could not calculate Placements",
+      cause,
+    }),
   ),
 );

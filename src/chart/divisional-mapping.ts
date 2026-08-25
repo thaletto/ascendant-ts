@@ -1,4 +1,5 @@
 import { Effect, pipe, Schema } from "effect";
+
 import { Degree, Division, Longitude } from "./model.js";
 
 export const DIVISIONAL_MAPPING = "ascendant-divisional-mapping" as const;

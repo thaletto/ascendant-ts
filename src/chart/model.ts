@@ -1,4 +1,5 @@
 import { Schema } from "effect";
+
 import { Options as AstroParamsOptions } from "../astro-params/model.js";
 import { NAKSHATRA_NAMES, PLANET_NAMES, RASHI_NAMES } from "./literals.js";
 
@@ -149,7 +150,7 @@ export class ChartCalculation extends Schema.Class<ChartCalculation>("ChartCalcu
 }) {}
 
 export class Moment extends Schema.Class<Moment>("Moment")({
-  date: Schema.Date,
+  date: Schema.DateTimeUtc,
 }) {}
 
 export class LocatedMoment extends Schema.Class<LocatedMoment>("LocatedMoment")({
