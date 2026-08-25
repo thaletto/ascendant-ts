@@ -1,17 +1,18 @@
 import { Context, Effect, Layer, Schema } from "effect";
+
+import { SIGN_LORDS } from "../chart/helper.js";
 import { RASHI_NAMES } from "../chart/literals.js";
 import { Houses, RashiLords, Rashis, type Placements } from "../chart/model.js";
-import { SIGN_LORDS } from "../chart/tables.js";
 import { signAt, signIndexOf } from "../internal/sign-position.js";
 
-export const Provenance = Schema.Struct({
+const Provenance = Schema.Struct({
   school: Schema.Literal("Jaimini"),
   method: Schema.Literal("plain-projection"),
   version: Schema.Literal(1),
 });
-export interface Provenance extends Schema.Schema.Type<typeof Provenance> {}
+interface Provenance extends Schema.Schema.Type<typeof Provenance> {}
 
-export const Result = Schema.Struct({
+const Result = Schema.Struct({
   provenance: Provenance,
   house: Houses,
   sourceSign: Rashis,
@@ -19,15 +20,15 @@ export const Result = Schema.Struct({
   lordSign: Rashis,
   sign: Rashis,
 });
-export interface Result extends Schema.Schema.Type<typeof Result> {}
+interface Result extends Schema.Schema.Type<typeof Result> {}
 
-export class EvidenceError extends Schema.TaggedError<EvidenceError>()("ArudhaPadaEvidenceError", {
+class EvidenceError extends Schema.TaggedError<EvidenceError>()("ArudhaPadaEvidenceError", {
   placement: RashiLords,
   expected: Schema.Literal(1),
   actual: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
 }) {}
 
-export const calculate = Effect.fn("ArudhaPada.calculate")(function* (
+const calculate = Effect.fn("astro-ascendant/jaimini/arudha-pada/calculate")(function* (
   placements: Placements,
   house: typeof Houses.Type,
 ) {
@@ -38,7 +39,7 @@ export const calculate = Effect.fn("ArudhaPada.calculate")(function* (
   const matches = placements.planets.filter((planet) => planet.name === lord);
   const lordPlacement = matches[0];
   if (matches.length !== 1 || lordPlacement === undefined) {
-    return yield* new EvidenceError({
+    return yield* EvidenceError.make({
       placement: lord,
       expected: 1,
       actual: matches.length,
@@ -62,13 +63,16 @@ export const calculate = Effect.fn("ArudhaPada.calculate")(function* (
   } satisfies Result;
 });
 
-export interface Service {
-  readonly calculate: (
-    placements: Placements,
-    house: typeof Houses.Type,
-  ) => Effect.Effect<Result, EvidenceError>;
-}
+class Service extends Context.Service<
+  Service,
+  {
+    readonly calculate: (
+      placements: Placements,
+      house: typeof Houses.Type,
+    ) => Effect.Effect<Result, EvidenceError>;
+  }
+>()("astro-ascendant/jaimini/arudha-pada/Service") {}
 
-export const Service = Context.Service<Service>("astro-ascendant/arudha-pada/Service");
+const layer = Layer.succeed(Service, Service.of({ calculate }));
 
-export const layer = Layer.succeed(Service, Service.of({ calculate }));
+export { Service as ArudhaPada, layer as ArudhaPadaLayer };

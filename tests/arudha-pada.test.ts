@@ -1,7 +1,8 @@
 import { describe, expect, it } from "@effect/vitest";
 import { Effect } from "effect";
-import * as ArudhaPada from "../src/jaimini/arudha-pada.js";
+
 import * as Chart from "../src/chart/index.js";
+import * as ArudhaPada from "../src/jaimini/arudha-pada.js";
 
 function sourcePlanet(name: typeof Chart.Planets.Type, longitude: number): Chart.SourcePlanet {
   return new Chart.SourcePlanet({

@@ -1,9 +1,10 @@
 import { Effect, Schema } from "effect";
+
 import { Division } from "../chart/model.js";
-import { YogaCondition, type YogaDefinition, YogaStrategy } from "./internal.js";
 import { housePatternDefinitions } from "./definitions/house-patterns.js";
 import { moonRelativeDefinitions } from "./definitions/moon-relative.js";
 import { InvalidYogaCatalogError } from "./error.js";
+import { YogaCondition, type YogaDefinition, YogaStrategy } from "./internal.js";
 
 function normalizedAlias(value: string): string {
   return value.trim().toLocaleLowerCase();

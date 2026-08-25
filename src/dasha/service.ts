@@ -1,6 +1,6 @@
 import { Context, Effect, Layer, DateTime } from "effect";
 
-import type { Moment, Placements } from "../chart/model.js";
+import type { Moment, Placements } from "../internal/model.js";
 import { calculate } from "./calculate.js";
 import { DashaTimelineError, type DashaCalculationError } from "./error.js";
 import type { AntarDasha, CurrentDasha, MahaDasha, VimshottariDasha } from "./model.js";

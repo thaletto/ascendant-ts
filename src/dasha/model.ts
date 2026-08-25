@@ -1,6 +1,6 @@
 import { Schema } from "effect";
 
-import { Planets } from "../chart/model.js";
+import { Planets } from "../internal/model.js";
 
 export const AntarDasha = Schema.Struct({
   mahadasha: Planets,

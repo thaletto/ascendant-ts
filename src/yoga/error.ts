@@ -1,4 +1,5 @@
 import { Schema } from "effect";
+
 import { Division } from "../chart/model.js";
 import { YogaIds } from "./model.js";
 

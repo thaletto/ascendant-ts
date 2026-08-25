@@ -1,5 +1,5 @@
 import { RASHI_NAMES } from "../chart/literals.js";
-import type { AshtakavargaEntity, AshtakavargaPlanet } from "./model.js";
+import { AshtakavargaEntities, AshtakavargaPlanets } from "./model.js";
 
 export const ASHTAKAVARGA_PLANET_ORDER = [
   "Sun",
@@ -9,17 +9,20 @@ export const ASHTAKAVARGA_PLANET_ORDER = [
   "Jupiter",
   "Venus",
   "Saturn",
-] as const satisfies readonly AshtakavargaPlanet[];
+] as const satisfies readonly (typeof AshtakavargaPlanets.Type)[];
 
 export const ASHTAKAVARGA_ENTITY_ORDER = [
   ...ASHTAKAVARGA_PLANET_ORDER,
   "Lagna",
-] as const satisfies readonly AshtakavargaEntity[];
+] as const satisfies readonly (typeof AshtakavargaEntities.Type)[];
 
 export const RASHI_ORDER = RASHI_NAMES;
 
 type ContributionOffsets = Readonly<
-  Record<AshtakavargaEntity, Readonly<Record<AshtakavargaEntity, readonly number[]>>>
+  Record<
+    typeof AshtakavargaEntities.Type,
+    Readonly<Record<typeof AshtakavargaEntities.Type, readonly number[]>>
+  >
 >;
 
 export const CONTRIBUTION_OFFSETS = {
@@ -114,7 +117,7 @@ export const EXPECTED_BAV_TOTALS = {
   Venus: 52,
   Saturn: 39,
   Lagna: 49,
-} as const satisfies Readonly<Record<AshtakavargaEntity, number>>;
+} as const satisfies Readonly<Record<typeof AshtakavargaEntities.Type, number>>;
 
 export const EXPECTED_SAV_TOTAL = 337;
 
@@ -143,4 +146,4 @@ export const GRAHA_GUNAKAR = {
   Jupiter: 10,
   Venus: 7,
   Saturn: 5,
-} as const satisfies Readonly<Record<AshtakavargaPlanet, number>>;
+} as const satisfies Readonly<Record<typeof AshtakavargaPlanets.Type, number>>;

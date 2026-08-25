@@ -1,4 +1,5 @@
 import { Context, Effect } from "effect";
+import type { DateTime } from "effect/DateTime";
 
 import { type Ayanamsa, type HouseSystem } from "../astro-params/model.js";
 import { EphemerisError } from "./error.js";
@@ -12,7 +13,7 @@ import {
 class Service extends Context.Service<
   Service,
   {
-    readonly dateToJulianDay: (date: Date) => Effect.Effect<JulianDay, EphemerisError>;
+    readonly dateToJulianDay: (date: DateTime) => Effect.Effect<JulianDay, EphemerisError>;
     readonly calculatePosition: (
       julianDay: JulianDay,
       body: CelestialBody,

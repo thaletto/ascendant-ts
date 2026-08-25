@@ -1,35 +1,36 @@
 import { Context, Effect, Layer, Schema } from "effect";
-import * as CharaKarakas from "./chara-karakas.js";
-import { getDivisionalTarget } from "../chart/divisional-mapping.js";
+
+import { getDivisionalTarget } from "../chart/divisional-mapping/index.js";
 import { RASHI_NAMES } from "../chart/literals.js";
 import { Rashis, type Placements } from "../chart/model.js";
+import * as CharaKarakas from "./chara-karakas.js";
 
-export const Provenance = Schema.Struct({
+const Provenance = Schema.Struct({
   school: Schema.Literal("Jaimini"),
   method: Schema.Literal("atmakaraka-d9-sign"),
   version: Schema.Literal(1),
 });
-export interface Provenance extends Schema.Schema.Type<typeof Provenance> {}
+interface Provenance extends Schema.Schema.Type<typeof Provenance> {}
 
-export const Placement = Schema.Struct({
+const Placement = Schema.Struct({
   planet: CharaKarakas.ClassicalPlanets,
   sign: Rashis,
 });
-export interface Placement extends Schema.Schema.Type<typeof Placement> {}
+interface Placement extends Schema.Schema.Type<typeof Placement> {}
 
-export const Result = Schema.Struct({
+const Result = Schema.Struct({
   provenance: Provenance,
   placements: Schema.NonEmptyArray(Placement),
 });
-export interface Result extends Schema.Schema.Type<typeof Result> {}
+interface Result extends Schema.Schema.Type<typeof Result> {}
 
-export class EvidenceError extends Schema.TaggedError<EvidenceError>()("KarakamshaEvidenceError", {
+class EvidenceError extends Schema.TaggedError<EvidenceError>()("KarakamshaEvidenceError", {
   placement: CharaKarakas.ClassicalPlanets,
   expected: Schema.Literal(1),
   actual: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
 }) {}
 
-export class CalculationError extends Schema.TaggedError<CalculationError>()(
+class CalculationError extends Schema.TaggedError<CalculationError>()(
   "KarakamshaCalculationError",
   {
     message: Schema.String,
@@ -39,13 +40,12 @@ export class CalculationError extends Schema.TaggedError<CalculationError>()(
 
 export const calculate = Effect.fn("Karakamsha.calculate")(function* (placements: Placements) {
   const charaKarakas = yield* CharaKarakas.calculate(placements).pipe(
-    Effect.mapError(
-      (error) =>
-        new EvidenceError({
-          placement: error.placement,
-          expected: 1,
-          actual: error.actual,
-        }),
+    Effect.mapError((error) =>
+      EvidenceError.make({
+        placement: error.placement,
+        expected: 1,
+        actual: error.actual,
+      }),
     ),
   );
 
@@ -53,7 +53,7 @@ export const calculate = Effect.fn("Karakamsha.calculate")(function* (placements
     charaKarakas.assignments.Atmakaraka.map((holder) => {
       const source = placements.planets.find((planet) => planet.name === holder.planet);
       if (source === undefined) {
-        return Effect.fail(new EvidenceError({ placement: holder.planet, expected: 1, actual: 0 }));
+        return EvidenceError.make({ placement: holder.planet, expected: 1, actual: 0 });
       }
       return getDivisionalTarget(source.longitude, 9).pipe(
         Effect.map((target) => {
@@ -61,12 +61,11 @@ export const calculate = Effect.fn("Karakamsha.calculate")(function* (placements
           if (sign === undefined) throw new Error(`Missing D9 Sign at index ${target.signIndex}`);
           return { planet: holder.planet, sign };
         }),
-        Effect.mapError(
-          (cause) =>
-            new CalculationError({
-              message: `Could not calculate the D9 Sign for ${holder.planet}`,
-              cause,
-            }),
+        Effect.mapError((cause) =>
+          CalculationError.make({
+            message: `Could not calculate the D9 Sign for ${holder.planet}`,
+            cause,
+          }),
         ),
       );
     }),
@@ -86,12 +85,15 @@ export const calculate = Effect.fn("Karakamsha.calculate")(function* (placements
   } satisfies Result;
 });
 
-export interface Service {
-  readonly calculate: (
-    placements: Placements,
-  ) => Effect.Effect<Result, EvidenceError | CalculationError>;
-}
+class Service extends Context.Service<
+  Service,
+  {
+    readonly calculate: (
+      placements: Placements,
+    ) => Effect.Effect<Result, EvidenceError | CalculationError>;
+  }
+>()("astro-ascendant/jaimini/karakamsha/Service") {}
 
-export const Service = Context.Service<Service>("astro-ascendant/karakamsha/Service");
+const layer = Layer.succeed(Service, Service.of({ calculate }));
 
-export const layer = Layer.succeed(Service, Service.of({ calculate }));
+export { Service as Karakamsha, layer as KarakamshaLayer };

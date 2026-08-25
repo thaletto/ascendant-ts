@@ -1,4 +1,5 @@
 import { Context, Effect, Layer, Schema } from "effect";
+
 import { PLANET_NAMES, RASHI_NAMES } from "../chart/literals.js";
 import { Planets, Rashis, type Placements } from "../chart/model.js";
 import { signAt, signIndexOf } from "../internal/sign-position.js";
@@ -64,7 +65,7 @@ function relation(
   return { position, sign, planets };
 }
 
-export const calculate = Effect.fn("Argala.calculate")(function* (
+const calculate = Effect.fn("astro-ascendant/jaimini/argala/calculate")(function* (
   placements: Placements,
   reference: Reference,
 ) {
@@ -76,7 +77,7 @@ export const calculate = Effect.fn("Argala.calculate")(function* (
     const matches = placements.planets.filter((placement) => placement.name === planet);
     const match = matches[0];
     if (matches.length !== 1 || match === undefined) {
-      return yield* new EvidenceError({
+      return yield* EvidenceError.make({
         placement: planet,
         expected: 1,
         actual: matches.length,
@@ -120,13 +121,16 @@ export const calculate = Effect.fn("Argala.calculate")(function* (
   } satisfies Result;
 });
 
-export interface Service {
-  readonly calculate: (
-    placements: Placements,
-    reference: Reference,
-  ) => Effect.Effect<Result, EvidenceError>;
-}
+class Service extends Context.Service<
+  Service,
+  {
+    readonly calculate: (
+      placements: Placements,
+      reference: Reference,
+    ) => Effect.Effect<Result, EvidenceError>;
+  }
+>()("astro-ascendant/jaimini/argala/Service") {}
 
-export const Service = Context.Service<Service>("astro-ascendant/argala/Service");
+const layer = Layer.succeed(Service, Service.of({ calculate }));
 
-export const layer = Layer.succeed(Service, Service.of({ calculate }));
+export { Service as Argala, layer as ArgalaLayer };

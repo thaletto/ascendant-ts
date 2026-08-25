@@ -1,7 +1,8 @@
 import { describe, expect, it } from "@effect/vitest";
 import { Effect } from "effect";
+
+import { getDivisionalTarget } from "../src/chart/divisional-mapping/index.js";
 import { Division } from "../src/chart/index.js";
-import { getDivisionalTarget } from "../src/chart/divisional-mapping.js";
 
 describe("getDivisionalTarget", () => {
   it.effect.each([

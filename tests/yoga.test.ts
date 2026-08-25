@@ -1,8 +1,9 @@
 import { describe, expect, it } from "@effect/vitest";
 import { Cause, Deferred, Effect, Fiber, Layer, Ref, Schema } from "effect";
+
 import * as Chart from "../src/chart/index.js";
-import * as Yoga from "../src/yoga/index.js";
 import { definitions } from "../src/yoga/catalog.js";
+import * as Yoga from "../src/yoga/index.js";
 import { YogaCondition, type YogaDefinition, YogaStrategy } from "../src/yoga/internal.js";
 import { makeLayer } from "../src/yoga/service.js";
 

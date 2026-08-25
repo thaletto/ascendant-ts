@@ -2,10 +2,10 @@ import { Function } from "effect";
 
 import type { Planet } from "../../internal/model.js";
 
-export const normalizeAngle = Function.dual<
-  (angle: number) => number,
-  (angle: number) => number
->(1, (angle) => ((angle % 360) + 360) % 360);
+export const normalizeAngle = Function.dual<(angle: number) => number, (angle: number) => number>(
+  1,
+  (angle) => ((angle % 360) + 360) % 360,
+);
 
 export const forwardDistance = Function.dual<
   (to: number) => (from: number) => number,
@@ -23,8 +23,15 @@ export const houseFor = Function.dual<
 );
 
 export const distributePlanets = Function.dual<
-  (cusps: readonly number[], spans: readonly number[]) => (planets: readonly Planet[]) => readonly (readonly Planet[])[],
-  (planets: readonly Planet[], cusps: readonly number[], spans: readonly number[]) => readonly (readonly Planet[])[]
+  (
+    cusps: readonly number[],
+    spans: readonly number[],
+  ) => (planets: readonly Planet[]) => readonly (readonly Planet[])[],
+  (
+    planets: readonly Planet[],
+    cusps: readonly number[],
+    spans: readonly number[],
+  ) => readonly (readonly Planet[])[]
 >(3, (planets, cusps, spans) => {
   const planetsByHouse: Planet[][] = Array.from({ length: 12 }, () => []);
 

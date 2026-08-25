@@ -1,6 +1,6 @@
 import { Effect, DateTime } from "effect";
 
-import type { Moment, Placements, Planets } from "../chart/model.js";
+import type { Moment, Placements, Planets } from "../internal/model.js";
 import { DashaCalculationError } from "./error.js";
 import { AntarDasha, MahaDasha } from "./model.js";
 
@@ -14,7 +14,7 @@ const VIMSHOTTARI_PLANETS = [
   "Jupiter",
   "Saturn",
   "Mercury",
-] as const satisfies readonly (typeof Planets.Type)[];
+] as const satisfies readonly Planets[];
 
 const VIMSHOTTARI_YEARS: Readonly<Record<(typeof VIMSHOTTARI_PLANETS)[number], number>> = {
   Ketu: 7,

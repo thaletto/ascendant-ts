@@ -1,4 +1,5 @@
 import { Effect } from "effect";
+
 import type { Placements, Rashis } from "../chart/model.js";
 import {
   ASHTAKAVARGA_ENTITY_ORDER,
@@ -13,9 +14,9 @@ import {
   TRIKONA_GROUPS,
 } from "./constants.js";
 import { SAVCalculationError } from "./error.js";
-import type {
-  AshtakavargaEntity,
-  AshtakavargaPlanet,
+import {
+  AshtakavargaEntities,
+  AshtakavargaPlanets,
   AshtakavargaResult,
   BhinnaAshtakavarga,
   Pinda,
@@ -24,9 +25,9 @@ import type {
   SignScores,
 } from "./model.js";
 
-type EntityPositions = Readonly<Record<AshtakavargaEntity, number>>;
+type EntityPositions = Readonly<Record<typeof AshtakavargaEntities.Type, number>>;
 
-function signScores(scores: readonly number[]): SignScores {
+function signScores(scores: readonly number[]): typeof SignScores.Type {
   if (scores.length !== RASHI_ORDER.length) {
     throw new Error(`Expected 12 sign scores; received ${scores.length}`);
   }
@@ -57,12 +58,12 @@ function rashiAt(index: number): typeof Rashis.Type {
   return rashi;
 }
 
-function total(scores: SignScores): number {
+function total(scores: typeof SignScores.Type): number {
   return RASHI_ORDER.reduce((sum, rashi) => sum + scores[rashi], 0);
 }
 
 function entityPositions(placements: Placements): EntityPositions {
-  const planetPosition = (name: AshtakavargaPlanet): number => {
+  const planetPosition = (name: typeof AshtakavargaPlanets.Type): number => {
     const matches = placements.planets.filter((planet) => planet.name === name);
     const match = matches[0];
     if (matches.length !== 1 || match === undefined) {
@@ -83,7 +84,10 @@ function entityPositions(placements: Placements): EntityPositions {
   };
 }
 
-function calculateSignScores(target: AshtakavargaEntity, positions: EntityPositions): SignScores {
+function calculateSignScores(
+  target: typeof AshtakavargaEntities.Type,
+  positions: EntityPositions,
+): typeof SignScores.Type {
   return signScores(
     RASHI_ORDER.map((_, signIndex) =>
       ASHTAKAVARGA_ENTITY_ORDER.reduce((score, contributor) => {
@@ -94,7 +98,7 @@ function calculateSignScores(target: AshtakavargaEntity, positions: EntityPositi
   );
 }
 
-function calculateBhinna(positions: EntityPositions): BhinnaAshtakavarga {
+function calculateBhinna(positions: EntityPositions): typeof BhinnaAshtakavarga.Type {
   return {
     Sun: calculateSignScores("Sun", positions),
     Moon: calculateSignScores("Moon", positions),
@@ -107,7 +111,7 @@ function calculateBhinna(positions: EntityPositions): BhinnaAshtakavarga {
   };
 }
 
-function validateBhinna(bhinna: BhinnaAshtakavarga): void {
+function validateBhinna(bhinna: typeof BhinnaAshtakavarga.Type): void {
   for (const entity of ASHTAKAVARGA_ENTITY_ORDER) {
     const actual = total(bhinna[entity]);
     const expected = EXPECTED_BAV_TOTALS[entity];
@@ -117,7 +121,7 @@ function validateBhinna(bhinna: BhinnaAshtakavarga): void {
   }
 }
 
-function calculateSarva(bhinna: BhinnaAshtakavarga): SignScores {
+function calculateSarva(bhinna: typeof BhinnaAshtakavarga.Type): typeof SignScores.Type {
   const sarva = signScores(
     RASHI_ORDER.map((rashi) =>
       ASHTAKAVARGA_PLANET_ORDER.reduce((score, planet) => score + bhinna[planet][rashi], 0),
@@ -130,7 +134,7 @@ function calculateSarva(bhinna: BhinnaAshtakavarga): SignScores {
   return sarva;
 }
 
-function reduceScores(scores: SignScores): SignScores {
+function reduceScores(scores: typeof SignScores.Type): typeof SignScores.Type {
   const reduced = RASHI_ORDER.map((rashi) => scores[rashi]);
 
   for (const group of TRIKONA_GROUPS) {
@@ -153,7 +157,7 @@ function reduceScores(scores: SignScores): SignScores {
   return signScores(reduced);
 }
 
-function calculateReduced(bhinna: BhinnaAshtakavarga): ReducedAshtakavarga {
+function calculateReduced(bhinna: typeof BhinnaAshtakavarga.Type): typeof ReducedAshtakavarga.Type {
   return {
     Sun: reduceScores(bhinna.Sun),
     Moon: reduceScores(bhinna.Moon),
@@ -165,7 +169,7 @@ function calculateReduced(bhinna: BhinnaAshtakavarga): ReducedAshtakavarga {
   };
 }
 
-function calculatePlanetPinda(scores: SignScores, positions: EntityPositions): Pinda {
+function calculatePlanetPinda(scores: typeof SignScores.Type, positions): typeof Pinda.Type {
   const rashi_pinda = RASHI_ORDER.reduce(
     (sum, rashi, index) => sum + scores[rashi] * (RASHI_GUNAKAR[index] ?? 0),
     0,

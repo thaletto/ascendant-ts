@@ -1,5 +1,6 @@
 import { describe, expect, it } from "@effect/vitest";
 import { Effect } from "effect";
+
 import * as Chart from "../src/chart/index.js";
 import * as Upapada from "../src/jaimini/upapada.js";
 
