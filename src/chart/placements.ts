@@ -1,7 +1,7 @@
 import { Effect } from "effect";
 
 import { Placements, SourceLagna, SourcePlanet } from "../internal/model.js";
-import { normalizeLongitude } from "./divisional-mapping/index.js";
+import { normalizeLongitude } from "./divisional-mapping/calculate.js";
 import { ChartCalculationError, MissingPlacementError } from "./error.js";
 import { nakshatraOf } from "./helper.js";
 import type { PlacementEvidence } from "./model.js";

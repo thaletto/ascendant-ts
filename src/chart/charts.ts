@@ -12,7 +12,7 @@ import {
   Rashis,
   Sign,
 } from "../internal/model.js";
-import { getDivisionalTarget } from "./divisional-mapping/index.js";
+import { getDivisionalTarget } from "./divisional-mapping/calculate.js";
 import { ChartCalculationError } from "./error.js";
 import { inSignStatus } from "./helper.js";
 
