@@ -1,4 +1,5 @@
 import { Schema } from "effect";
+
 import { Houses, Planets } from "../../chart/model.js";
 
 export class Aspect extends Schema.Class<Aspect>("Aspect")({
