@@ -1,9 +1,8 @@
 import { Context, Effect, Layer, Schema } from "effect";
 
-import { SIGN_LORDS } from "../chart/helper.js";
-import { RASHI_NAMES } from "../chart/literals.js";
-import { Houses, RashiLords, Rashis, type Placements } from "../chart/model.js";
+import { RASHIS, SIGN_LORDS } from "../internal/constant.js";
 import { signAt, signIndexOf } from "../internal/helper.js";
+import { Houses, RashiLords, Rashis, type Placements } from "../internal/model.js";
 
 const Provenance = Schema.Struct({
   school: Schema.Literal("Jaimini"),
@@ -30,10 +29,10 @@ class EvidenceError extends Schema.TaggedError<EvidenceError>()("ArudhaPadaEvide
 
 const calculate = Effect.fn("astro-ascendant/jaimini/arudha-pada/calculate")(function* (
   placements: Placements,
-  house: typeof Houses.Type,
+  house: Houses,
 ) {
   const lagnaSignIndex = signIndexOf(placements.lagna.longitude);
-  const sourceSignIndex = (lagnaSignIndex + house - 1) % RASHI_NAMES.length;
+  const sourceSignIndex = (lagnaSignIndex + house - 1) % RASHIS.length;
   const sourceSign = signAt(sourceSignIndex);
   const lord = SIGN_LORDS[sourceSign];
   const matches = placements.planets.filter((planet) => planet.name === lord);
@@ -47,7 +46,7 @@ const calculate = Effect.fn("astro-ascendant/jaimini/arudha-pada/calculate")(fun
   }
 
   const lordSignIndex = signIndexOf(lordPlacement.longitude);
-  const distance = (lordSignIndex - sourceSignIndex + RASHI_NAMES.length) % RASHI_NAMES.length;
+  const distance = (lordSignIndex - sourceSignIndex + RASHIS.length) % RASHIS.length;
 
   return {
     provenance: {
@@ -68,7 +67,7 @@ class Service extends Context.Service<
   {
     readonly calculate: (
       placements: Placements,
-      house: typeof Houses.Type,
+      house: Houses,
     ) => Effect.Effect<Result, EvidenceError>;
   }
 >()("astro-ascendant/jaimini/arudha-pada/Service") {}
