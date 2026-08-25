@@ -3,7 +3,7 @@ import { Context, Effect, Layer, Schema } from "effect";
 import { SIGN_LORDS } from "../chart/helper.js";
 import { RASHI_NAMES } from "../chart/literals.js";
 import { Houses, RashiLords, Rashis, type Placements } from "../chart/model.js";
-import { signAt, signIndexOf } from "../internal/sign-position.js";
+import { signAt, signIndexOf } from "../internal/helper.js";
 
 const Provenance = Schema.Struct({
   school: Schema.Literal("Jaimini"),

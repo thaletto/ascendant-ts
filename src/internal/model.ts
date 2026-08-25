@@ -161,3 +161,16 @@ export class LocatedMoment extends Schema.Class<LocatedMoment>("LocatedMoment")(
   latitude: Schema.Finite,
   longitude: Schema.Finite,
 }) {}
+
+export class DeepExaltation extends Schema.Class<DeepExaltation>("DeepExaltation")({
+  sign: Rashis,
+  degree: Schema.Finite,
+}) {}
+
+export const DeepExaltationPoints = Schema.Record(RashiLords, DeepExaltation);
+
+export class Aspect extends Schema.Class<Aspect>("Aspect")({
+  planet: Planets,
+  from_house: Houses,
+  aspect_houses: Schema.Array(Schema.Record(Houses, Schema.Array(Planets))),
+}) {}

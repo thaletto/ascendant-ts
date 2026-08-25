@@ -2,26 +2,12 @@ import { Function } from "effect";
 
 import {
   NAKSHATRAS,
-  RASHIS,
   NAKSHATRA_SPAN,
   NAKSHATRA_LORD_CYCLE,
   DIGNITY_RANGES,
 } from "../internal/constant.js";
-import {
-  type Longitude,
-  Nakshatra,
-  type PlanetDignity,
-  type Planets,
-  type Rashis,
-} from "../internal/model.js";
-
-function normalize(longitude: number): number {
-  return ((longitude % 360) + 360) % 360;
-}
-
-export function signOf(longitude: Longitude): Rashis {
-  return RASHIS[Math.floor(normalize(longitude) / 30)]!;
-}
+import { normalize } from "../internal/helper.js";
+import { type Longitude, Nakshatra, type PlanetDignity, type Planets } from "../internal/model.js";
 
 export function nakshatraOf(longitude: Longitude): Nakshatra {
   const position = normalize(longitude);
