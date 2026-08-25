@@ -1,24 +1,14 @@
 import { Effect } from "effect";
 
 import { AstroParams } from "../astro-params/service.js";
-import { type CelestialBody } from "../ephemeris/model.js";
 import { Ephemeris } from "../ephemeris/service.js";
-import { bhavaFromHouseData } from "./bhava.js";
+import { PLANET_BODY_MAP } from "../internal/constant.js";
+import { ChartCalculation, Division, LocatedMoment } from "../internal/model.js";
+import { bhavaFromHouseData } from "./bhava/index.js";
 import { chartsFromPlacements } from "./charts.js";
 import { ChartCalculationError, LocatedMomentValidationError } from "./error.js";
-import { ChartCalculation, Division, LocatedMoment, Planets } from "./model.js";
-import { placementsFromEvidence, type PlacementEvidence } from "./placements.js";
-
-const BODY_ENTRIES = [
-  ["Sun", "Sun"],
-  ["Moon", "Moon"],
-  ["Mars", "Mars"],
-  ["Mercury", "Mercury"],
-  ["Venus", "Venus"],
-  ["Jupiter", "Jupiter"],
-  ["Saturn", "Saturn"],
-  ["Rahu", "TrueNode"],
-] as const satisfies readonly (readonly [typeof Planets.Type, CelestialBody])[];
+import type { PlacementEvidence } from "./model.js";
+import { placementsFromEvidence } from "./placements.js";
 
 const validateInput = Effect.fn("astro-ascendant/chart/validateInput")(function* (
   input: LocatedMoment,
@@ -30,7 +20,7 @@ const validateInput = Effect.fn("astro-ascendant/chart/validateInput")(function*
     Number.isFinite(input.longitude) &&
     input.longitude >= -180 &&
     input.longitude <= 180 &&
-    Number.isFinite(input.moment.date.getTime());
+    Number.isFinite(input.moment.date.epochMilliseconds);
 
   if (!valid) {
     return yield* LocatedMomentValidationError.make({
@@ -53,7 +43,7 @@ const calculatePlacementEvidence = Effect.fn("astro-ascendant/chart/calculatePla
       astroParams.ayanamsa,
     );
     const planetEntries = yield* Effect.all(
-      BODY_ENTRIES.map(([name, body]) =>
+      PLANET_BODY_MAP.map(([name, body]) =>
         ephemeris
           .calculatePosition(julianDay, body, astroParams.ayanamsa)
           .pipe(Effect.map((position) => [name, position] as const)),
@@ -74,7 +64,7 @@ const calculatePlacementEvidence = Effect.fn("astro-ascendant/chart/calculatePla
 
 export const generate = Effect.fn("astro-ascendant/chart/generate")(function* (
   input: LocatedMoment,
-  divisions: readonly [typeof Division.Type, ...(typeof Division.Type)[]],
+  divisions: readonly [Division, ...Division[]],
 ) {
   const astroParams = yield* AstroParams;
   yield* validateInput(input);

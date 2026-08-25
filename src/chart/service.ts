@@ -2,16 +2,16 @@ import { Context, Effect, Layer } from "effect";
 
 import { AstroParams } from "../astro-params/service.js";
 import { Ephemeris } from "../ephemeris/service.js";
+import { ChartCalculation, LocatedMoment, type Division } from "../internal/model.js";
 import { ChartCalculationError, LocatedMomentValidationError } from "./error.js";
 import { generate } from "./generate.js";
-import { ChartCalculation, LocatedMoment, Division } from "./model.js";
 
 class Service extends Context.Service<
   Service,
   {
     readonly generate: (
       input: LocatedMoment,
-      divisions: readonly [typeof Division.Type, ...(typeof Division.Type)[]],
+      divisions: readonly [Division, ...Division[]],
     ) => Effect.Effect<
       ChartCalculation,
       ChartCalculationError | LocatedMomentValidationError,

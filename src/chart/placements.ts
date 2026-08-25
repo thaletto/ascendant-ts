@@ -1,22 +1,10 @@
-import { Effect, Schema } from "effect";
+import { Effect } from "effect";
 
-import { type HouseData, type PlanetaryPosition } from "../ephemeris/model.js";
-import { normalizeLongitude } from "./divisional-mapping.js";
-import { ChartCalculationError } from "./error.js";
-import { type Planets, Placements, SourceLagna, SourcePlanet } from "./model.js";
-import { nakshatraOf } from "./tables.js";
-
-export interface PlacementEvidence {
-  readonly houses: HouseData;
-  readonly planetEntries: readonly (readonly [typeof Planets.Type, PlanetaryPosition])[];
-}
-
-class MissingPlacementError extends Schema.TaggedError<MissingPlacementError>()(
-  "MissingPlacementError",
-  {
-    placement: Schema.Literal("Rahu"),
-  },
-) {}
+import { Placements, SourceLagna, SourcePlanet } from "../internal/model.js";
+import { normalizeLongitude } from "./divisional-mapping/index.js";
+import { ChartCalculationError, MissingPlacementError } from "./error.js";
+import { nakshatraOf } from "./helper.js";
+import type { PlacementEvidence } from "./model.js";
 
 export const placementsFromEvidence = Effect.fn("Chart.placementsFromEvidence")(
   function* (evidence: PlacementEvidence) {

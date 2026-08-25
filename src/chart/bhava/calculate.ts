@@ -1,7 +1,6 @@
 import { Effect, Schema } from "effect";
 
-import type { HouseData } from "../ephemeris/model.js";
-import { ChartCalculationError } from "./error.js";
+import type { HouseData } from "../../ephemeris/model.js";
 import {
   BhavaAngles,
   BhavaChart,
@@ -10,18 +9,15 @@ import {
   CircleAngle,
   type Chart,
   Longitude,
-  type Planet,
-} from "./model.js";
+} from "../../internal/model.js";
+import { ChartCalculationError } from "../error.js";
+import {
+  distributePlanets,
+  forwardDistance,
+  normalizeAngle,
+} from "./helper.js";
 
 const HOUSE_NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] as const;
-
-function normalizeAngle(angle: number): number {
-  return ((angle % 360) + 360) % 360;
-}
-
-function forwardDistance(from: number, to: number): number {
-  return normalizeAngle(to - from);
-}
 
 export const bhavaFromHouseData = Effect.fn("Chart.Bhava.fromHouseData")(function* (
   houses: HouseData,
@@ -75,30 +71,7 @@ export const bhavaFromHouseData = Effect.fn("Chart.Bhava.fromHouseData")(functio
     });
   }
 
-  function houseFor(longitude: number): number {
-    return cusps.findIndex((cusp, index) => {
-      const span = spans[index];
-      return span !== undefined && forwardDistance(cusp, longitude) < span;
-    });
-  }
-
-  const planetsByHouse: Array<Array<Planet>> = Array.from(
-    { length: HOUSE_NUMBERS.length },
-    () => [],
-  );
-
-  for (const planet of planets) {
-    const houseIndex = houseFor(planet.longitude);
-    const housePlanets = planetsByHouse[houseIndex];
-    if (housePlanets === undefined) {
-      return yield* ChartCalculationError.make({
-        stage: "mapping",
-        message: "Could not calculate Bhava chart",
-        cause: houses.cusps,
-      });
-    }
-    housePlanets.push(planet);
-  }
+  const planetsByHouse = distributePlanets(planets, cusps, spans);
 
   const bhavaHouseEntries: Array<readonly [number, BhavaHouse]> = [];
   for (const [index, houseNumber] of HOUSE_NUMBERS.entries()) {

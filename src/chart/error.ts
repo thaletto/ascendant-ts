@@ -1,5 +1,7 @@
 import { Schema } from "effect";
 
+import { Planets } from "../internal/model.js";
+
 export class ChartCalculationError extends Schema.TaggedError<ChartCalculationError>()(
   "ChartCalculationError",
   {
@@ -14,5 +16,12 @@ export class LocatedMomentValidationError extends Schema.TaggedError<LocatedMome
   {
     message: Schema.String,
     cause: Schema.Defect(),
+  },
+) {}
+
+export class MissingPlacementError extends Schema.TaggedError<MissingPlacementError>()(
+  "MissingPlacementError",
+  {
+    placement: Planets,
   },
 ) {}
