@@ -1,10 +1,10 @@
 import { Effect } from "effect";
 
-import { Houses, type Placements } from "../../internal/model.js";
 import { signAt, signIndexOf } from "../../internal/helper.js";
+import { Houses, type Placements } from "../../internal/model.js";
+import { distanceBetween, lordOfSign, projectedSign, sourceSignOf } from "./helper.js";
 import type { Result } from "./model.js";
 import { EvidenceError, Provenance } from "./model.js";
-import { distanceBetween, lordOfSign, projectedSign, sourceSignOf } from "./helper.js";
 
 export const calculate = Effect.fn("astro-ascendant/jaimini/arudha-pada/calculate")(function* (
   placements: Placements,

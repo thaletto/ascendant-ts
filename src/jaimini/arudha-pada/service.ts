@@ -2,9 +2,9 @@ import { Context, Effect, Layer } from "effect";
 
 import type { Placements } from "../../internal/model.js";
 import { Houses } from "../../internal/model.js";
+import { calculate } from "./calculate.js";
 import type { Result } from "./model.js";
 import { EvidenceError } from "./model.js";
-import { calculate } from "./calculate.js";
 
 class Service extends Context.Service<
   Service,
