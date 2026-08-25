@@ -1,7 +1,7 @@
 import { Context, Effect, Layer, Schema } from "effect";
 
 import { RashiLords, Rashis, type Placements } from "../chart/model.js";
-import * as ArudhaPada from "./arudha-pada.js";
+import * as ArudhaPada from "./arudha-pada/index.js";
 
 export const Provenance = Schema.Struct({
   school: Schema.Literal("Jaimini"),
