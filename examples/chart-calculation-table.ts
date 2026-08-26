@@ -1,11 +1,11 @@
-import { Console, Effect } from "effect";
+import { Console, Effect, Record as EffectRecord } from "effect";
 
 import type {
   BhavaChart,
   ChartCalculation,
   Chart as DivisionalChart,
   Placements,
-} from "../src/chart/index.ts";
+} from "../src/internal/model.ts";
 
 type TableValue = string | number | boolean;
 type TableRow = Readonly<Record<string, TableValue>>;
@@ -34,7 +34,7 @@ function placementRows(placements: Placements): readonly TableRow[] {
 }
 
 function chartRows(chart: DivisionalChart): readonly TableRow[] {
-  return Object.entries(chart.houses).flatMap(([houseNumber, houseData]) => {
+  return EffectRecord.toEntries(chart.houses).flatMap(([houseNumber, houseData]) => {
     const house = Number(houseNumber);
     const rows: TableRow[] = [];
 
@@ -79,7 +79,7 @@ function chartRows(chart: DivisionalChart): readonly TableRow[] {
 }
 
 function bhavaRows(bhava: BhavaChart): readonly TableRow[] {
-  return Object.entries(bhava.houses).flatMap(([houseNumber, houseData]) => {
+  return EffectRecord.toEntries(bhava.houses).flatMap(([houseNumber, houseData]) => {
     const house = Number(houseNumber);
     const rows: TableRow[] = [];
 

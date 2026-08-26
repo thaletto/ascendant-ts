@@ -1,7 +1,9 @@
-import { Config, Console, Effect, Layer } from "effect";
+import { BunRuntime } from "@effect/platform-bun";
+import { Config, Console, DateTime, Effect, Layer, Record } from "effect";
 import { DevTools } from "effect/unstable/devtools";
 
 import { AstroParams, Chart, SAV } from "../src/index.ts";
+import { LocatedMoment, Moment } from "../src/internal/model.ts";
 import * as Swisseph from "../src/swisseph/index.ts";
 
 const config = Effect.gen(function* () {
@@ -14,7 +16,7 @@ const config = Effect.gen(function* () {
 const printSAV = Effect.fn("Examples.printSAV")(function* (result: SAV.AshtakavargaResult) {
   yield* Console.log("Bhinnashtakavarga and Sarvashtakavarga");
   yield* Console.table(
-    Chart.Rashis.literals.map((rashi) => ({
+    Record.keys(result.sarva).map((rashi) => ({
       Rashi: rashi,
       Sun: result.bhinna.Sun[rashi],
       Moon: result.bhinna.Moon[rashi],
@@ -30,7 +32,7 @@ const printSAV = Effect.fn("Examples.printSAV")(function* (result: SAV.Ashtakava
 
   yield* Console.log("Reduced Bhinnashtakavarga");
   yield* Console.table(
-    Chart.Rashis.literals.map((rashi) => ({
+    Record.keys(result.sarva).map((rashi) => ({
       Rashi: rashi,
       Sun: result.reduced.Sun[rashi],
       Moon: result.reduced.Moon[rashi],
@@ -58,24 +60,25 @@ const printSAV = Effect.fn("Examples.printSAV")(function* (result: SAV.Ashtakava
 
 const program = Effect.gen(function* () {
   const { date, latitude, longitude } = yield* config;
-  const chart = yield* Chart.Service;
-  const sav = yield* SAV.Service;
+  const chart = yield* Chart.Chart;
+  const sav = yield* SAV.SAV;
   const calculation = yield* chart.generate(
-    new Chart.LocatedMoment({
-      moment: new Chart.Moment({ date: new Date(date) }),
+    LocatedMoment.make({
+      moment: Moment.make({ date: DateTime.makeUnsafe(date) }),
       latitude,
       longitude,
     }),
+    [1],
   );
   yield* sav.calculate(calculation.placements).pipe(Effect.tap(printSAV));
 });
 
-const chartLayer = Chart.layer.pipe(
-  Layer.provide(AstroParams.defaultLayer),
-  Layer.provide(Swisseph.layer),
+const runtimeLayer = Layer.mergeAll(
+  AstroParams.DefaultAstroParams,
+  Chart.ChartLayer,
+  SAV.SAVLayer,
+  Swisseph.SwissephLayer,
+  DevTools.layer(),
 );
-const runtimeLayer = Layer.mergeAll(chartLayer, SAV.layer, DevTools.layer());
 
-Effect.runPromise(program.pipe(Effect.provide(runtimeLayer))).catch((error) => {
-  console.error(error);
-});
+BunRuntime.runMain(program.pipe(Effect.provide(runtimeLayer)));

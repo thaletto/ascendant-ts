@@ -1,4 +1,5 @@
-import { Config, Console, Effect, Layer } from "effect";
+import { BunRuntime } from "@effect/platform-bun";
+import { Config, Console, DateTime, Effect, Layer } from "effect";
 import { DevTools } from "effect/unstable/devtools";
 
 import {
@@ -11,6 +12,7 @@ import {
   RashiDrishti,
   Upapada,
 } from "../src/index.ts";
+import { LocatedMoment, Moment } from "../src/internal/model.ts";
 import * as Swisseph from "../src/swisseph/index.ts";
 
 const config = Effect.gen(function* () {
@@ -22,21 +24,21 @@ const config = Effect.gen(function* () {
 
 const program = Effect.gen(function* () {
   const { date, latitude, longitude } = yield* config;
-  const chart = yield* Chart.Service;
-  const charaKarakas = yield* CharaKarakas.Service;
-  const rashiDrishti = yield* RashiDrishti.Service;
-  const karakamsha = yield* Karakamsha.Service;
-  const arudhaPada = yield* ArudhaPada.Service;
-  const upapada = yield* Upapada.Service;
-  const argala = yield* Argala.Service;
+  const chart = yield* Chart.Chart;
+  const charaKarakas = yield* CharaKarakas.CharaKarakas;
+  const rashiDrishti = yield* RashiDrishti.RashiDrishti;
+  const karakamsha = yield* Karakamsha.Karakamsha;
+  const arudhaPada = yield* ArudhaPada.ArudhaPada;
+  const upapada = yield* Upapada.Upapada;
+  const argala = yield* Argala.Argala;
 
   const calculation = yield* chart.generate(
-    new Chart.LocatedMoment({
-      moment: new Chart.Moment({ date: new Date(date) }),
+    LocatedMoment.make({
+      moment: Moment.make({ date: DateTime.makeUnsafe(date) }),
       latitude,
       longitude,
     }),
-    [9],
+    [1, 9],
   );
   const placements = calculation.placements;
   const lagnaSign = calculation.charts[0].houses[1].sign;
@@ -105,21 +107,17 @@ const program = Effect.gen(function* () {
   ]);
 });
 
-const chartLayer = Chart.layer.pipe(
-  Layer.provide(AstroParams.defaultLayer),
-  Layer.provide(Swisseph.layer),
-);
 const runtimeLayer = Layer.mergeAll(
-  chartLayer,
-  CharaKarakas.layer,
-  RashiDrishti.layer,
-  Karakamsha.layer,
-  ArudhaPada.layer,
-  Upapada.layer,
-  Argala.layer,
+  AstroParams.DefaultAstroParams,
+  Chart.ChartLayer,
+  CharaKarakas.CharaKarakasLayer,
+  RashiDrishti.RashiDrishtiLayer,
+  Karakamsha.KarakamshaLayer,
+  ArudhaPada.ArudhaPadaLayer,
+  Upapada.UpapadaLayer,
+  Argala.ArgalaLayer,
+  Swisseph.SwissephLayer,
   DevTools.layer(),
 );
 
-Effect.runPromise(program.pipe(Effect.provide(runtimeLayer))).catch((error) => {
-  console.error(error);
-});
+BunRuntime.runMain(program.pipe(Effect.provide(runtimeLayer)));
