@@ -1,7 +1,8 @@
 import { Effect } from "effect";
+
 import * as Chart from "../src/chart/index.js";
-import * as Yoga from "../src/yoga/index.js";
 import { definitions } from "../src/yoga/catalog.js";
+import * as Yoga from "../src/yoga/index.js";
 import type { YogaDefinition } from "../src/yoga/internal.js";
 import { makeLayer } from "../src/yoga/service.js";
 

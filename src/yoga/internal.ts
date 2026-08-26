@@ -1,21 +1,22 @@
-import { Data, type Effect, type Result } from "effect";
+import { Data, type Effect, type Result, Schema } from "effect";
+
 import type { Division, Houses, Planets, PlanetsLagna } from "../chart/model.js";
 import type { InvalidYogaEvidenceError } from "./error.js";
-import type { YogaDescriptor, YogaEvidence, YogaId } from "./model.js";
+import type { YogaDescriptor, YogaEvidence } from "./model.js";
 
 export type YogaCondition = Data.TaggedEnum<{
   BodyPositionsCondition: {
-    readonly division: typeof Division.Type;
-    readonly referenceBody: typeof PlanetsLagna.Type;
-    readonly bodies: readonly (typeof Planets.Type)[];
-    readonly expectedRelativeHouses: readonly (typeof Houses.Type)[];
+    readonly division: Division;
+    readonly referenceBody: PlanetsLagna;
+    readonly bodies: readonly Planets[];
+    readonly expectedRelativeHouses: readonly Houses[];
     readonly quantifier: "All" | "Any";
   };
   HouseOccupancyCondition: {
-    readonly division: typeof Division.Type;
-    readonly referenceBody: typeof PlanetsLagna.Type;
-    readonly expectedRelativeHouses: readonly (typeof Houses.Type)[];
-    readonly excludedBodies: readonly (typeof Planets.Type)[];
+    readonly division: Division;
+    readonly referenceBody: PlanetsLagna;
+    readonly expectedRelativeHouses: readonly Houses[];
+    readonly excludedBodies: readonly Planets[];
     readonly quantifier: "EveryHouse" | "AnyHouse";
   };
   AllCondition: { readonly children: readonly YogaCondition[] };
@@ -26,23 +27,23 @@ export type YogaCondition = Data.TaggedEnum<{
 export const YogaCondition = Data.taggedEnum<YogaCondition>();
 
 export interface IndexedDivision {
-  readonly positionOf: (body: typeof PlanetsLagna.Type) => typeof Houses.Type;
+  readonly positionOf: (body: PlanetsLagna) => Houses;
   readonly occupantsAtRelativeHouse: (
-    referenceBody: typeof PlanetsLagna.Type,
-    relativeHouse: typeof Houses.Type,
-  ) => readonly (typeof Planets.Type)[];
+    referenceBody: PlanetsLagna,
+    relativeHouse: Houses,
+  ) => readonly Planets[];
 }
 
 export interface EvaluationIndex {
   readonly forDivision: (
-    division: typeof Division.Type,
+    division: Division,
   ) => Result.Result<IndexedDivision, InvalidYogaEvidenceError>;
 }
 
 export type YogaStrategy = Data.TaggedEnum<{
   Condition: { readonly condition: YogaCondition };
   Evaluator: {
-    readonly name: string;
+    readonly name: Schema.String;
     readonly evaluate: (index: EvaluationIndex) => Effect.Effect<YogaEvidence>;
   };
 }>;
@@ -51,16 +52,6 @@ export const YogaStrategy = Data.taggedEnum<YogaStrategy>();
 
 export interface YogaDefinition {
   readonly yoga: YogaDescriptor;
-  readonly requiredDivisions: readonly [typeof Division.Type, ...(typeof Division.Type)[]];
+  readonly requiredDivisions: readonly [Division, ...Division[]];
   readonly strategy: YogaStrategy;
-}
-
-export interface EvaluationHooks {
-  readonly onStart: (id: YogaId) => Effect.Effect<void>;
-  readonly onFinish: (id: YogaId) => Effect.Effect<void>;
-}
-
-export interface ServiceOptions {
-  readonly hooks?: EvaluationHooks;
-  readonly concurrency?: number;
 }

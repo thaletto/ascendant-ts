@@ -1,7 +1,7 @@
 import { YogaCondition, type YogaDefinition, YogaStrategy } from "../internal.js";
 import { YogaIds } from "../model.js";
 
-export const housePatternDefinitions = Object.freeze([
+export const housePatternDefinitions = [
   {
     yoga: {
       id: YogaIds.make("chatussagara"),
@@ -73,4 +73,4 @@ export const housePatternDefinitions = Object.freeze([
       }),
     }),
   },
-] as const satisfies readonly YogaDefinition[]);
+] as const satisfies readonly YogaDefinition[];

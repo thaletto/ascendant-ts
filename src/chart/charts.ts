@@ -1,6 +1,9 @@
-import { Effect, pipe } from "effect";
+import { Array, Effect, Order, pipe, Record as Struct } from "effect";
+
+import { getDivisionalTarget } from "./divisional-mapping/calculate.js";
 import { ChartCalculationError } from "./error.js";
-import { getDivisionalTarget } from "./divisional-mapping.js";
+import { inSignStatus } from "./helper.js";
+import { SIGN_LORDS } from "./internal/constants.js";
 import {
   Chart,
   type Division,
@@ -12,55 +15,57 @@ import {
   Rashis,
   Sign,
 } from "./model.js";
-import { inSignStatus, SIGN_LORDS } from "./tables.js";
-
-function sign(name: typeof Rashis.Type): Sign {
-  return new Sign({ name, lord: SIGN_LORDS[name] });
-}
 
 function chartFromMappedPlacements({
   division,
   lagna,
   planets,
 }: {
-  readonly division: typeof Division.Type;
+  readonly division: Division;
   readonly lagna: Lagna;
   readonly planets: readonly Planet[];
 }): Chart {
-  const houses = {} as Record<typeof Houses.Type, House>;
   const lagnaSignIndex = Rashis.literals.indexOf(lagna.sign.name);
-  for (let index = 0; index < 12; index++) {
-    const house = (index + 1) as typeof Houses.Type;
-    const houseSign = Rashis.literals[(lagnaSignIndex + index) % 12]!;
-    houses[house] = new House({
-      sign: houseSign,
-      planets: planets.filter((planet) => planet.sign.name === houseSign),
-      lagna: house === 1 ? lagna : null,
-    });
-  }
+  const houses = Struct.fromEntries(
+    Array.range(0, 11).map((index) => {
+      const house = (index + 1) as Houses;
+      const houseSign = Array.getUnsafe(Rashis.literals, (lagnaSignIndex + index) % 12);
+      return [
+        String(house),
+        House.make({
+          sign: houseSign,
+          planets: planets.filter((planet) => planet.sign.name === houseSign),
+          lagna: house === 1 ? lagna : null,
+        }),
+      ] as const;
+    }),
+  ) as Record<Houses, House>;
 
-  return new Chart({
+  return Chart.make({
     provenance: {
       method: "ascendant-divisional-mapping",
-      version: 1,
+      version: "1",
     },
     division,
     houses,
   });
 }
 
-export const chartFromPlacements = Effect.fn("Chart.chartFromPlacements")(function* (
+const chartFromPlacements = Effect.fn("astro-ascendant/chart/chartFromPlacements")(function* (
   placements: Placements,
-  division: typeof Division.Type,
+  division: Division,
 ) {
   const lagna = yield* getDivisionalTarget(placements.lagna.longitude, division).pipe(
     Effect.map((mapped) => {
-      const mappedSign = Rashis.literals[mapped.signIndex]!;
-      return new Lagna({
+      const mappedSign = Array.getUnsafe(Rashis.literals, mapped.signIndex);
+      return Lagna.make({
         name: "Lagna",
         longitude: mapped.longitude,
         degree: mapped.degree,
-        sign: sign(mappedSign),
+        sign: Sign.make({
+          name: mappedSign,
+          lord: SIGN_LORDS[mappedSign],
+        }),
       });
     }),
   );
@@ -69,14 +74,17 @@ export const chartFromPlacements = Effect.fn("Chart.chartFromPlacements")(functi
     placements.planets.map((source) =>
       getDivisionalTarget(source.longitude, division).pipe(
         Effect.map((mapped) => {
-          const mappedSign = Rashis.literals[mapped.signIndex]!;
-          return new Planet({
+          const mappedSign = Array.getUnsafe(Rashis.literals, mapped.signIndex);
+          return Planet.make({
             name: source.name,
             longitude: mapped.longitude,
             degree: mapped.degree,
             is_retrograde: source.is_retrograde,
-            in_sign: [...inSignStatus(source.name, mappedSign, mapped.degree)],
-            sign: sign(mappedSign),
+            in_sign: inSignStatus(source.name, source.longitude),
+            sign: Sign.make({
+              name: mappedSign,
+              lord: SIGN_LORDS[mappedSign],
+            }),
           });
         }),
       ),
@@ -84,15 +92,24 @@ export const chartFromPlacements = Effect.fn("Chart.chartFromPlacements")(functi
     { concurrency: "unbounded" },
   );
 
-  return pipe({ division, lagna, planets }, chartFromMappedPlacements);
+  return chartFromMappedPlacements({ division, lagna, planets });
 });
 
-export const chartsFromPlacements = Effect.fn("Chart.chartsFromPlacements")(
-  function* (
-    placements: Placements,
-    divisions: readonly [typeof Division.Type, ...(typeof Division.Type)[]],
-  ) {
-    const [firstDivision, ...remainingDivisions] = divisions;
+function requestedDivisions(divisions: readonly Division[]): readonly [Division, ...Division[]] {
+  const requested = pipe(
+    divisions,
+    Array.filter((division) => division !== 1),
+    Array.dedupe,
+    Array.sort(Order.Number),
+  );
+
+  return [1, ...requested];
+}
+
+export const project = Effect.fn("astro-ascendant/chart/project")(
+  function* (placements: Placements, divisions: readonly Division[] = []) {
+    const requested = requestedDivisions(divisions);
+    const [firstDivision, ...remainingDivisions] = requested;
     const firstChart = yield* chartFromPlacements(placements, firstDivision);
     const remainingCharts = yield* Effect.all(
       remainingDivisions.map((division) => chartFromPlacements(placements, division)),
@@ -101,12 +118,11 @@ export const chartsFromPlacements = Effect.fn("Chart.chartsFromPlacements")(
 
     return [firstChart, ...remainingCharts] as [Chart, ...Chart[]];
   },
-  Effect.mapError(
-    (cause) =>
-      new ChartCalculationError({
-        stage: "mapping",
-        message: "Could not map one or more requested Divisions",
-        cause,
-      }),
+  Effect.mapError((cause) =>
+    ChartCalculationError.make({
+      stage: "mapping",
+      message: "Could not map one or more requested Divisions",
+      cause,
+    }),
   ),
 );

@@ -1,5 +1,7 @@
-import { Config, Console, Effect, Layer } from "effect";
+import { BunRuntime } from "@effect/platform-bun";
+import { Config, Console, DateTime, Effect, Layer } from "effect";
 import { DevTools } from "effect/unstable/devtools";
+
 import {
   Argala,
   ArudhaPada,
@@ -21,17 +23,10 @@ const config = Effect.gen(function* () {
 
 const program = Effect.gen(function* () {
   const { date, latitude, longitude } = yield* config;
-  const chart = yield* Chart.Service;
-  const charaKarakas = yield* CharaKarakas.Service;
-  const rashiDrishti = yield* RashiDrishti.Service;
-  const karakamsha = yield* Karakamsha.Service;
-  const arudhaPada = yield* ArudhaPada.Service;
-  const upapada = yield* Upapada.Service;
-  const argala = yield* Argala.Service;
 
-  const calculation = yield* chart.generate(
-    new Chart.LocatedMoment({
-      moment: new Chart.Moment({ date: new Date(date) }),
+  const calculation = yield* Chart.generate(
+    Chart.LocatedMoment.make({
+      moment: Chart.Moment.make({ date: DateTime.makeUnsafe(date) }),
       latitude,
       longitude,
     }),
@@ -40,12 +35,12 @@ const program = Effect.gen(function* () {
   const placements = calculation.placements;
   const lagnaSign = calculation.charts[0].houses[1].sign;
 
-  const charaKarakaResult = yield* charaKarakas.calculate(placements);
-  const rashiDrishtiResult = yield* rashiDrishti.calculate(lagnaSign);
-  const karakamshaResult = yield* karakamsha.calculate(placements);
-  const arudhaLagnaResult = yield* arudhaPada.calculate(placements, 1);
-  const upapadaResult = yield* upapada.calculate(placements);
-  const argalaResult = yield* argala.calculate(placements, {
+  const charaKarakaResult = yield* CharaKarakas.calculate(placements);
+  const rashiDrishtiResult = yield* RashiDrishti.calculate(lagnaSign);
+  const karakamshaResult = yield* Karakamsha.calculate(placements);
+  const arudhaLagnaResult = yield* ArudhaPada.calculate(placements, 1);
+  const upapadaResult = yield* Upapada.calculate(placements);
+  const argalaResult = yield* Argala.calculate(placements, {
     kind: "Sign",
     sign: lagnaSign,
   });
@@ -104,21 +99,10 @@ const program = Effect.gen(function* () {
   ]);
 });
 
-const chartLayer = Chart.layer.pipe(
-  Layer.provide(AstroParams.defaultLayer),
-  Layer.provide(Swisseph.layer),
-);
 const runtimeLayer = Layer.mergeAll(
-  chartLayer,
-  CharaKarakas.layer,
-  RashiDrishti.layer,
-  Karakamsha.layer,
-  ArudhaPada.layer,
-  Upapada.layer,
-  Argala.layer,
+  AstroParams.DefaultAstroParams,
+  Swisseph.SwissephLayer,
   DevTools.layer(),
 );
 
-Effect.runPromise(program.pipe(Effect.provide(runtimeLayer))).catch((error) => {
-  console.error(error);
-});
+BunRuntime.runMain(program.pipe(Effect.provide(runtimeLayer)));

@@ -23,58 +23,59 @@ import * as FocusedSAV from "astro-ascendant/sav";
 import * as Swisseph from "astro-ascendant/swisseph";
 import * as FocusedUpapada from "astro-ascendant/upapada";
 import * as FocusedYoga from "astro-ascendant/yoga";
+import { DateTime, Effect } from "effect";
 
-const chartLayer = Chart.layer;
-const paramsLayer = AstroParams.defaultLayer;
-const ephemerisService = Ephemeris.Service;
-const dashaService = Dasha.Service;
-const dashaLayer = FocusedDasha.layer;
-const savService = SAV.Service;
-const savLayer = FocusedSAV.layer;
-const yogaService = Yoga.Service;
-const yogaLayer = FocusedYoga.layer;
-const yogaCatalog = FocusedYoga.catalog;
-const yogaEvaluationSchema = Yoga.YogaEvaluation;
-const yogaEvidenceSchema = FocusedYoga.YogaEvidence;
-const unknownYogaError = FocusedYoga.UnknownYogaError;
-const mapping = DivisionalMapping.getDivisionalTarget;
-const swissephLayer = Swisseph.layer;
-const bhavaSchema = Chart.BhavaChart;
-const circleAngleSchema = Chart.CircleAngle;
-const ayanamsas = AstroParams.Ayanamsa.literals;
-const houseSystems = AstroParams.HouseSystem.literals;
-const namedCalculationLayers = [
-  Argala.layer,
-  ArudhaPada.layer,
-  CharaKarakas.layer,
-  Karakamsha.layer,
-  RashiDrishti.layer,
-  Upapada.layer,
-  FocusedArgala.layer,
-  FocusedArudhaPada.layer,
-  FocusedCharaKarakas.layer,
-  FocusedKarakamsha.layer,
-  FocusedRashiDrishti.layer,
-  FocusedUpapada.layer,
-];
+const moment = Chart.Moment.make({
+  date: DateTime.makeUnsafe("2000-01-01T12:00:00.000Z"),
+});
+const input = Chart.LocatedMoment.make({
+  moment,
+  latitude: 12.9716,
+  longitude: 77.5946,
+});
 
-void chartLayer;
-void paramsLayer;
-void ephemerisService;
-void dashaService;
-void dashaLayer;
-void savService;
-void savLayer;
-void yogaService;
-void yogaLayer;
-void yogaCatalog;
-void yogaEvaluationSchema;
-void yogaEvidenceSchema;
-void unknownYogaError;
-void mapping;
-void swissephLayer;
-void bhavaSchema;
-void circleAngleSchema;
-void ayanamsas;
-void houseSystems;
-void namedCalculationLayers;
+const packageWorkflow = Effect.gen(function* () {
+  const calculation = yield* Chart.generate(input, [9]);
+  const timeline = yield* Dasha.calculate(moment, calculation.placements);
+  const current = yield* Dasha.at(timeline, moment.date);
+  const sav = yield* SAV.calculate(calculation.placements);
+  const yogas = yield* Yoga.evaluateAll(calculation);
+  const charaKarakas = yield* CharaKarakas.calculate(calculation.placements);
+
+  return { calculation, timeline, current, sav, yogas, charaKarakas };
+});
+
+void Chart.generate;
+void Chart.project;
+void Chart.ChartCalculation;
+void Chart.LocatedMoment;
+void Chart.Moment;
+void AstroParams.layer;
+void AstroParams.DefaultAstroParams;
+void Ephemeris.Ephemeris;
+void Dasha.calculate;
+void Dasha.at;
+void FocusedDasha.calculate;
+void FocusedDasha.at;
+void SAV.calculate;
+void FocusedSAV.calculate;
+void Yoga.catalog;
+void Yoga.evaluateAll;
+void Yoga.evaluateSelected;
+void FocusedYoga.YogaEvidence;
+void FocusedYoga.UnknownYogaError;
+void Argala.calculate;
+void ArudhaPada.calculate;
+void CharaKarakas.calculate;
+void Karakamsha.calculate;
+void RashiDrishti.calculate;
+void Upapada.calculate;
+void FocusedArgala.calculate;
+void FocusedArudhaPada.calculate;
+void FocusedCharaKarakas.calculate;
+void FocusedKarakamsha.calculate;
+void FocusedRashiDrishti.calculate;
+void FocusedUpapada.calculate;
+void DivisionalMapping.getDivisionalTarget;
+void Swisseph.SwissephLayer;
+void packageWorkflow;

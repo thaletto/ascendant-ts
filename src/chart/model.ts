@@ -1,35 +1,45 @@
 import { Schema } from "effect";
-import { Options as AstroParamsOptions } from "../astro-params/model.js";
-import { NAKSHATRA_NAMES, PLANET_NAMES, RASHI_NAMES } from "./literals.js";
 
-export const Planets = Schema.Literals(PLANET_NAMES);
-export const Rashis = Schema.Literals(RASHI_NAMES);
+import { Options as AstroParamsOptions } from "../astro-params/model.js";
+import {
+  PLANETS,
+  CLASSICAL_PLANETS,
+  RASHIS,
+  NAKSHATRAS,
+  PLANET_DIGNITY,
+} from "./internal/constants.js";
+
+export const Planets = Schema.Literals(PLANETS);
+export type Planets = typeof Planets.Type;
+
+export const Rashis = Schema.Literals(RASHIS);
+export type Rashis = typeof Rashis.Type;
+
 export const LagnaName = Schema.Literal("Lagna");
+export type LagnaName = typeof LagnaName.Type;
+
 export const PlanetsLagna = Schema.Union([Planets, LagnaName]);
+export type PlanetsLagna = typeof PlanetsLagna.Type;
+
 export const Houses = Schema.Literals([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] as const);
-export const RashiLords = Schema.Literals([
-  "Sun",
-  "Moon",
-  "Mars",
-  "Mercury",
-  "Venus",
-  "Jupiter",
-  "Saturn",
-]);
-export const Nakshatras = Schema.Literals(NAKSHATRA_NAMES);
+export type Houses = typeof Houses.Type;
+
+export const RashiLords = Schema.Literals(CLASSICAL_PLANETS);
+export type RashiLords = typeof RashiLords.Type;
+
+export const Nakshatras = Schema.Literals(NAKSHATRAS);
+export type Nakshatras = typeof Nakshatras.Type;
+
 export const Pada = Schema.Literals([1, 2, 3, 4] as const);
-export const PlanetInSign = Schema.Literals([
-  "Exalted",
-  "Moola Trikona",
-  "Own",
-  "Friend",
-  "Neutral",
-  "Enemy",
-  "Debilitated",
-]);
+export type Pada = typeof Pada.Type;
+
+export const PlanetDignity = Schema.Literals(PLANET_DIGNITY);
+export type PlanetDignity = typeof PlanetDignity.Type;
+
 export const Division = Schema.Literals([
   1, 2, 3, 4, 7, 9, 10, 12, 16, 20, 24, 27, 30, 40, 45, 60,
 ] as const);
+export type Division = typeof Division.Type;
 
 export const Longitude = Schema.Finite.check(
   Schema.isBetween({ minimum: 0, maximum: 360, exclusiveMaximum: true }),
@@ -62,7 +72,7 @@ export class Planet extends Schema.Class<Planet>("Planet")({
   longitude: Longitude,
   degree: Degree,
   is_retrograde: Schema.Boolean,
-  in_sign: Schema.Array(PlanetInSign),
+  in_sign: Schema.Array(PlanetDignity),
   sign: Sign,
 }) {}
 
@@ -100,8 +110,8 @@ export class Placements extends Schema.Class<Placements>("Placements")({
 }) {}
 
 export const Provenance = Schema.Struct({
-  method: Schema.Literal("ascendant-divisional-mapping"),
-  version: Schema.Literal(1),
+  method: Schema.String,
+  version: Schema.String,
 });
 export interface Provenance extends Schema.Schema.Type<typeof Provenance> {}
 
@@ -137,7 +147,7 @@ export class BhavaChart extends Schema.Class<BhavaChart>("BhavaChart")({
 
 export const CalculationCharts = Schema.NonEmptyArray(Chart).check(
   Schema.makeFilter((charts) => charts[0].division === 1, {
-    expected: "a non-empty Chart collection beginning with D1",
+    expected: "A non-empty Chart collection beginning with D1",
   }),
 );
 
@@ -149,7 +159,7 @@ export class ChartCalculation extends Schema.Class<ChartCalculation>("ChartCalcu
 }) {}
 
 export class Moment extends Schema.Class<Moment>("Moment")({
-  date: Schema.Date,
+  date: Schema.DateTimeUtc,
 }) {}
 
 export class LocatedMoment extends Schema.Class<LocatedMoment>("LocatedMoment")({

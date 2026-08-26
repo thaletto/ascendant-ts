@@ -1,5 +1,8 @@
-import { Effect } from "effect";
-import type { Placements, Rashis } from "../chart/model.js";
+import { Array, Effect, Record } from "effect";
+
+import { RASHIS } from "../chart/internal/constants.js";
+import { signAt } from "../chart/internal/position.js";
+import type { Placements } from "../chart/model.js";
 import {
   ASHTAKAVARGA_ENTITY_ORDER,
   ASHTAKAVARGA_PLANET_ORDER,
@@ -9,14 +12,14 @@ import {
   EXPECTED_SAV_TOTAL,
   GRAHA_GUNAKAR,
   RASHI_GUNAKAR,
-  RASHI_ORDER,
   TRIKONA_GROUPS,
 } from "./constants.js";
 import { SAVCalculationError } from "./error.js";
-import type {
-  AshtakavargaEntity,
-  AshtakavargaPlanet,
+import {
+  AshtakavargaEntities,
+  AshtakavargaPlanets,
   AshtakavargaResult,
+  AshtakavargaTotals,
   BhinnaAshtakavarga,
   Pinda,
   ReducedAshtakavarga,
@@ -24,114 +27,119 @@ import type {
   SignScores,
 } from "./model.js";
 
-type EntityPositions = Readonly<Record<AshtakavargaEntity, number>>;
+type EntityPositions = Readonly<Record<AshtakavargaEntities, number>>;
 
-function signScores(scores: readonly number[]): SignScores {
-  if (scores.length !== RASHI_ORDER.length) {
-    throw new Error(`Expected 12 sign scores; received ${scores.length}`);
+const signScores = Effect.fn("SAV.signScores")(function* (scores: readonly number[]) {
+  if (scores.length !== RASHIS.length) {
+    return yield* SAVCalculationError.make({
+      message: `Expected 12 sign scores; received ${scores.length}`,
+      cause: { expected: RASHIS.length, actual: scores.length },
+    });
   }
-  const score = (index: number): number => {
-    const value = scores[index];
-    if (value === undefined) throw new Error(`Missing score for sign index ${index}`);
-    return value;
-  };
   return {
-    Aries: score(0),
-    Taurus: score(1),
-    Gemini: score(2),
-    Cancer: score(3),
-    Leo: score(4),
-    Virgo: score(5),
-    Libra: score(6),
-    Scorpio: score(7),
-    Sagittarius: score(8),
-    Capricorn: score(9),
-    Aquarius: score(10),
-    Pisces: score(11),
-  };
-}
+    Aries: Array.getUnsafe(scores, 0),
+    Taurus: Array.getUnsafe(scores, 1),
+    Gemini: Array.getUnsafe(scores, 2),
+    Cancer: Array.getUnsafe(scores, 3),
+    Leo: Array.getUnsafe(scores, 4),
+    Virgo: Array.getUnsafe(scores, 5),
+    Libra: Array.getUnsafe(scores, 6),
+    Scorpio: Array.getUnsafe(scores, 7),
+    Sagittarius: Array.getUnsafe(scores, 8),
+    Capricorn: Array.getUnsafe(scores, 9),
+    Aquarius: Array.getUnsafe(scores, 10),
+    Pisces: Array.getUnsafe(scores, 11),
+  } satisfies SignScores;
+});
 
-function rashiAt(index: number): typeof Rashis.Type {
-  const rashi = RASHI_ORDER[index];
-  if (rashi === undefined) throw new Error(`Invalid Rashi index: ${index}`);
-  return rashi;
-}
+const total = (scores: SignScores): number => RASHIS.reduce((sum, rashi) => sum + scores[rashi], 0);
 
-function total(scores: SignScores): number {
-  return RASHI_ORDER.reduce((sum, rashi) => sum + scores[rashi], 0);
-}
-
-function entityPositions(placements: Placements): EntityPositions {
-  const planetPosition = (name: AshtakavargaPlanet): number => {
+const entityPositions = Effect.fn("SAV.entityPositions")(function* (placements: Placements) {
+  const planetPosition = Effect.fn("planetPosition")(function* (name: AshtakavargaPlanets) {
     const matches = placements.planets.filter((planet) => planet.name === name);
     const match = matches[0];
     if (matches.length !== 1 || match === undefined) {
-      throw new Error(`Placements must contain exactly one ${name}; received ${matches.length}`);
+      return yield* SAVCalculationError.make({
+        message: `Placements must contain exactly one ${name}; received ${matches.length}`,
+        cause: { planet: name, count: matches.length },
+      });
     }
     return Math.floor(match.longitude / 30) % 12;
-  };
+  });
 
-  return {
-    Sun: planetPosition("Sun"),
-    Moon: planetPosition("Moon"),
-    Mars: planetPosition("Mars"),
-    Mercury: planetPosition("Mercury"),
-    Jupiter: planetPosition("Jupiter"),
-    Venus: planetPosition("Venus"),
-    Saturn: planetPosition("Saturn"),
-    Lagna: Math.floor(placements.lagna.longitude / 30) % 12,
-  };
-}
+  const positions = yield* Effect.all(
+    ASHTAKAVARGA_ENTITY_ORDER.map((entity) =>
+      entity === "Lagna"
+        ? Effect.succeed(Math.floor(placements.lagna.longitude / 30) % 12)
+        : planetPosition(entity),
+    ),
+    { concurrency: "unbounded" },
+  );
 
-function calculateSignScores(target: AshtakavargaEntity, positions: EntityPositions): SignScores {
-  return signScores(
-    RASHI_ORDER.map((_, signIndex) =>
+  return Record.fromEntries(
+    ASHTAKAVARGA_ENTITY_ORDER.map((entity, i) => [entity, Array.getUnsafe(positions, i)]),
+  ) as EntityPositions;
+});
+
+const calculateSignScores = Effect.fn("SAV.calculateSignScores")(function* (
+  target: AshtakavargaEntities,
+  positions: EntityPositions,
+) {
+  return yield* signScores(
+    RASHIS.map((_, signIndex) =>
       ASHTAKAVARGA_ENTITY_ORDER.reduce((score, contributor) => {
         const distance = ((signIndex - positions[contributor] + 12) % 12) + 1;
         return score + (CONTRIBUTION_OFFSETS[target][contributor].includes(distance) ? 1 : 0);
       }, 0),
     ),
   );
-}
+});
 
-function calculateBhinna(positions: EntityPositions): BhinnaAshtakavarga {
-  return {
-    Sun: calculateSignScores("Sun", positions),
-    Moon: calculateSignScores("Moon", positions),
-    Mars: calculateSignScores("Mars", positions),
-    Mercury: calculateSignScores("Mercury", positions),
-    Jupiter: calculateSignScores("Jupiter", positions),
-    Venus: calculateSignScores("Venus", positions),
-    Saturn: calculateSignScores("Saturn", positions),
-    Lagna: calculateSignScores("Lagna", positions),
-  };
-}
+const calculateBhinna = Effect.fn("SAV.calculateBhinna")(function* (positions: EntityPositions) {
+  const bhinnaEntries = yield* Effect.all(
+    ASHTAKAVARGA_ENTITY_ORDER.map((entity) =>
+      calculateSignScores(entity, positions).pipe(
+        Effect.map((scores) => [entity, scores] as const),
+      ),
+    ),
+    { concurrency: "unbounded" },
+  );
+  return Record.fromEntries(bhinnaEntries) as BhinnaAshtakavarga;
+});
 
-function validateBhinna(bhinna: BhinnaAshtakavarga): void {
-  for (const entity of ASHTAKAVARGA_ENTITY_ORDER) {
-    const actual = total(bhinna[entity]);
-    const expected = EXPECTED_BAV_TOTALS[entity];
-    if (actual !== expected) {
-      throw new Error(`Invalid ${entity} BAV total: ${actual}; expected ${expected}`);
-    }
-  }
-}
+const validateBhinna = Effect.fn("SAV.validateBhinna")(function* (bhinna: BhinnaAshtakavarga) {
+  yield* Effect.forEach(ASHTAKAVARGA_ENTITY_ORDER, (entity) =>
+    Effect.sync(() => {
+      const actual = total(bhinna[entity]);
+      const expected = EXPECTED_BAV_TOTALS[entity];
+      if (actual !== expected) {
+        return SAVCalculationError.make({
+          message: `Invalid ${entity} BAV total: ${actual}; expected ${expected}`,
+          cause: { entity, actual, expected },
+        });
+      }
+    }),
+  );
+});
 
-function calculateSarva(bhinna: BhinnaAshtakavarga): SignScores {
-  const sarva = signScores(
-    RASHI_ORDER.map((rashi) =>
+const calculateSarva = Effect.fn("SAV.calculateSarva")(function* (bhinna: BhinnaAshtakavarga) {
+  const sarva = yield* signScores(
+    RASHIS.map((rashi) =>
       ASHTAKAVARGA_PLANET_ORDER.reduce((score, planet) => score + bhinna[planet][rashi], 0),
     ),
   );
   const actual = total(sarva);
   if (actual !== EXPECTED_SAV_TOTAL) {
-    throw new Error(`Invalid SAV total: ${actual}; expected ${EXPECTED_SAV_TOTAL}`);
+    return yield* SAVCalculationError.make({
+      message: `Invalid SAV total: ${actual}; expected ${EXPECTED_SAV_TOTAL}`,
+      cause: { actual, expected: EXPECTED_SAV_TOTAL },
+    });
   }
   return sarva;
-}
+});
 
-function reduceScores(scores: SignScores): SignScores {
-  const reduced = RASHI_ORDER.map((rashi) => scores[rashi]);
+const reduceScores = Effect.fn("SAV.reduceScores")(function* (scores: SignScores) {
+  const reduced = RASHIS.map((rashi) => scores[rashi]);
 
   for (const group of TRIKONA_GROUPS) {
     const minimum = Math.min(...group.map((index) => reduced[index] ?? 0));
@@ -150,84 +158,61 @@ function reduceScores(scores: SignScores): SignScores {
     }
   }
 
-  return signScores(reduced);
-}
+  return yield* signScores(reduced);
+});
 
-function calculateReduced(bhinna: BhinnaAshtakavarga): ReducedAshtakavarga {
-  return {
-    Sun: reduceScores(bhinna.Sun),
-    Moon: reduceScores(bhinna.Moon),
-    Mars: reduceScores(bhinna.Mars),
-    Mercury: reduceScores(bhinna.Mercury),
-    Jupiter: reduceScores(bhinna.Jupiter),
-    Venus: reduceScores(bhinna.Venus),
-    Saturn: reduceScores(bhinna.Saturn),
-  };
-}
+const calculateReduced = Effect.fn("SAV.calculateReduced")(function* (bhinna: BhinnaAshtakavarga) {
+  const reducedEntries = yield* Effect.all(
+    ASHTAKAVARGA_PLANET_ORDER.map((planet) =>
+      reduceScores(bhinna[planet]).pipe(Effect.map((scores) => [planet, scores] as const)),
+    ),
+    { concurrency: "unbounded" },
+  );
+  return Record.fromEntries(reducedEntries) as ReducedAshtakavarga;
+});
 
 function calculatePlanetPinda(scores: SignScores, positions: EntityPositions): Pinda {
-  const rashi_pinda = RASHI_ORDER.reduce(
+  const rashi_pinda = RASHIS.reduce(
     (sum, rashi, index) => sum + scores[rashi] * (RASHI_GUNAKAR[index] ?? 0),
     0,
   );
   const graha_pinda = ASHTAKAVARGA_PLANET_ORDER.reduce(
-    (sum, planet) => sum + scores[rashiAt(positions[planet])] * GRAHA_GUNAKAR[planet],
+    (sum, planet) => sum + scores[signAt(positions[planet])] * GRAHA_GUNAKAR[planet],
     0,
   );
-  return { rashi_pinda, graha_pinda, shodhya_pinda: rashi_pinda + graha_pinda };
+  return { rashi_pinda, graha_pinda, shodhya_pinda: rashi_pinda + graha_pinda } satisfies Pinda;
 }
 
 function calculateShodhyaPinda(
   reduced: ReducedAshtakavarga,
   positions: EntityPositions,
 ): ShodhyaPinda {
-  return {
-    Sun: calculatePlanetPinda(reduced.Sun, positions),
-    Moon: calculatePlanetPinda(reduced.Moon, positions),
-    Mars: calculatePlanetPinda(reduced.Mars, positions),
-    Mercury: calculatePlanetPinda(reduced.Mercury, positions),
-    Jupiter: calculatePlanetPinda(reduced.Jupiter, positions),
-    Venus: calculatePlanetPinda(reduced.Venus, positions),
-    Saturn: calculatePlanetPinda(reduced.Saturn, positions),
-  };
+  return Record.fromEntries(
+    ASHTAKAVARGA_PLANET_ORDER.map(
+      (planet) => [planet, calculatePlanetPinda(reduced[planet], positions)] as const,
+    ),
+  ) as ShodhyaPinda;
 }
 
-function calculate(placements: Placements): AshtakavargaResult {
-  const positions = entityPositions(placements);
-  const bhinna = calculateBhinna(positions);
-  validateBhinna(bhinna);
-  const sarva = calculateSarva(bhinna);
-  const reduced = calculateReduced(bhinna);
+const calculateTotals = Effect.fn("SAV.calculateTotals")(function* (bhinna: BhinnaAshtakavarga) {
+  const entityTotals = yield* Effect.all(
+    ASHTAKAVARGA_ENTITY_ORDER.map((entity) =>
+      Effect.sync(() => total(bhinna[entity])).pipe(Effect.map((t) => [entity, t] as const)),
+    ),
+    { concurrency: "unbounded" },
+  );
+  const sarvaTotal = total(yield* calculateSarva(bhinna));
+  return Record.fromEntries([...entityTotals, ["sarva", sarvaTotal]]) as AshtakavargaTotals;
+});
+
+export const calculate = Effect.fn("SAV.calculate")(function* (placements: Placements) {
+  const positions = yield* entityPositions(placements);
+  const bhinna = yield* calculateBhinna(positions);
+  yield* validateBhinna(bhinna);
+  const sarva = yield* calculateSarva(bhinna);
+  const reduced = yield* calculateReduced(bhinna);
   const shodhya_pinda = calculateShodhyaPinda(reduced, positions);
+  const totals = yield* calculateTotals(bhinna);
 
-  return {
-    bhinna,
-    sarva,
-    reduced,
-    shodhya_pinda,
-    totals: {
-      Sun: total(bhinna.Sun),
-      Moon: total(bhinna.Moon),
-      Mars: total(bhinna.Mars),
-      Mercury: total(bhinna.Mercury),
-      Jupiter: total(bhinna.Jupiter),
-      Venus: total(bhinna.Venus),
-      Saturn: total(bhinna.Saturn),
-      Lagna: total(bhinna.Lagna),
-      sarva: total(sarva),
-    },
-  };
-}
-
-export function makeCalculate() {
-  return Effect.fn("SAV.calculate")(function* (placements: Placements) {
-    return yield* Effect.try({
-      try: () => calculate(placements),
-      catch: (cause) =>
-        new SAVCalculationError({
-          message: "Could not calculate Parashari Ashtakavarga",
-          cause,
-        }),
-    });
-  });
-}
+  return { bhinna, sarva, reduced, shodhya_pinda, totals } satisfies AshtakavargaResult;
+});

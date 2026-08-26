@@ -10,7 +10,7 @@ const lunarOccupancy = (relativeHouse: 2 | 12) =>
     quantifier: "AnyHouse",
   });
 
-export const moonRelativeDefinitions = Object.freeze([
+export const moonRelativeDefinitions = [
   {
     yoga: {
       id: YogaIds.make("gajakesari"),
@@ -129,4 +129,4 @@ export const moonRelativeDefinitions = Object.freeze([
       }),
     }),
   },
-] as const satisfies readonly YogaDefinition[]);
+] as const satisfies readonly YogaDefinition[];

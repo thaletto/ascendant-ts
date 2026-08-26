@@ -1,4 +1,5 @@
 import { Schema } from "effect";
+
 import { LagnaName, Rashis } from "../chart/model.js";
 
 export const AshtakavargaPlanets = Schema.Literals([
@@ -10,29 +11,29 @@ export const AshtakavargaPlanets = Schema.Literals([
   "Venus",
   "Saturn",
 ] as const);
-export type AshtakavargaPlanet = typeof AshtakavargaPlanets.Type;
+export type AshtakavargaPlanets = typeof AshtakavargaPlanets.Type;
 
 export const AshtakavargaEntities = Schema.Union([AshtakavargaPlanets, LagnaName]);
-export type AshtakavargaEntity = typeof AshtakavargaEntities.Type;
+export type AshtakavargaEntities = typeof AshtakavargaEntities.Type;
 
 export const SignScores = Schema.Record(Rashis, Schema.Int);
-export interface SignScores extends Schema.Schema.Type<typeof SignScores> {}
+export type SignScores = typeof SignScores.Type;
 
 export const BhinnaAshtakavarga = Schema.Record(AshtakavargaEntities, SignScores);
-export interface BhinnaAshtakavarga extends Schema.Schema.Type<typeof BhinnaAshtakavarga> {}
+export type BhinnaAshtakavarga = typeof BhinnaAshtakavarga.Type;
 
 export const ReducedAshtakavarga = Schema.Record(AshtakavargaPlanets, SignScores);
-export interface ReducedAshtakavarga extends Schema.Schema.Type<typeof ReducedAshtakavarga> {}
+export type ReducedAshtakavarga = typeof ReducedAshtakavarga.Type;
 
 export const Pinda = Schema.Struct({
   rashi_pinda: Schema.Int,
   graha_pinda: Schema.Int,
   shodhya_pinda: Schema.Int,
 });
-export interface Pinda extends Schema.Schema.Type<typeof Pinda> {}
+export type Pinda = typeof Pinda.Type;
 
 export const ShodhyaPinda = Schema.Record(AshtakavargaPlanets, Pinda);
-export interface ShodhyaPinda extends Schema.Schema.Type<typeof ShodhyaPinda> {}
+export type ShodhyaPinda = typeof ShodhyaPinda.Type;
 
 export const AshtakavargaTotals = Schema.Struct({
   Sun: Schema.Int,
@@ -45,7 +46,7 @@ export const AshtakavargaTotals = Schema.Struct({
   Lagna: Schema.Int,
   sarva: Schema.Int,
 });
-export interface AshtakavargaTotals extends Schema.Schema.Type<typeof AshtakavargaTotals> {}
+export type AshtakavargaTotals = typeof AshtakavargaTotals.Type;
 
 export const AshtakavargaResult = Schema.Struct({
   bhinna: BhinnaAshtakavarga,
@@ -54,4 +55,4 @@ export const AshtakavargaResult = Schema.Struct({
   shodhya_pinda: ShodhyaPinda,
   totals: AshtakavargaTotals,
 });
-export interface AshtakavargaResult extends Schema.Schema.Type<typeof AshtakavargaResult> {}
+export type AshtakavargaResult = typeof AshtakavargaResult.Type;

@@ -1,1 +1,1 @@
-export { layer } from "./layer.js";
+export { SwissephLayer } from "./service.js";
