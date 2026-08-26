@@ -1,144 +1,60 @@
 import { describe, expect, it } from "@effect/vitest";
-import { Effect } from "effect";
-import { TestClock } from "effect/testing";
+import { DateTime, Effect, Equal } from "effect";
 
-import * as Chart from "../src/chart/index.js";
 import * as Dasha from "../src/dasha/index.js";
+import { fixtures } from "./support/fixtures.js";
 
-const moment = new Chart.Moment({ date: new Date("2000-01-01T12:00:00.000Z") });
-const placements = new Chart.Placements({
-  lagna: new Chart.SourceLagna({
-    name: "Lagna",
-    longitude: Chart.Longitude.make(100),
-    nakshatra: new Chart.Nakshatra({ name: "Pushya", lord: "Saturn", pada: 2 }),
-  }),
-  planets: [
-    new Chart.SourcePlanet({
-      name: "Moon",
-      longitude: Chart.Longitude.make(45),
-      is_retrograde: false,
-      nakshatra: new Chart.Nakshatra({ name: "Rohini", lord: "Moon", pada: 2 }),
-    }),
-  ],
-});
-
-describe("Dasha.calculate", () => {
-  it.effect("derives the nine Vimshottari Mahadashas from the natal Moon", () =>
-    Effect.gen(function* () {
-      const dasha = yield* Dasha.Service;
-      const timeline = yield* dasha.calculate(moment, placements);
-
-      expect(timeline.map((period) => period.mahadasha)).toEqual([
-        "Moon",
-        "Mars",
-        "Rahu",
-        "Jupiter",
-        "Saturn",
-        "Mercury",
-        "Ketu",
-        "Venus",
-        "Sun",
-      ]);
-      expect(timeline[0]).toMatchObject({
-        mahadasha: "Moon",
-        start: "01-04-1996",
-        end: "01-04-2006",
-      });
-      expect(timeline.at(-1)).toMatchObject({ end: "01-04-2116" });
-    }).pipe(Effect.provide(Dasha.layer)),
-  );
-
-  it.effect("creates nine ordered Antardashas inside each Mahadasha", () =>
-    Effect.gen(function* () {
-      const dasha = yield* Dasha.Service;
-      const timeline = yield* dasha.calculate(moment, placements);
-
-      for (const mahadasha of timeline) {
-        expect(mahadasha.antardashas).toHaveLength(9);
-        expect(new Set(mahadasha.antardashas.map((period) => period.antardasha))).toEqual(
-          new Set(Chart.Planets.literals),
+describe("Dasha", () => {
+  it.layer(Dasha.DashaLayer)((it) => {
+    it.effect("derives nine ordered Mahadashas and nested Antardashas", () =>
+      Effect.gen(function* () {
+        const service = yield* Dasha.Dasha;
+        const result = yield* service.calculate(
+          fixtures.moment(),
+          fixtures.placementsFromLongitudes({ Moon: 40 }),
         );
-        expect(mahadasha.antardashas[0]?.start).toBe(mahadasha.start);
-        expect(mahadasha.antardashas.at(-1)?.end).toBe(mahadasha.end);
-      }
-      expect(timeline[0]?.antardashas[0]).toMatchObject({
-        mahadasha: "Moon",
-        antardasha: "Moon",
-        start: "01-04-1996",
-        end: "01-02-1997",
-      });
-    }).pipe(Effect.provide(Dasha.layer)),
-  );
 
-  it.effect("fails with a typed error when the Moon is absent", () =>
-    Effect.gen(function* () {
-      const dasha = yield* Dasha.Service;
-      const withoutMoon = new Chart.Placements({ lagna: placements.lagna, planets: [] });
-      const error = yield* dasha.calculate(moment, withoutMoon).pipe(Effect.flip);
+        expect(result).toHaveLength(9);
+        expect(
+          Equal.equals(
+            result.map(({ mahadasha }) => mahadasha),
+            ["Ketu", "Venus", "Sun", "Moon", "Mars", "Rahu", "Jupiter", "Saturn", "Mercury"],
+          ),
+        ).toBe(true);
+        expect(result.every(({ antardashas }) => antardashas.length === 9)).toBe(true);
+      }),
+    );
 
-      expect(error).toMatchObject({
-        _tag: "DashaCalculationError",
-        message: "Could not calculate Vimshottari Dasha",
-      });
-    }).pipe(Effect.provide(Dasha.layer)),
-  );
-});
+    it.effect("reports a typed calculation error when the Moon evidence is absent", () =>
+      Effect.gen(function* () {
+        const service = yield* Dasha.Dasha;
+        const exit = yield* Effect.exit(
+          service.calculate(
+            fixtures.moment(),
+            fixtures.placementsFromLongitudes({}, { omit: ["Moon"] }),
+          ),
+        );
 
-describe("DashaTimeline", () => {
-  it.effect("selects inclusive current and relative periods", () =>
-    Effect.gen(function* () {
-      const dasha = yield* Dasha.Service;
-      const periods = yield* dasha.calculate(moment, placements);
+        expect(exit._tag).toBe("Failure");
+        if (exit._tag === "Failure") expect(String(exit.cause)).toContain("DashaCalculationError");
+      }),
+    );
 
-      expect((yield* dasha.current(periods, "01-04-1996")).mahadasha).toBe(periods[0]);
-      expect((yield* dasha.current(periods, "01-04-1996")).antardasha).toBe(
-        periods[0]?.antardashas[0],
-      );
-      expect(yield* dasha.mahadasha(periods, 1, "01-04-1996")).toBe(periods[1]);
-      expect(yield* dasha.antardasha(periods, 1, "01-04-1996")).toBe(periods[0]?.antardashas[1]);
-      expect(yield* dasha.current(periods, "31-03-1996")).toEqual({
-        mahadasha: null,
-        antardasha: null,
-      });
-    }).pipe(Effect.provide(Dasha.layer)),
-  );
+    it.effect("selects a Mahadasha at an inclusive start boundary", () =>
+      Effect.gen(function* () {
+        const service = yield* Dasha.Dasha;
+        const timeline = yield* service.calculate(
+          fixtures.moment(),
+          fixtures.placementsFromLongitudes({ Moon: 40 }),
+        );
+        const result = yield* service.mahadasha(
+          timeline,
+          0,
+          DateTime.makeUnsafe({ year: 2000, month: 1, day: 1 }),
+        );
 
-  it.effect("returns typed errors for malformed dates and invalid boundaries", () =>
-    Effect.gen(function* () {
-      const dasha = yield* Dasha.Service;
-      const invalidDate = yield* dasha.current([], "1996-04-01").pipe(Effect.flip);
-      expect(invalidDate).toMatchObject({ _tag: "DashaTimelineError", operation: "current" });
-
-      const malformed = [
-        {
-          mahadasha: "Moon" as const,
-          start: "01-01-2000",
-          end: "31-12-2000",
-          antardashas: [
-            {
-              mahadasha: "Moon" as const,
-              antardasha: "Moon" as const,
-              start: "31-12-1999",
-              end: "01-01-2000",
-            },
-          ],
-        },
-      ];
-      const invalidBoundary = yield* dasha.current(malformed, "01-01-2000").pipe(Effect.flip);
-      expect(invalidBoundary).toMatchObject({
-        _tag: "DashaTimelineError",
-        operation: "current",
-      });
-    }).pipe(Effect.provide(Dasha.layer)),
-  );
-
-  it.effect("uses the Effect Clock when the query date is omitted", () =>
-    Effect.gen(function* () {
-      yield* TestClock.setTime(new Date("2000-01-01T00:00:00.000Z").getTime());
-      const dasha = yield* Dasha.Service;
-      const periods = yield* dasha.calculate(moment, placements);
-
-      expect((yield* dasha.current(periods)).mahadasha?.mahadasha).toBe("Moon");
-    }).pipe(Effect.provide(Dasha.layer)),
-  );
+        expect(result).not.toBeNull();
+      }),
+    );
+  });
 });

@@ -24,57 +24,33 @@ import * as Swisseph from "astro-ascendant/swisseph";
 import * as FocusedUpapada from "astro-ascendant/upapada";
 import * as FocusedYoga from "astro-ascendant/yoga";
 
-const chartLayer = Chart.layer;
-const paramsLayer = AstroParams.defaultLayer;
-const ephemerisService = Ephemeris.Service;
-const dashaService = Dasha.Service;
-const dashaLayer = FocusedDasha.layer;
-const savService = SAV.Service;
-const savLayer = FocusedSAV.layer;
-const yogaService = Yoga.Service;
-const yogaLayer = FocusedYoga.layer;
-const yogaCatalog = FocusedYoga.catalog;
-const yogaEvaluationSchema = Yoga.YogaEvaluation;
-const yogaEvidenceSchema = FocusedYoga.YogaEvidence;
-const unknownYogaError = FocusedYoga.UnknownYogaError;
-const mapping = DivisionalMapping.getDivisionalTarget;
-const swissephLayer = Swisseph.layer;
-const bhavaSchema = Chart.BhavaChart;
-const circleAngleSchema = Chart.CircleAngle;
-const ayanamsas = AstroParams.Ayanamsa.literals;
-const houseSystems = AstroParams.HouseSystem.literals;
-const namedCalculationLayers = [
-  Argala.layer,
-  ArudhaPada.layer,
-  CharaKarakas.layer,
-  Karakamsha.layer,
-  RashiDrishti.layer,
-  Upapada.layer,
-  FocusedArgala.layer,
-  FocusedArudhaPada.layer,
-  FocusedCharaKarakas.layer,
-  FocusedKarakamsha.layer,
-  FocusedRashiDrishti.layer,
-  FocusedUpapada.layer,
+const layers = [
+  Argala.ArgalaLayer,
+  ArudhaPada.ArudhaPadaLayer,
+  CharaKarakas.CharaKarakasLayer,
+  Karakamsha.KarakamshaLayer,
+  RashiDrishti.RashiDrishtiLayer,
+  Upapada.UpapadaLayer,
+  FocusedArgala.ArgalaLayer,
+  FocusedArudhaPada.ArudhaPadaLayer,
+  FocusedCharaKarakas.CharaKarakasLayer,
+  FocusedKarakamsha.KarakamshaLayer,
 ];
 
-void chartLayer;
-void paramsLayer;
-void ephemerisService;
-void dashaService;
-void dashaLayer;
-void savService;
-void savLayer;
-void yogaService;
-void yogaLayer;
-void yogaCatalog;
-void yogaEvaluationSchema;
-void yogaEvidenceSchema;
-void unknownYogaError;
-void mapping;
-void swissephLayer;
-void bhavaSchema;
-void circleAngleSchema;
-void ayanamsas;
-void houseSystems;
-void namedCalculationLayers;
+void Chart.ChartLayer;
+void AstroParams.DefaultAstroParams;
+void Ephemeris.Ephemeris;
+void Dasha.Dasha;
+void FocusedDasha.DashaLayer;
+void SAV.SAV;
+void FocusedSAV.SAVLayer;
+void Yoga.Yoga;
+void FocusedYoga.YogaLayer;
+void Yoga.YogaEvaluation;
+void FocusedYoga.YogaEvidence;
+void FocusedYoga.UnknownYogaError;
+void DivisionalMapping.getDivisionalTarget;
+void Swisseph.SwissephLayer;
+void layers;
+void FocusedRashiDrishti;
+void FocusedUpapada;

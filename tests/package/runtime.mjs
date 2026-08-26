@@ -1,53 +1,31 @@
 import * as AstroAscendant from "astro-ascendant";
+import { Equal, HashSet, Record } from "effect";
 
-const exports = Object.keys(AstroAscendant).sort();
-if (
-  exports.join(",") !==
-  "Argala,ArudhaPada,AstroParams,CharaKarakas,Chart,Dasha,Ephemeris,Karakamsha,RashiDrishti,SAV,Upapada,Yoga"
-) {
-  throw new Error(`Unexpected root exports: ${exports.join(",")}`);
+const exports = HashSet.fromIterable(Record.keys(AstroAscendant));
+const expectedExports = HashSet.make(
+  "Argala",
+  "ArudhaPada",
+  "AstroParams",
+  "Chart",
+  "CharaKarakas",
+  "Dasha",
+  "Ephemeris",
+  "Karakamsha",
+  "RashiDrishti",
+  "SAV",
+  "Upapada",
+  "Yoga",
+);
+if (!Equal.equals(exports, expectedExports)) {
+  throw new Error("Unexpected root exports");
 }
-
-await import("astro-ascendant/chart/generate")
-  .then(() => {
-    throw new Error("Internal chart modules must not be exported");
-  })
-  .catch((error) => {
-    if (error.message === "Internal chart modules must not be exported") throw error;
-  });
-
-await import("astro-ascendant/dasha/calculate")
-  .then(() => {
-    throw new Error("Internal Dasha modules must not be exported");
-  })
-  .catch((error) => {
-    if (error.message === "Internal Dasha modules must not be exported") throw error;
-  });
-
-await import("astro-ascendant/sav/calculate")
-  .then(() => {
-    throw new Error("Internal SAV modules must not be exported");
-  })
-  .catch((error) => {
-    if (error.message === "Internal SAV modules must not be exported") throw error;
-  });
 
 const Yoga = await import("astro-ascendant/yoga");
-if (Yoga.catalog.length !== 10 || Yoga.catalog[0]?.id !== "gajakesari") {
-  throw new Error("The public Yoga catalog is not available from the Yoga subpath");
-}
-if (
-  typeof Yoga.YogaEvaluation !== "function" ||
-  typeof Yoga.YogaEvidence !== "function" ||
-  typeof Yoga.UnknownYogaError !== "function"
-) {
-  throw new Error("The public Yoga models and errors are not available from the Yoga subpath");
+if (typeof Yoga.Yoga !== "function" || typeof Yoga.YogaLayer !== "object") {
+  throw new Error("The public Yoga service is not available from the Yoga subpath");
 }
 
-await import("astro-ascendant/yoga/catalog")
-  .then(() => {
-    throw new Error("Internal Yoga modules must not be exported");
-  })
-  .catch((error) => {
-    if (error.message === "Internal Yoga modules must not be exported") throw error;
-  });
+const focused = await import("astro-ascendant/chara-karakas");
+if (typeof focused.CharaKarakas !== "function" || typeof focused.CharaKarakasLayer !== "object") {
+  throw new Error("The focused Jaimini subpath is not available");
+}

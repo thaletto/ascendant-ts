@@ -1,5 +1,5 @@
 import type { CelestialBody } from "../ephemeris/model.js";
-import { Planets } from "./model.js";
+import type { Planets } from "./model.js";
 
 export const CLASSICAL_PLANETS = [
   "Sun",

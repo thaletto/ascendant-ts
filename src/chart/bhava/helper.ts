@@ -2,10 +2,9 @@ import { Function } from "effect";
 
 import type { Planet } from "../../internal/model.js";
 
-export const normalizeAngle = Function.dual<(angle: number) => number, (angle: number) => number>(
-  1,
-  (angle) => ((angle % 360) + 360) % 360,
-);
+export function normalizeAngle(angle: number): number {
+  return ((angle % 360) + 360) % 360;
+}
 
 export const forwardDistance = Function.dual<
   (to: number) => (from: number) => number,
