@@ -7,11 +7,3 @@ export class DashaCalculationError extends Schema.TaggedError<DashaCalculationEr
     cause: Schema.Defect(),
   },
 ) {}
-
-export class DashaTimelineError extends Schema.TaggedError<DashaTimelineError>()(
-  "DashaTimelineError",
-  {
-    operation: Schema.Literals(["current", "mahadasha", "antardasha"]),
-    cause: Schema.Defect(),
-  },
-) {}

@@ -1,8 +1,8 @@
 import { Function } from "effect";
 
-import { RASHIS, SIGN_LORDS } from "../../internal/constant.js";
-import { signAt } from "../../internal/helper.js";
-import type { Rashis, RashiLords } from "../../internal/model.js";
+import { RASHIS, SIGN_LORDS } from "../../chart/internal/constants.js";
+import { signAt } from "../../chart/internal/position.js";
+import type { Rashis, RashiLords } from "../../chart/model.js";
 
 export const sourceSignOf = Function.dual<
   (house: number) => (lagnaSignIndex: number) => Rashis,

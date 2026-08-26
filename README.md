@@ -2,7 +2,7 @@
 
 `astro-ascendant` is an Effect-first TypeScript library for Vedic astrology calculations. It calculates sidereal Placements, D1 and divisional Charts, Vimshottari Dasha timelines, and classical Parashari Ashtakavarga.
 
-The library calculates planetary positions once for a Located Moment. Chart, Dasha, and SAV services then share those Placements without repeating ephemeris work.
+The library calculates planetary positions once for a Located Moment. Chart, Dasha, and SAV modules then share those Placements without repeating ephemeris work.
 
 ## Features
 
@@ -12,8 +12,8 @@ The library calculates planetary positions once for a Located Moment. Chart, Das
 - **Vimshottari Dasha**: Mahadasha and Antardasha timelines with date queries
 - **Ashtakavarga**: BAV, SAV, reduced BAV, and Shodhya Pinda
 - **Yogas**: classical Yoga catalog with structured evidence and bounded concurrency
-- **Effect integration**: typed services, layers, schemas, and domain errors
-- **Runtime-neutral core**: use the bundled Node/Bun adapter or provide another ephemeris service
+- **Effect integration**: named effects, typed context, layers, schemas, and domain errors
+- **Runtime-neutral core**: use the bundled Node/Bun adapter or provide another Ephemeris adapter
 
 ## Installation
 
@@ -27,58 +27,48 @@ The package uses ES modules and ships TypeScript declarations.
 
 ## Calculate a chart
 
-Create a Located Moment, provide the calculation layers, and request the divisions you need. D1 is always included as the first Chart.
+Create a Located Moment, provide the runtime layers once, and request the divisions you need. D1 is always included as the first Chart.
 
 ```typescript
+import { BunRuntime } from "@effect/platform-bun";
 import { AstroParams, Chart } from "astro-ascendant";
 import * as Swisseph from "astro-ascendant/swisseph";
-import { Effect, Layer } from "effect";
+import { Console, DateTime, Effect, Layer } from "effect";
 
-const moment = new Chart.Moment({
-  date: new Date("2000-01-01T12:00:00.000Z"),
+const moment = Chart.Moment.make({
+  date: DateTime.makeUnsafe("2000-01-01T12:00:00.000Z"),
 });
-const input = new Chart.LocatedMoment({
+const input = Chart.LocatedMoment.make({
   moment,
   latitude: 12.9716,
   longitude: 77.5946,
 });
 
-const program = Effect.gen(function* () {
-  const chart = yield* Chart.Service;
-  return yield* chart.generate(input, [9, 10]);
-});
+const program = Chart.generate(input, [9, 10]);
+const runtimeLayer = Layer.merge(AstroParams.DefaultAstroParams, Swisseph.SwissephLayer);
 
-const chartLayer = Chart.layer.pipe(
-  Layer.provide(AstroParams.defaultLayer),
-  Layer.provide(Swisseph.layer),
-);
-const calculation = await Effect.runPromise(program.pipe(Effect.provide(chartLayer)));
+BunRuntime.runMain(program.pipe(Effect.provide(runtimeLayer)));
 ```
 
 `calculation.placements` contains the shared source longitudes. `calculation.charts` contains D1, D9, and D10 in deterministic order. `calculation.bhava` contains the twelve cusp-defined houses and all eight house angles. `calculation.astroParams` records the resolved methodology used for the result.
 
 ## Derive Dasha and Ashtakavarga
 
-Pass the shared Placements to the Dasha and SAV services. Both calculations stay in process and do not call the ephemeris adapter again.
+Pass the shared Placements to the Dasha and SAV modules. Both calculations stay in process and do not call the Ephemeris adapter again.
 
 ```typescript
 import { Dasha, SAV } from "astro-ascendant";
 
 const derivedProgram = Effect.gen(function* () {
-  const dasha = yield* Dasha.Service;
-  const sav = yield* SAV.Service;
+  const timeline = yield* Dasha.calculate(moment, calculation.placements);
+  const current = yield* Dasha.at(timeline);
+  const ashtakavarga = yield* SAV.calculate(calculation.placements);
 
-  const timeline = yield* dasha.calculate(moment, calculation.placements);
-  const ashtakavarga = yield* sav.calculate(calculation.placements);
-
-  return { timeline, ashtakavarga };
+  return { timeline, current, ashtakavarga };
 });
-
-const derivedLayer = Layer.merge(Dasha.layer, SAV.layer);
-const derived = await Effect.runPromise(derivedProgram.pipe(Effect.provide(derivedLayer)));
 ```
 
-The Dasha service also provides `current`, `mahadasha`, and `antardasha` queries. The SAV result contains these fields:
+`Dasha.at` queries the active Mahadasha and Antardasha with half-open UTC intervals. The SAV result contains these fields:
 
 - `bhinna`: BAV tables for the 7 classical planets and Lagna
 - `sarva`: the 12 SAV scores, excluding Lagna BAV
@@ -88,30 +78,30 @@ The Dasha service also provides `current`, `mahadasha`, and `antardasha` queries
 
 ## Evaluate Yogas
 
-Evaluate the built-in Yoga catalog against an existing Chart calculation. The service preflights the required divisions, then runs the rules with bounded concurrency and returns structured evidence per rule.
+Evaluate the built-in Yoga rule set against an existing Chart calculation. The module preflights the required divisions, then runs the definitions with bounded concurrency and returns structured evidence per definition.
 
 ```typescript
 import { Yoga } from "astro-ascendant";
 
 const yogaProgram = Effect.gen(function* () {
-  const yoga = yield* Yoga.Service;
-  const evaluation = yield* yoga.evaluateAll(calculation);
+  const evaluation = yield* Yoga.evaluateAll(calculation);
 
   for (const { yoga: descriptor, present } of evaluation.results) {
-    if (present) console.log(descriptor.name);
+    if (present) yield* Console.log(descriptor.name);
   }
 
-  return yield* yoga.evaluateSelected(calculation, ["gajakesari", "sunapha"]);
+  return yield* Yoga.evaluateSelected(calculation, [
+    Yoga.YogaId.make("gajakesari"),
+    Yoga.YogaId.make("sunapha"),
+  ]);
 });
-
-const yogaEvaluation = await Effect.runPromise(yogaProgram.pipe(Effect.provide(Yoga.layer)));
 ```
 
-`yoga.catalog` lists every rule's descriptor without running any calculation. Unknown, duplicate, or empty selections and missing Chart divisions fail through the typed error channel before rules start. Each result carries a `YogaEvidence` tree that `Yoga.formatEvidence` renders as text.
+`Yoga.catalog` lists every definition's descriptor without running any calculation. Unknown, duplicate, or empty selections and missing Chart divisions fail through the typed error channel before definitions start. Each result carries a `YogaEvidence` tree that `Yoga.formatEvidence` renders as text.
 
 ## Configure calculation parameters
 
-`AstroParams.defaultLayer` uses Lahiri ayanamsa and Whole Sign houses. Provide another layer for a different supported methodology.
+`AstroParams.DefaultAstroParams` uses Lahiri ayanamsa and Whole Sign houses. Provide another layer for a different supported methodology.
 
 ```typescript
 const paramsLayer = AstroParams.layer({
@@ -120,9 +110,7 @@ const paramsLayer = AstroParams.layer({
 });
 ```
 
-The Chart service produces sign-based D1 and divisional Charts, so their houses remain Whole Sign. The configured `houseSystem` changes only `calculation.bhava`; the shared Placements and sign-based Charts retain their own semantics.
-
-For environment-driven applications, use `AstroParams.layerConfig(AstroParams.environmentConfig)`. It reads `AYANAMSA` and `HOUSE_SYSTEM`, with the same defaults as `defaultLayer`.
+The Chart module produces sign-based D1 and divisional Charts, so their houses remain Whole Sign. The configured `houseSystem` changes only `calculation.bhava`; the shared Placements and sign-based Charts retain their own semantics.
 
 ### Supported ayanamsas
 
@@ -140,7 +128,7 @@ Some systems, including Placidus and Koch, cannot be calculated at certain polar
 
 ## Supported divisions
 
-The Chart service supports these divisions:
+The Chart module supports these divisions:
 
 `D1`, `D2`, `D3`, `D4`, `D7`, `D9`, `D10`, `D12`, `D16`, `D20`, `D24`, `D27`, `D30`, `D40`, `D45`, and `D60`.
 
@@ -153,10 +141,10 @@ Import namespaces from the package root or use focused entry points:
 | Import                                     | Purpose                                                            |
 | ------------------------------------------ | ------------------------------------------------------------------ |
 | `astro-ascendant`                          | `AstroParams`, `Chart`, `Dasha`, `Ephemeris`, and `SAV` namespaces |
-| `astro-ascendant/chart`                    | Chart models, schemas, errors, service, and layer                  |
-| `astro-ascendant/dasha`                    | Vimshottari Dasha models, errors, service, and layer               |
-| `astro-ascendant/sav`                      | Ashtakavarga models, errors, service, and layer                    |
-| `astro-ascendant/yoga`                     | Yoga models, catalog, errors, service, and layer                   |
+| `astro-ascendant/chart`                    | Chart models, schemas, errors, generation, and projection          |
+| `astro-ascendant/dasha`                    | Vimshottari Dasha models, calculation, and UTC lookup              |
+| `astro-ascendant/sav`                      | Ashtakavarga models, errors, and calculation                       |
+| `astro-ascendant/yoga`                     | Yoga models, rule set, errors, evaluation, and evidence formatting |
 | `astro-ascendant/astro-params`             | Calculation parameter models and layers                            |
 | `astro-ascendant/ephemeris`                | Runtime-neutral ephemeris contract and models                      |
 | `astro-ascendant/swisseph`                 | Swiss Ephemeris adapter for Node.js and Bun                        |
@@ -176,7 +164,7 @@ bun run examples/chart.ts
 Replace `chart.ts` with `dasha.ts`, `sav.ts`, `yoga.ts`, or `jaimini.ts` to print the
 corresponding tables.
 The Jaimini example composes Chara Karakas, Rashi Drishti, Karakamsha, Arudha Pada,
-Upapada, and Argala through their separately named services.
+Upapada, and Argala through their separately named operations.
 
 ## Development
 

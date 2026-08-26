@@ -1,21 +1,15 @@
 import { Effect, Array, pipe, HashSet, Order, MutableHashSet, HashMap, Option } from "effect";
 
-import type { ChartCalculation } from "../internal/model.js";
+import type { ChartCalculation } from "../chart/model.js";
 import { definitions as builtInDefinitions, makeCatalog } from "./catalog.js";
 import {
   DuplicateYogaSelectionError,
   EmptyYogaSelectionError,
-  InvalidYogaServiceConfigurationError,
   MissingYogaEvidenceError,
   UnknownYogaError,
 } from "./error.js";
 import { evaluateDefinition, makeEvaluationIndex } from "./evaluate.js";
-import type {
-  EvaluationHooks,
-  EvaluationIndex,
-  ServiceOptions,
-  YogaDefinition,
-} from "./internal.js";
+import type { YogaDefinition } from "./internal.js";
 import type { YogaEvaluation, YogaId } from "./model.js";
 import { provenance } from "./provenance.js";
 
@@ -56,35 +50,16 @@ const missingEvidence = Effect.fn(function* (
   return yield* MissingYogaEvidenceError.make({ affectedYogaIds, missingDivisions });
 });
 
-const evaluateRule = Effect.fn(function* (
-  definition: YogaDefinition,
-  index: EvaluationIndex,
-  hooks: EvaluationHooks | undefined,
-) {
-  if (hooks !== undefined) yield* hooks.onStart(definition.yoga.id);
-  const evaluated = evaluateDefinition(definition, index);
-  return yield* hooks === undefined
-    ? evaluated
-    : evaluated.pipe(Effect.ensuring(hooks.onFinish(definition.yoga.id)));
-});
-
 const evaluateYoga = Effect.fn("evaluateYoga")(function* (
   calculation: ChartCalculation,
   selected: readonly YogaDefinition[],
-  options: ServiceOptions = {},
 ) {
   yield* missingEvidence(calculation, selected);
 
-  const hooks = options.hooks;
-  const concurrency = options.concurrency ?? 4;
-  if (!Number.isInteger(concurrency) || concurrency < 1) {
-    return yield* InvalidYogaServiceConfigurationError.make({ concurrency });
-  }
-
   const index = makeEvaluationIndex(calculation);
   const results = yield* Effect.all(
-    selected.map((definition) => evaluateRule(definition, index, hooks)),
-    { concurrency },
+    selected.map((definition) => evaluateDefinition(definition, index)),
+    { concurrency: 4 },
   );
 
   return { provenance, results } as YogaEvaluation;

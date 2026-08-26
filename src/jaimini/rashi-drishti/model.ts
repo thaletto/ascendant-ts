@@ -1,6 +1,6 @@
 import { Schema } from "effect";
 
-import { Rashis } from "../../internal/model.js";
+import { Rashis } from "../../chart/model.js";
 
 export const Provenance = Schema.Struct({
   school: Schema.Literal("Jaimini"),

@@ -3,7 +3,6 @@ import { Config, Console, DateTime, Effect, Layer } from "effect";
 import { DevTools } from "effect/unstable/devtools";
 
 import { AstroParams, Chart, Yoga } from "../src/index.ts";
-import { LocatedMoment, Moment } from "../src/internal/model.ts";
 import * as Swisseph from "../src/swisseph/index.ts";
 
 const config = Effect.gen(function* () {
@@ -32,21 +31,16 @@ const printYogas = Effect.fn("Examples.printYogas")(function* (evaluation: Yoga.
 
 const program = Effect.gen(function* () {
   const { date, latitude, longitude } = yield* config;
-  const chart = yield* Chart.Chart;
-  const yoga = yield* Yoga.Yoga;
-  const moment = Moment.make({ date: DateTime.makeUnsafe(date) });
-  const calculation = yield* chart.generate(
-    LocatedMoment.make({ moment, latitude, longitude }),
-    [1],
+  const moment = Chart.Moment.make({ date: DateTime.makeUnsafe(date) });
+  const calculation = yield* Chart.generate(
+    Chart.LocatedMoment.make({ moment, latitude, longitude }),
   );
 
-  yield* yoga.evaluateAll(calculation).pipe(Effect.tap(printYogas));
+  yield* Yoga.evaluateAll(calculation).pipe(Effect.tap(printYogas));
 });
 
 const runtimeLayer = Layer.mergeAll(
   AstroParams.DefaultAstroParams,
-  Chart.ChartLayer,
-  Yoga.YogaLayer,
   Swisseph.SwissephLayer,
   DevTools.layer(),
 );

@@ -1,8 +1,8 @@
 import { Data, type Effect, type Result, Schema } from "effect";
 
-import type { Division, Houses, Planets, PlanetsLagna } from "../internal/model.js";
+import type { Division, Houses, Planets, PlanetsLagna } from "../chart/model.js";
 import type { InvalidYogaEvidenceError } from "./error.js";
-import type { YogaDescriptor, YogaEvidence, YogaId } from "./model.js";
+import type { YogaDescriptor, YogaEvidence } from "./model.js";
 
 export type YogaCondition = Data.TaggedEnum<{
   BodyPositionsCondition: {
@@ -54,14 +54,4 @@ export interface YogaDefinition {
   readonly yoga: YogaDescriptor;
   readonly requiredDivisions: readonly [Division, ...Division[]];
   readonly strategy: YogaStrategy;
-}
-
-export interface EvaluationHooks {
-  readonly onStart: (id: YogaId) => Effect.Effect<void>;
-  readonly onFinish: (id: YogaId) => Effect.Effect<void>;
-}
-
-export interface ServiceOptions {
-  readonly hooks?: EvaluationHooks;
-  readonly concurrency?: number;
 }

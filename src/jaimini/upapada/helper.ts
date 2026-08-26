@@ -1,6 +1,6 @@
 import { Effect } from "effect";
 
-import type { Placements } from "../../internal/model.js";
+import type { Placements } from "../../chart/model.js";
 import * as ArudhaPada from "../arudha-pada/index.js";
 import { EvidenceError } from "./model.js";
 

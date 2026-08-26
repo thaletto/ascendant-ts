@@ -1,6 +1,6 @@
 import { Schema } from "effect";
 
-import { type Ayanamsa, type HouseSystem } from "../astro-params/model.js";
+import { type HouseSystem } from "../astro-params/model.js";
 
 export const JulianDay = Schema.Finite.check(Schema.isBetween({ minimum: 0, maximum: 1e7 })).pipe(
   Schema.brand("JulianDay"),
@@ -42,10 +42,4 @@ export interface HouseData {
   readonly coAscendant2: number;
   readonly polarAscendant: number;
   readonly houseSystem: typeof HouseSystem.Type;
-}
-
-export interface PositionRequest {
-  readonly julianDay: JulianDay;
-  readonly body: CelestialBody;
-  readonly ayanamsa: typeof Ayanamsa.Type;
 }

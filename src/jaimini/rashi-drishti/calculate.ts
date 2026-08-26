@@ -1,6 +1,6 @@
 import { Effect } from "effect";
 
-import type { Rashis } from "../../internal/model.js";
+import type { Rashis } from "../../chart/model.js";
 import { targetsOf } from "./helper.js";
 import type { Result } from "./model.js";
 import { Provenance } from "./model.js";

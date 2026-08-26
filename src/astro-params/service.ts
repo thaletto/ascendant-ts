@@ -10,7 +10,7 @@ class Service extends Context.Service<
   }
 >()("astro-ascendant/astro-params/service") {}
 
-function layer(options: Options) {
+export function layer(options: Options) {
   return Layer.succeed(Service, Service.of(options));
 }
 

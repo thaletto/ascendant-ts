@@ -1,6 +1,6 @@
 import { Schema } from "effect";
 
-import { Planets, Rashis } from "../../internal/model.js";
+import { Planets, Rashis } from "../../chart/model.js";
 
 export const SignReference = Schema.Struct({
   kind: Schema.Literal("Sign"),

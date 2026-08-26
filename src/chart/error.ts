@@ -1,6 +1,6 @@
 import { Schema } from "effect";
 
-import { Planets } from "../internal/model.js";
+import { Planets } from "./model.js";
 
 export class ChartCalculationError extends Schema.TaggedError<ChartCalculationError>()(
   "ChartCalculationError",

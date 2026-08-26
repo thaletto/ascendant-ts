@@ -1,8 +1,8 @@
-import { Effect } from "effect";
+import { Array, Effect, Record } from "effect";
 
-import { RASHIS } from "../internal/constant.js";
-import { signAt } from "../internal/helper.js";
-import type { Placements } from "../internal/model.js";
+import { RASHIS } from "../chart/internal/constants.js";
+import { signAt } from "../chart/internal/position.js";
+import type { Placements } from "../chart/model.js";
 import {
   ASHTAKAVARGA_ENTITY_ORDER,
   ASHTAKAVARGA_PLANET_ORDER,
@@ -37,18 +37,18 @@ const signScores = Effect.fn("SAV.signScores")(function* (scores: readonly numbe
     });
   }
   return {
-    Aries: scores[0]!,
-    Taurus: scores[1]!,
-    Gemini: scores[2]!,
-    Cancer: scores[3]!,
-    Leo: scores[4]!,
-    Virgo: scores[5]!,
-    Libra: scores[6]!,
-    Scorpio: scores[7]!,
-    Sagittarius: scores[8]!,
-    Capricorn: scores[9]!,
-    Aquarius: scores[10]!,
-    Pisces: scores[11]!,
+    Aries: Array.getUnsafe(scores, 0),
+    Taurus: Array.getUnsafe(scores, 1),
+    Gemini: Array.getUnsafe(scores, 2),
+    Cancer: Array.getUnsafe(scores, 3),
+    Leo: Array.getUnsafe(scores, 4),
+    Virgo: Array.getUnsafe(scores, 5),
+    Libra: Array.getUnsafe(scores, 6),
+    Scorpio: Array.getUnsafe(scores, 7),
+    Sagittarius: Array.getUnsafe(scores, 8),
+    Capricorn: Array.getUnsafe(scores, 9),
+    Aquarius: Array.getUnsafe(scores, 10),
+    Pisces: Array.getUnsafe(scores, 11),
   } satisfies SignScores;
 });
 
@@ -76,8 +76,8 @@ const entityPositions = Effect.fn("SAV.entityPositions")(function* (placements: 
     { concurrency: "unbounded" },
   );
 
-  return Object.fromEntries(
-    ASHTAKAVARGA_ENTITY_ORDER.map((entity, i) => [entity, positions[i]!]),
+  return Record.fromEntries(
+    ASHTAKAVARGA_ENTITY_ORDER.map((entity, i) => [entity, Array.getUnsafe(positions, i)]),
   ) as EntityPositions;
 });
 
@@ -104,7 +104,7 @@ const calculateBhinna = Effect.fn("SAV.calculateBhinna")(function* (positions: E
     ),
     { concurrency: "unbounded" },
   );
-  return Object.fromEntries(bhinnaEntries) as BhinnaAshtakavarga;
+  return Record.fromEntries(bhinnaEntries) as BhinnaAshtakavarga;
 });
 
 const validateBhinna = Effect.fn("SAV.validateBhinna")(function* (bhinna: BhinnaAshtakavarga) {
@@ -168,13 +168,10 @@ const calculateReduced = Effect.fn("SAV.calculateReduced")(function* (bhinna: Bh
     ),
     { concurrency: "unbounded" },
   );
-  return Object.fromEntries(reducedEntries) as ReducedAshtakavarga;
+  return Record.fromEntries(reducedEntries) as ReducedAshtakavarga;
 });
 
-const calculatePlanetPinda = Effect.fn("SAV.calculatePlanetPinda")(function* (
-  scores: SignScores,
-  positions: EntityPositions,
-) {
+function calculatePlanetPinda(scores: SignScores, positions: EntityPositions): Pinda {
   const rashi_pinda = RASHIS.reduce(
     (sum, rashi, index) => sum + scores[rashi] * (RASHI_GUNAKAR[index] ?? 0),
     0,
@@ -184,22 +181,18 @@ const calculatePlanetPinda = Effect.fn("SAV.calculatePlanetPinda")(function* (
     0,
   );
   return { rashi_pinda, graha_pinda, shodhya_pinda: rashi_pinda + graha_pinda } satisfies Pinda;
-});
+}
 
-const calculateShodhyaPinda = Effect.fn("SAV.calculateShodhyaPinda")(function* (
+function calculateShodhyaPinda(
   reduced: ReducedAshtakavarga,
   positions: EntityPositions,
-) {
-  const pindaEntries = yield* Effect.all(
-    ASHTAKAVARGA_PLANET_ORDER.map((planet) =>
-      calculatePlanetPinda(reduced[planet], positions).pipe(
-        Effect.map((pinda) => [planet, pinda] as const),
-      ),
+): ShodhyaPinda {
+  return Record.fromEntries(
+    ASHTAKAVARGA_PLANET_ORDER.map(
+      (planet) => [planet, calculatePlanetPinda(reduced[planet], positions)] as const,
     ),
-    { concurrency: "unbounded" },
-  );
-  return Object.fromEntries(pindaEntries) as ShodhyaPinda;
-});
+  ) as ShodhyaPinda;
+}
 
 const calculateTotals = Effect.fn("SAV.calculateTotals")(function* (bhinna: BhinnaAshtakavarga) {
   const entityTotals = yield* Effect.all(
@@ -209,7 +202,7 @@ const calculateTotals = Effect.fn("SAV.calculateTotals")(function* (bhinna: Bhin
     { concurrency: "unbounded" },
   );
   const sarvaTotal = total(yield* calculateSarva(bhinna));
-  return Object.fromEntries([...entityTotals, ["sarva", sarvaTotal]]) as AshtakavargaTotals;
+  return Record.fromEntries([...entityTotals, ["sarva", sarvaTotal]]) as AshtakavargaTotals;
 });
 
 export const calculate = Effect.fn("SAV.calculate")(function* (placements: Placements) {
@@ -218,7 +211,7 @@ export const calculate = Effect.fn("SAV.calculate")(function* (placements: Place
   yield* validateBhinna(bhinna);
   const sarva = yield* calculateSarva(bhinna);
   const reduced = yield* calculateReduced(bhinna);
-  const shodhya_pinda = yield* calculateShodhyaPinda(reduced, positions);
+  const shodhya_pinda = calculateShodhyaPinda(reduced, positions);
   const totals = yield* calculateTotals(bhinna);
 
   return { bhinna, sarva, reduced, shodhya_pinda, totals } satisfies AshtakavargaResult;

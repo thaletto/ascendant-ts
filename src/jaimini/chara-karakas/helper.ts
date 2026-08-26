@@ -1,6 +1,6 @@
-import { Effect, Function } from "effect";
+import { Effect, Function, HashMap, Option } from "effect";
 
-import { Degree, Longitude } from "../../internal/model.js";
+import { Degree, Longitude } from "../../chart/model.js";
 import type { Holder, ExactDegree, RankedHolder, Role } from "./model.js";
 import { ClassicalPlanets, ParseError, Roles } from "./model.js";
 
@@ -58,12 +58,12 @@ export const hasSameDegree = Function.dual<
 >(2, (left, right) => compareExactDegrees(left.exactDegree, right.exactDegree) === 0);
 
 export const assignmentAt = Effect.fn(function* (
-  assignments: ReadonlyMap<Role, readonly [Holder, ...Holder[]]>,
+  assignments: HashMap.HashMap<Role, readonly [Holder, ...Holder[]]>,
   role: Role,
 ) {
-  const assignment = assignments.get(role);
-  if (assignment === undefined) {
+  const assignment = HashMap.get(assignments, role);
+  if (Option.isNone(assignment)) {
     return yield* ParseError.make({ message: `Missing Chara Karaka role ${role}` });
   }
-  return assignment;
+  return assignment.value;
 });

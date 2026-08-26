@@ -1,7 +1,7 @@
 import { Effect } from "effect";
 
-import { signAt, signIndexOf } from "../../internal/helper.js";
-import { Houses, type Placements } from "../../internal/model.js";
+import { signAt, signIndexOf } from "../../chart/internal/position.js";
+import { Houses, type Placements } from "../../chart/model.js";
 import { distanceBetween, lordOfSign, projectedSign, sourceSignOf } from "./helper.js";
 import type { Result } from "./model.js";
 import { EvidenceError, Provenance } from "./model.js";

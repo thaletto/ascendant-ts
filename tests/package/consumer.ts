@@ -23,34 +23,59 @@ import * as FocusedSAV from "astro-ascendant/sav";
 import * as Swisseph from "astro-ascendant/swisseph";
 import * as FocusedUpapada from "astro-ascendant/upapada";
 import * as FocusedYoga from "astro-ascendant/yoga";
+import { DateTime, Effect } from "effect";
 
-const layers = [
-  Argala.ArgalaLayer,
-  ArudhaPada.ArudhaPadaLayer,
-  CharaKarakas.CharaKarakasLayer,
-  Karakamsha.KarakamshaLayer,
-  RashiDrishti.RashiDrishtiLayer,
-  Upapada.UpapadaLayer,
-  FocusedArgala.ArgalaLayer,
-  FocusedArudhaPada.ArudhaPadaLayer,
-  FocusedCharaKarakas.CharaKarakasLayer,
-  FocusedKarakamsha.KarakamshaLayer,
-];
+const moment = Chart.Moment.make({
+  date: DateTime.makeUnsafe("2000-01-01T12:00:00.000Z"),
+});
+const input = Chart.LocatedMoment.make({
+  moment,
+  latitude: 12.9716,
+  longitude: 77.5946,
+});
 
-void Chart.ChartLayer;
+const packageWorkflow = Effect.gen(function* () {
+  const calculation = yield* Chart.generate(input, [9]);
+  const timeline = yield* Dasha.calculate(moment, calculation.placements);
+  const current = yield* Dasha.at(timeline, moment.date);
+  const sav = yield* SAV.calculate(calculation.placements);
+  const yogas = yield* Yoga.evaluateAll(calculation);
+  const charaKarakas = yield* CharaKarakas.calculate(calculation.placements);
+
+  return { calculation, timeline, current, sav, yogas, charaKarakas };
+});
+
+void Chart.generate;
+void Chart.project;
+void Chart.ChartCalculation;
+void Chart.LocatedMoment;
+void Chart.Moment;
+void AstroParams.layer;
 void AstroParams.DefaultAstroParams;
 void Ephemeris.Ephemeris;
-void Dasha.Dasha;
-void FocusedDasha.DashaLayer;
-void SAV.SAV;
-void FocusedSAV.SAVLayer;
-void Yoga.Yoga;
-void FocusedYoga.YogaLayer;
-void Yoga.YogaEvaluation;
+void Dasha.calculate;
+void Dasha.at;
+void FocusedDasha.calculate;
+void FocusedDasha.at;
+void SAV.calculate;
+void FocusedSAV.calculate;
+void Yoga.catalog;
+void Yoga.evaluateAll;
+void Yoga.evaluateSelected;
 void FocusedYoga.YogaEvidence;
 void FocusedYoga.UnknownYogaError;
+void Argala.calculate;
+void ArudhaPada.calculate;
+void CharaKarakas.calculate;
+void Karakamsha.calculate;
+void RashiDrishti.calculate;
+void Upapada.calculate;
+void FocusedArgala.calculate;
+void FocusedArudhaPada.calculate;
+void FocusedCharaKarakas.calculate;
+void FocusedKarakamsha.calculate;
+void FocusedRashiDrishti.calculate;
+void FocusedUpapada.calculate;
 void DivisionalMapping.getDivisionalTarget;
 void Swisseph.SwissephLayer;
-void layers;
-void FocusedRashiDrishti;
-void FocusedUpapada;
+void packageWorkflow;

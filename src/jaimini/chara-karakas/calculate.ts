@@ -1,6 +1,6 @@
-import { Effect } from "effect";
+import { Effect, HashMap } from "effect";
 
-import { Placements } from "../../internal/model.js";
+import { Placements } from "../../chart/model.js";
 import {
   CLASSICAL_PLANET_ORDER,
   ROLE_ORDER,
@@ -36,7 +36,7 @@ export const calculate = Effect.fn("astro-ascendant/jaimini/chara-karakas/calcul
       CLASSICAL_PLANET_ORDER.indexOf(left.planet) - CLASSICAL_PLANET_ORDER.indexOf(right.planet),
   );
 
-  const byRole = new Map<Role, readonly [Holder, ...Holder[]]>();
+  let byRole = HashMap.empty<Role, readonly [Holder, ...Holder[]]>();
   let rank = 0;
   while (rank < holders.length) {
     const first = holders[rank];
@@ -72,7 +72,7 @@ export const calculate = Effect.fn("astro-ascendant/jaimini/chara-karakas/calcul
           message: `Missing Chara Karaka role at rank ${roleIndex}`,
         });
       }
-      byRole.set(role, nonEmptyTiedHolders);
+      byRole = HashMap.set(byRole, role, nonEmptyTiedHolders);
     }
     rank = nextRank;
   }

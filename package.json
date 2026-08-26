@@ -21,8 +21,8 @@
       "import": "./dist/chart/index.js"
     },
     "./chart/divisional-mapping": {
-      "types": "./dist/chart/divisional-mapping.d.ts",
-      "import": "./dist/chart/divisional-mapping.js"
+      "types": "./dist/chart/divisional-mapping/index.d.ts",
+      "import": "./dist/chart/divisional-mapping/index.js"
     },
     "./dasha": {
       "types": "./dist/dasha/index.d.ts",
@@ -45,28 +45,28 @@
       "import": "./dist/astro-params/index.js"
     },
     "./argala": {
-      "types": "./dist/jaimini/argala.d.ts",
-      "import": "./dist/jaimini/argala.js"
+      "types": "./dist/jaimini/argala/index.d.ts",
+      "import": "./dist/jaimini/argala/index.js"
     },
     "./arudha-pada": {
-      "types": "./dist/jaimini/arudha-pada.d.ts",
-      "import": "./dist/jaimini/arudha-pada.js"
+      "types": "./dist/jaimini/arudha-pada/index.d.ts",
+      "import": "./dist/jaimini/arudha-pada/index.js"
     },
     "./chara-karakas": {
-      "types": "./dist/jaimini/chara-karakas.d.ts",
-      "import": "./dist/jaimini/chara-karakas.js"
+      "types": "./dist/jaimini/chara-karakas/index.d.ts",
+      "import": "./dist/jaimini/chara-karakas/index.js"
     },
     "./karakamsha": {
-      "types": "./dist/jaimini/karakamsha.d.ts",
-      "import": "./dist/jaimini/karakamsha.js"
+      "types": "./dist/jaimini/karakamsha/index.d.ts",
+      "import": "./dist/jaimini/karakamsha/index.js"
     },
     "./rashi-drishti": {
-      "types": "./dist/jaimini/rashi-drishti.d.ts",
-      "import": "./dist/jaimini/rashi-drishti.js"
+      "types": "./dist/jaimini/rashi-drishti/index.d.ts",
+      "import": "./dist/jaimini/rashi-drishti/index.js"
     },
     "./upapada": {
-      "types": "./dist/jaimini/upapada.d.ts",
-      "import": "./dist/jaimini/upapada.js"
+      "types": "./dist/jaimini/upapada/index.d.ts",
+      "import": "./dist/jaimini/upapada/index.js"
     },
     "./swisseph": {
       "types": "./dist/swisseph/index.d.ts",

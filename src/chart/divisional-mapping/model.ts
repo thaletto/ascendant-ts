@@ -1,4 +1,4 @@
-import type { Degree, Longitude } from "../../internal/model.js";
+import type { Degree, Longitude } from "../model.js";
 
 export interface DivisionalTarget {
   readonly signIndex: number;

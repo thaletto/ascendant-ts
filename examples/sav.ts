@@ -3,7 +3,6 @@ import { Config, Console, DateTime, Effect, Layer, Record } from "effect";
 import { DevTools } from "effect/unstable/devtools";
 
 import { AstroParams, Chart, SAV } from "../src/index.ts";
-import { LocatedMoment, Moment } from "../src/internal/model.ts";
 import * as Swisseph from "../src/swisseph/index.ts";
 
 const config = Effect.gen(function* () {
@@ -60,23 +59,18 @@ const printSAV = Effect.fn("Examples.printSAV")(function* (result: SAV.Ashtakava
 
 const program = Effect.gen(function* () {
   const { date, latitude, longitude } = yield* config;
-  const chart = yield* Chart.Chart;
-  const sav = yield* SAV.SAV;
-  const calculation = yield* chart.generate(
-    LocatedMoment.make({
-      moment: Moment.make({ date: DateTime.makeUnsafe(date) }),
+  const calculation = yield* Chart.generate(
+    Chart.LocatedMoment.make({
+      moment: Chart.Moment.make({ date: DateTime.makeUnsafe(date) }),
       latitude,
       longitude,
     }),
-    [1],
   );
-  yield* sav.calculate(calculation.placements).pipe(Effect.tap(printSAV));
+  yield* SAV.calculate(calculation.placements).pipe(Effect.tap(printSAV));
 });
 
 const runtimeLayer = Layer.mergeAll(
   AstroParams.DefaultAstroParams,
-  Chart.ChartLayer,
-  SAV.SAVLayer,
   Swisseph.SwissephLayer,
   DevTools.layer(),
 );

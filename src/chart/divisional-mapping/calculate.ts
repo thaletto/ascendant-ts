@@ -1,6 +1,6 @@
 import { Effect, pipe } from "effect";
 
-import { type Division, Longitude } from "../../internal/model.js";
+import { type Division, Longitude } from "../model.js";
 import { DivisionalMappingError } from "./error.js";
 import {
   divisionalTargetOf,

@@ -1,6 +1,3 @@
-import type { CelestialBody } from "../ephemeris/model.js";
-import type { Planets } from "./model.js";
-
 export const CLASSICAL_PLANETS = [
   "Sun",
   "Moon",
@@ -464,7 +461,7 @@ export const DIGNITY_RANGES = {
   ],
 } as const;
 
-export const NAKSHATRA_SPAN = 360 / NAKSHATRAS.length;
+export const NAKSHATRA_SPAN: number = 360 / NAKSHATRAS.length;
 
 export const NAKSHATRA_LORD_CYCLE = [
   "Ketu",
@@ -477,14 +474,3 @@ export const NAKSHATRA_LORD_CYCLE = [
   "Saturn",
   "Mercury",
 ] as const;
-
-export const PLANET_BODY_MAP = [
-  ["Sun", "Sun"],
-  ["Moon", "Moon"],
-  ["Mars", "Mars"],
-  ["Mercury", "Mercury"],
-  ["Venus", "Venus"],
-  ["Jupiter", "Jupiter"],
-  ["Saturn", "Saturn"],
-  ["Rahu", "TrueNode"],
-] as const satisfies readonly (readonly [Planets, CelestialBody])[];

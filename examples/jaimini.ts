@@ -12,7 +12,6 @@ import {
   RashiDrishti,
   Upapada,
 } from "../src/index.ts";
-import { LocatedMoment, Moment } from "../src/internal/model.ts";
 import * as Swisseph from "../src/swisseph/index.ts";
 
 const config = Effect.gen(function* () {
@@ -24,31 +23,24 @@ const config = Effect.gen(function* () {
 
 const program = Effect.gen(function* () {
   const { date, latitude, longitude } = yield* config;
-  const chart = yield* Chart.Chart;
-  const charaKarakas = yield* CharaKarakas.CharaKarakas;
-  const rashiDrishti = yield* RashiDrishti.RashiDrishti;
-  const karakamsha = yield* Karakamsha.Karakamsha;
-  const arudhaPada = yield* ArudhaPada.ArudhaPada;
-  const upapada = yield* Upapada.Upapada;
-  const argala = yield* Argala.Argala;
 
-  const calculation = yield* chart.generate(
-    LocatedMoment.make({
-      moment: Moment.make({ date: DateTime.makeUnsafe(date) }),
+  const calculation = yield* Chart.generate(
+    Chart.LocatedMoment.make({
+      moment: Chart.Moment.make({ date: DateTime.makeUnsafe(date) }),
       latitude,
       longitude,
     }),
-    [1, 9],
+    [9],
   );
   const placements = calculation.placements;
   const lagnaSign = calculation.charts[0].houses[1].sign;
 
-  const charaKarakaResult = yield* charaKarakas.calculate(placements);
-  const rashiDrishtiResult = yield* rashiDrishti.calculate(lagnaSign);
-  const karakamshaResult = yield* karakamsha.calculate(placements);
-  const arudhaLagnaResult = yield* arudhaPada.calculate(placements, 1);
-  const upapadaResult = yield* upapada.calculate(placements);
-  const argalaResult = yield* argala.calculate(placements, {
+  const charaKarakaResult = yield* CharaKarakas.calculate(placements);
+  const rashiDrishtiResult = yield* RashiDrishti.calculate(lagnaSign);
+  const karakamshaResult = yield* Karakamsha.calculate(placements);
+  const arudhaLagnaResult = yield* ArudhaPada.calculate(placements, 1);
+  const upapadaResult = yield* Upapada.calculate(placements);
+  const argalaResult = yield* Argala.calculate(placements, {
     kind: "Sign",
     sign: lagnaSign,
   });
@@ -109,13 +101,6 @@ const program = Effect.gen(function* () {
 
 const runtimeLayer = Layer.mergeAll(
   AstroParams.DefaultAstroParams,
-  Chart.ChartLayer,
-  CharaKarakas.CharaKarakasLayer,
-  RashiDrishti.RashiDrishtiLayer,
-  Karakamsha.KarakamshaLayer,
-  ArudhaPada.ArudhaPadaLayer,
-  Upapada.UpapadaLayer,
-  Argala.ArgalaLayer,
   Swisseph.SwissephLayer,
   DevTools.layer(),
 );

@@ -25,4 +25,14 @@ describe("AstroParams", () => {
       }),
     );
   });
+
+  it.layer(AstroParams.layer({ ayanamsa: "Raman", houseSystem: "Placidus" }))((it) => {
+    it.effect("provides caller-selected options", () =>
+      Effect.gen(function* () {
+        const configured = yield* AstroParams.AstroParams;
+
+        expect(Equal.equals(configured, { ayanamsa: "Raman", houseSystem: "Placidus" })).toBe(true);
+      }),
+    );
+  });
 });

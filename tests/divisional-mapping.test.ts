@@ -2,7 +2,7 @@ import { describe, expect, it } from "@effect/vitest";
 import { Array, Effect, Equal } from "effect";
 
 import { getDivisionalTarget, normalizeLongitude } from "../src/chart/divisional-mapping/index.js";
-import { Division } from "../src/internal/model.js";
+import * as Chart from "../src/chart/index.js";
 
 describe("divisional mapping", () => {
   it.effect("normalizes negative and wrapped longitudes", () =>
@@ -30,7 +30,7 @@ describe("divisional mapping", () => {
       const justBefore = yield* getDivisionalTarget(10 - 1e-8, 9);
 
       expect(atBoundary.signIndex).not.toBe(justBefore.signIndex);
-      expect(Array.contains(Division.literals, 9)).toBe(true);
+      expect(Array.contains(Chart.Division.literals, 9)).toBe(true);
     }),
   );
 

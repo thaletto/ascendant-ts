@@ -1,6 +1,6 @@
 import { Effect, DateTime } from "effect";
 
-import type { Moment, Placements, Planets } from "../internal/model.js";
+import type { Moment, Placements, Planets } from "../chart/model.js";
 import { DashaCalculationError } from "./error.js";
 import { AntarDasha, MahaDasha } from "./model.js";
 
@@ -68,11 +68,6 @@ function shiftDate(date: DateTime.Utc, decimalYears: number, direction: 1 | -1):
   });
 }
 
-function formatDate(date: DateTime.Utc): string {
-  const { year, month, day } = DateTime.toPartsUtc(date);
-  return [String(day).padStart(2, "0"), String(month).padStart(2, "0"), String(year)].join("-");
-}
-
 function rotate<T>(values: readonly T[], start: number): readonly T[] {
   return [...values.slice(start), ...values.slice(0, start)];
 }
@@ -114,16 +109,16 @@ export const calculate = Effect.fn("astro-ascendant/dasha/calculate")(
         const period = AntarDasha.make({
           mahadasha,
           antardasha,
-          start: formatDate(antardashaStart),
-          end: formatDate(antardashaEnd),
+          start: antardashaStart,
+          end: antardashaEnd,
         });
         antardashaStart = antardashaEnd;
         return period;
       });
       const period = MahaDasha.make({
         mahadasha,
-        start: formatDate(mahadashaStart),
-        end: formatDate(mahadashaEnd),
+        start: mahadashaStart,
+        end: mahadashaEnd,
         antardashas,
       });
       mahadashaStart = mahadashaEnd;

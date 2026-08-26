@@ -1,5 +1,4 @@
 export * from "./error.js";
-export * from "./service.js";
-export * from "./bhava/index.js";
-export * from "./divisional-mapping/index.js";
+export { generate } from "./generate.js";
+export { project } from "./charts.js";
 export * from "./model.js";

@@ -1,7 +1,7 @@
 import { Effect } from "effect";
 
 import { getDivisionalTarget } from "../../chart/divisional-mapping/calculate.js";
-import { Placements } from "../../internal/model.js";
+import { Placements } from "../../chart/model.js";
 import * as CharaKarakas from "../chara-karakas/index.js";
 import { signOf } from "./helper.js";
 import type { Result } from "./model.js";

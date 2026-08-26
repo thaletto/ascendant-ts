@@ -1,8 +1,8 @@
-import { Effect } from "effect";
+import { Effect, HashMap, Option } from "effect";
 
-import { PLANETS, RASHIS } from "../../internal/constant.js";
-import { signAt, signIndexOf } from "../../internal/helper.js";
-import { Planets, Rashis, type Placements } from "../../internal/model.js";
+import { PLANETS, RASHIS } from "../../chart/internal/constants.js";
+import { signAt, signIndexOf } from "../../chart/internal/position.js";
+import { Planets, Rashis, type Placements } from "../../chart/model.js";
 import { relation } from "./helper.js";
 import type { Reference, Result } from "./model.js";
 import { EvidenceError } from "./model.js";
@@ -11,9 +11,10 @@ export const calculate = Effect.fn("astro-ascendant/jaimini/argala/calculate")(f
   placements: Placements,
   reference: Reference,
 ) {
-  const byPlanet = new Map<Planets, Placements["planets"][number]>();
-  const occupants = new Map<Rashis, Planets[]>();
-  for (const sign of RASHIS) occupants.set(sign, []);
+  let byPlanet = HashMap.empty<Planets, Placements["planets"][number]>();
+  let occupants: HashMap.HashMap<Rashis, readonly Planets[]> = HashMap.fromIterable(
+    RASHIS.map((sign) => [sign, []] as const),
+  );
 
   for (const planet of PLANETS) {
     const matches = placements.planets.filter((placement) => placement.name === planet);
@@ -25,18 +26,18 @@ export const calculate = Effect.fn("astro-ascendant/jaimini/argala/calculate")(f
         actual: matches.length,
       });
     }
-    byPlanet.set(planet, match);
+    byPlanet = HashMap.set(byPlanet, planet, match);
     const sign = signAt(signIndexOf(match.longitude));
-    const signOccupants = occupants.get(sign);
-    if (signOccupants === undefined) throw new Error(`Missing occupants for ${sign}`);
-    signOccupants.push(planet);
+    const signOccupants = HashMap.get(occupants, sign);
+    if (Option.isNone(signOccupants)) throw new Error(`Missing occupants for ${sign}`);
+    occupants = HashMap.set(occupants, sign, [...signOccupants.value, planet]);
   }
 
   const reverse = reference.kind === "Ketu";
-  const ketu = byPlanet.get("Ketu");
-  if (ketu === undefined) throw new Error("Missing validated Ketu placement");
+  const ketu = HashMap.get(byPlanet, "Ketu");
+  if (Option.isNone(ketu)) throw new Error("Missing validated Ketu placement");
   const referenceSign =
-    reference.kind === "Sign" ? reference.sign : signAt(signIndexOf(ketu.longitude));
+    reference.kind === "Sign" ? reference.sign : signAt(signIndexOf(ketu.value.longitude));
   const referenceIndex = RASHIS.indexOf(referenceSign);
 
   return {

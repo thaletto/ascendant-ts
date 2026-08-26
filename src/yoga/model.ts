@@ -1,6 +1,6 @@
 import { Schema } from "effect";
 
-import { Division, Houses, Planets, PlanetsLagna, Provenance } from "../internal/model.js";
+import { Division, Houses, Planets, PlanetsLagna, Provenance } from "../chart/model.js";
 
 export const YogaId = Schema.String.check(Schema.isPattern(/^[a-z][a-z0-9_]*$/)).pipe(
   Schema.brand("YogaId"),

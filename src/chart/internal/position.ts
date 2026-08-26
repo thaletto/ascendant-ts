@@ -1,9 +1,11 @@
-import { RASHIS } from "./constant.js";
-import { Longitude } from "./model.js";
+import { Array } from "effect";
 
-export function signAt(index: number) {
+import { Longitude, type Rashis } from "../model.js";
+import { RASHIS } from "./constants.js";
+
+export function signAt(index: number): Rashis {
   const normalized = ((index % RASHIS.length) + RASHIS.length) % RASHIS.length;
-  return RASHIS[normalized]!;
+  return Array.getUnsafe(RASHIS, normalized);
 }
 
 export function signIndexOf(longitude: Longitude): number {

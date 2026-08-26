@@ -1,6 +1,6 @@
 import { Effect } from "effect";
 
-import type { Placements } from "../../internal/model.js";
+import type { Placements } from "../../chart/model.js";
 import { calculateUpapada } from "./helper.js";
 import type { Result } from "./model.js";
 import { Provenance } from "./model.js";

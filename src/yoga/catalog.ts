@@ -1,6 +1,6 @@
 import { Array, Effect, HashSet, MutableHashSet, Schema } from "effect";
 
-import { Division } from "../internal/model.js";
+import { Division } from "../chart/model.js";
 import { housePatternDefinitions } from "./definitions/house-patterns.js";
 import { moonRelativeDefinitions } from "./definitions/moon-relative.js";
 import { InvalidYogaCatalogError } from "./error.js";

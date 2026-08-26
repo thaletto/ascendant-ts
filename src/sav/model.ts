@@ -1,6 +1,6 @@
 import { Schema } from "effect";
 
-import { LagnaName, Rashis } from "../internal/model.js";
+import { LagnaName, Rashis } from "../chart/model.js";
 
 export const AshtakavargaPlanets = Schema.Literals([
   "Sun",

@@ -1,6 +1,7 @@
-import { Effect, Schema } from "effect";
+import { Effect, Record, Schema } from "effect";
 
 import type { HouseData } from "../../ephemeris/model.js";
+import { ChartCalculationError } from "../error.js";
 import {
   BhavaAngles,
   BhavaChart,
@@ -9,8 +10,7 @@ import {
   CircleAngle,
   type Chart,
   Longitude,
-} from "../../internal/model.js";
-import { ChartCalculationError } from "../error.js";
+} from "../model.js";
 import { distributePlanets, forwardDistance, normalizeAngle } from "./helper.js";
 
 const HOUSE_NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] as const;
@@ -57,7 +57,7 @@ export const bhavaFromHouseData = Effect.fn("Chart.Bhava.fromHouseData")(functio
     });
   }
 
-  const planets = Object.values(d1.houses).flatMap((house) => house.planets);
+  const planets = Record.values(d1.houses).flatMap((house) => house.planets);
   const lagna = d1.houses[1].lagna;
   if (lagna === null) {
     return yield* ChartCalculationError.make({
@@ -69,7 +69,7 @@ export const bhavaFromHouseData = Effect.fn("Chart.Bhava.fromHouseData")(functio
 
   const planetsByHouse = distributePlanets(planets, cusps, spans);
 
-  const bhavaHouseEntries: Array<readonly [number, BhavaHouse]> = [];
+  const bhavaHouseEntries: Array<readonly [string, BhavaHouse]> = [];
   for (const [index, houseNumber] of HOUSE_NUMBERS.entries()) {
     const cusp = cusps[index];
     const housePlanets = planetsByHouse[index];
@@ -81,7 +81,7 @@ export const bhavaFromHouseData = Effect.fn("Chart.Bhava.fromHouseData")(functio
       });
     }
     bhavaHouseEntries.push([
-      houseNumber,
+      String(houseNumber),
       BhavaHouse.make({
         cusp: Longitude.make(cusp),
         planets: housePlanets,
@@ -91,7 +91,7 @@ export const bhavaFromHouseData = Effect.fn("Chart.Bhava.fromHouseData")(functio
   }
 
   const bhavaHouses = yield* Schema.decodeUnknownEffect(BhavaHouses)(
-    Object.fromEntries(bhavaHouseEntries),
+    Record.fromEntries(bhavaHouseEntries),
   ).pipe(
     Effect.mapError((cause) =>
       ChartCalculationError.make({

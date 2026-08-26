@@ -1,6 +1,6 @@
 import { Schema } from "effect";
 
-import { Degree } from "../../internal/model.js";
+import { Degree } from "../../chart/model.js";
 
 export const ClassicalPlanets = Schema.Literals([
   "Sun",

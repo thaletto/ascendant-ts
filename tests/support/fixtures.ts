@@ -1,7 +1,22 @@
-import { DateTime, HashSet, Record } from "effect";
+import { Array, DateTime, HashSet, Record } from "effect";
 
-import { RASHIS, SIGN_LORDS } from "../../src/internal/constant.js";
-import * as Model from "../../src/internal/model.js";
+import * as Model from "../../src/chart/index.js";
+
+const RASHIS = Model.Rashis.literals;
+const SIGN_LORDS: Record<Model.Rashis, Model.RashiLords> = {
+  Aries: "Mars",
+  Taurus: "Venus",
+  Gemini: "Mercury",
+  Cancer: "Moon",
+  Leo: "Sun",
+  Virgo: "Mercury",
+  Libra: "Venus",
+  Scorpio: "Mars",
+  Sagittarius: "Jupiter",
+  Capricorn: "Saturn",
+  Aquarius: "Saturn",
+  Pisces: "Jupiter",
+};
 
 const ALL_PLANETS = [
   "Sun",
@@ -64,7 +79,7 @@ function placementsFromLongitudes(
 
 function planetForHouse(name: Model.Planets, house: Model.Houses): Model.Planet {
   const longitude = (house - 1) * 30;
-  const sign = RASHIS[house - 1]!;
+  const sign = Array.getUnsafe(RASHIS, house - 1);
   return Model.Planet.make({
     name,
     longitude: Model.Longitude.make(longitude),
@@ -128,12 +143,14 @@ function calculationFromHouses(
   const bhavaHouses = Record.fromEntries(
     RASHIS.map((_, index) => {
       const house = (index + 1) as Model.Houses;
+      const chartHouse = houses[house];
+      if (chartHouse === undefined) throw new Error(`Missing fixture house ${house}`);
       return [
         String(house),
         Model.BhavaHouse.make({
           cusp: Model.Longitude.make(index * 30),
-          planets: houses[house]!.planets,
-          lagna: houses[house]!.lagna,
+          planets: chartHouse.planets,
+          lagna: chartHouse.lagna,
         }),
       ];
     }),

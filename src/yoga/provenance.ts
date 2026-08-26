@@ -1,4 +1,4 @@
-import type { Provenance } from "../internal/model.js";
+import type { Provenance } from "../chart/model.js";
 
 export const provenance: Provenance = {
   method: "ascendant-yoga",

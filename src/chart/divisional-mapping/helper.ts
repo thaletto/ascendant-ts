@@ -1,6 +1,6 @@
-import { Function } from "effect";
+import { Array, Function } from "effect";
 
-import { Degree, type Division, Longitude } from "../../internal/model.js";
+import { Degree, type Division, Longitude } from "../model.js";
 import type { DivisionalTarget, SourcePosition, Subdivision } from "./model.js";
 
 export function sourcePositionOf(longitude: Longitude): SourcePosition {
@@ -49,10 +49,10 @@ export const targetSignOf = Function.dual<
         : (sourceSignIndex - 6) * 2 + partIndex;
 
     case 3:
-      return (sourceSignIndex + [0, 4, 8][partIndex]!) % 12;
+      return (sourceSignIndex + Array.getUnsafe([0, 4, 8], partIndex)) % 12;
 
     case 4:
-      return (sourceSignIndex + [0, 3, 6, 9][partIndex]!) % 12;
+      return (sourceSignIndex + Array.getUnsafe([0, 3, 6, 9], partIndex)) % 12;
 
     case 7:
       return (sourceSignIndex + (oddRashi ? 0 : 6) + partIndex) % 12;
@@ -101,7 +101,7 @@ export const targetSignOf = Function.dual<
 
       const band = edges.findIndex((edge) => degreeInSourceSign < edge);
 
-      return targets[band === -1 ? targets.length - 1 : band]!;
+      return Array.getUnsafe(targets, band === -1 ? targets.length - 1 : band);
     }
 
     case 40:

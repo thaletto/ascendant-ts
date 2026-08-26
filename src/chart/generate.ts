@@ -1,14 +1,24 @@
 import { Effect } from "effect";
 
 import { AstroParams } from "../astro-params/service.js";
+import type { CelestialBody } from "../ephemeris/model.js";
 import { Ephemeris } from "../ephemeris/service.js";
-import { PLANET_BODY_MAP } from "../internal/constant.js";
-import { ChartCalculation, Division, LocatedMoment } from "../internal/model.js";
 import { bhavaFromHouseData } from "./bhava/index.js";
-import { chartsFromPlacements } from "./charts.js";
+import { project } from "./charts.js";
 import { ChartCalculationError, LocatedMomentValidationError } from "./error.js";
-import type { PlacementEvidence } from "./model.js";
-import { placementsFromEvidence } from "./placements.js";
+import { ChartCalculation, Division, LocatedMoment, type Planets } from "./model.js";
+import { placementsFromEvidence, type PlacementEvidence } from "./placements.js";
+
+const PLANET_BODY_MAP = [
+  ["Sun", "Sun"],
+  ["Moon", "Moon"],
+  ["Mars", "Mars"],
+  ["Mercury", "Mercury"],
+  ["Venus", "Venus"],
+  ["Jupiter", "Jupiter"],
+  ["Saturn", "Saturn"],
+  ["Rahu", "TrueNode"],
+] as const satisfies readonly (readonly [Planets, CelestialBody])[];
 
 const validateInput = Effect.fn("astro-ascendant/chart/validateInput")(function* (
   input: LocatedMoment,
@@ -64,13 +74,13 @@ const calculatePlacementEvidence = Effect.fn("astro-ascendant/chart/calculatePla
 
 export const generate = Effect.fn("astro-ascendant/chart/generate")(function* (
   input: LocatedMoment,
-  divisions: readonly [Division, ...Division[]],
+  divisions: readonly Division[] = [],
 ) {
   const astroParams = yield* AstroParams;
   yield* validateInput(input);
   const evidence = yield* calculatePlacementEvidence(input);
   const placements = yield* placementsFromEvidence(evidence);
-  const charts = yield* chartsFromPlacements(placements, divisions);
+  const charts = yield* project(placements, divisions);
   const bhava = yield* bhavaFromHouseData(evidence.houses, charts[0]);
 
   return ChartCalculation.make({

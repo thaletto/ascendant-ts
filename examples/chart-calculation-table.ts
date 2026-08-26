@@ -5,7 +5,7 @@ import type {
   ChartCalculation,
   Chart as DivisionalChart,
   Placements,
-} from "../src/internal/model.ts";
+} from "../src/chart/index.ts";
 
 type TableValue = string | number | boolean;
 type TableRow = Readonly<Record<string, TableValue>>;

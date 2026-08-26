@@ -1,10 +1,15 @@
 import { Effect } from "effect";
 
-import { Placements, SourceLagna, SourcePlanet } from "../internal/model.js";
+import type { HouseData, PlanetaryPosition } from "../ephemeris/model.js";
 import { normalizeLongitude } from "./divisional-mapping/calculate.js";
 import { ChartCalculationError, MissingPlacementError } from "./error.js";
 import { nakshatraOf } from "./helper.js";
-import type { PlacementEvidence } from "./model.js";
+import { Placements, SourceLagna, SourcePlanet } from "./model.js";
+
+export interface PlacementEvidence {
+  readonly houses: HouseData;
+  readonly planetEntries: readonly (readonly [SourcePlanet["name"], PlanetaryPosition])[];
+}
 
 export const placementsFromEvidence = Effect.fn("Chart.placementsFromEvidence")(
   function* (evidence: PlacementEvidence) {

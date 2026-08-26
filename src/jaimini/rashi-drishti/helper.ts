@@ -1,21 +1,38 @@
-import { RASHIS } from "../../internal/constant.js";
-import { signAt } from "../../internal/helper.js";
-import type { Rashis } from "../../internal/model.js";
+import { HashSet } from "effect";
 
-export const MOVABLE = new Set<Rashis>(["Aries", "Cancer", "Libra", "Capricorn"]);
-export const FIXED = new Set<Rashis>(["Taurus", "Leo", "Scorpio", "Aquarius"]);
-export const DUAL = new Set<Rashis>(["Gemini", "Virgo", "Sagittarius", "Pisces"]);
+import { RASHIS } from "../../chart/internal/constants.js";
+import { signAt } from "../../chart/internal/position.js";
+import type { Rashis } from "../../chart/model.js";
+
+const MOVABLE = HashSet.fromIterable([
+  "Aries",
+  "Cancer",
+  "Libra",
+  "Capricorn",
+] as const satisfies readonly Rashis[]);
+const FIXED = HashSet.fromIterable([
+  "Taurus",
+  "Leo",
+  "Scorpio",
+  "Aquarius",
+] as const satisfies readonly Rashis[]);
+const DUAL = HashSet.fromIterable([
+  "Gemini",
+  "Virgo",
+  "Sagittarius",
+  "Pisces",
+] as const satisfies readonly Rashis[]);
 
 export function targetsOf(reference: Rashis): readonly [Rashis, Rashis, Rashis] {
   const referenceIndex = RASHIS.indexOf(reference);
   const targets = RASHIS.filter((candidate) => {
-    if (MOVABLE.has(reference)) {
-      return FIXED.has(candidate) && candidate !== signAt(referenceIndex + 1);
+    if (HashSet.has(MOVABLE, reference)) {
+      return HashSet.has(FIXED, candidate) && candidate !== signAt(referenceIndex + 1);
     }
-    if (FIXED.has(reference)) {
-      return MOVABLE.has(candidate) && candidate !== signAt(referenceIndex - 1);
+    if (HashSet.has(FIXED, reference)) {
+      return HashSet.has(MOVABLE, candidate) && candidate !== signAt(referenceIndex - 1);
     }
-    return DUAL.has(candidate) && candidate !== reference;
+    return HashSet.has(DUAL, candidate) && candidate !== reference;
   });
 
   const first = targets[0];

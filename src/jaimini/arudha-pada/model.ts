@@ -1,6 +1,6 @@
 import { Schema } from "effect";
 
-import { Houses, RashiLords, Rashis } from "../../internal/model.js";
+import { Houses, RashiLords, Rashis } from "../../chart/model.js";
 
 export const Provenance = Schema.Struct({
   school: Schema.Literal("Jaimini"),

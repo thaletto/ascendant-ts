@@ -7,7 +7,7 @@ import {
   Division,
   Planets,
   PlanetsLagna,
-} from "../internal/model.js";
+} from "../chart/model.js";
 import { InvalidYogaEvidenceError } from "./error.js";
 import {
   YogaStrategy,

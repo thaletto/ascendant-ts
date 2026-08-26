@@ -1,5 +1,5 @@
 import * as AstroAscendant from "astro-ascendant";
-import { Equal, HashSet, Record } from "effect";
+import { Array, Equal, HashSet, Record } from "effect";
 
 const exports = HashSet.fromIterable(Record.keys(AstroAscendant));
 const expectedExports = HashSet.make(
@@ -21,11 +21,11 @@ if (!Equal.equals(exports, expectedExports)) {
 }
 
 const Yoga = await import("astro-ascendant/yoga");
-if (typeof Yoga.Yoga !== "function" || typeof Yoga.YogaLayer !== "object") {
-  throw new Error("The public Yoga service is not available from the Yoga subpath");
+if (typeof Yoga.evaluateAll !== "function" || !Array.isArray(Yoga.catalog)) {
+  throw new Error("The public Yoga interface is not available from the Yoga subpath");
 }
 
 const focused = await import("astro-ascendant/chara-karakas");
-if (typeof focused.CharaKarakas !== "function" || typeof focused.CharaKarakasLayer !== "object") {
+if (typeof focused.calculate !== "function") {
   throw new Error("The focused Jaimini subpath is not available");
 }

@@ -1,6 +1,6 @@
 import { Function } from "effect";
 
-import type { Planet } from "../../internal/model.js";
+import type { Planet } from "../model.js";
 
 export function normalizeAngle(angle: number): number {
   return ((angle % 360) + 360) % 360;

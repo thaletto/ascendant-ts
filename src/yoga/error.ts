@@ -1,6 +1,6 @@
 import { Schema } from "effect";
 
-import { Division } from "../internal/model.js";
+import { Division } from "../chart/model.js";
 import { YogaIds } from "./model.js";
 
 export class UnknownYogaError extends Schema.TaggedError<UnknownYogaError>()("UnknownYogaError", {
@@ -42,11 +42,6 @@ export class InvalidYogaCatalogError extends Schema.TaggedError<InvalidYogaCatal
     issue: InvalidYogaCatalogIssues,
     detail: Schema.String,
   },
-) {}
-
-export class InvalidYogaServiceConfigurationError extends Schema.TaggedError<InvalidYogaServiceConfigurationError>()(
-  "InvalidYogaServiceConfigurationError",
-  { concurrency: Schema.Finite },
 ) {}
 
 export class InvalidYogaEvidenceError extends Schema.TaggedError<InvalidYogaEvidenceError>()(

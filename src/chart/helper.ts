@@ -1,21 +1,21 @@
-import { Function } from "effect";
+import { Array, Function } from "effect";
 
 import {
   NAKSHATRAS,
   NAKSHATRA_SPAN,
   NAKSHATRA_LORD_CYCLE,
   DIGNITY_RANGES,
-} from "../internal/constant.js";
-import { normalize } from "../internal/helper.js";
-import { type Longitude, Nakshatra, type PlanetDignity, type Planets } from "../internal/model.js";
+} from "./internal/constants.js";
+import { normalize } from "./internal/position.js";
+import { type Longitude, Nakshatra, type PlanetDignity, type Planets } from "./model.js";
 
 export function nakshatraOf(longitude: Longitude): Nakshatra {
   const position = normalize(longitude);
   const index = Math.floor(position / NAKSHATRA_SPAN);
   const pada = Math.floor(((position % NAKSHATRA_SPAN) / NAKSHATRA_SPAN) * 4) + 1;
   return Nakshatra.make({
-    name: NAKSHATRAS[index]!,
-    lord: NAKSHATRA_LORD_CYCLE[index % NAKSHATRA_LORD_CYCLE.length]!,
+    name: Array.getUnsafe(NAKSHATRAS, index),
+    lord: Array.getUnsafe(NAKSHATRA_LORD_CYCLE, index % NAKSHATRA_LORD_CYCLE.length),
     pada: pada as 1 | 2 | 3 | 4,
   });
 }

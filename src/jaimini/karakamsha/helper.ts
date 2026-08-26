@@ -1,5 +1,5 @@
-import { RASHIS } from "../../internal/constant.js";
-import type { Rashis } from "../../internal/model.js";
+import { RASHIS } from "../../chart/internal/constants.js";
+import type { Rashis } from "../../chart/model.js";
 
 export function signOf(signIndex: number): Rashis {
   const sign = RASHIS[signIndex];
