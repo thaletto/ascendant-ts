@@ -14,6 +14,17 @@ Reach when: uncertain on API, checking generics, debugging inference.
 - Combine combinators with explicit lambdas in `pipe` or `Effect.gen` - never `flow` from `effect/Function`.
 - Reason: tacit style erases generics on overloads, weakens inference, degrades stack traces.
 
+### Function declarations
+- **Pure functions** — use named `function` declaration: `function add(a: number, b: number): number { return a + b }`
+- **Functions with side effects** (throwing, I/O, mutation) — use `Effect.fn` with `yield*`:
+  ```ts
+  const parseUser = Effect.fn("parseUser")(function* (input: string) {
+    const parsed = yield* Schema.decode(User)(input)
+    return parsed
+  })
+  ```
+- Never use arrow functions for top-level declarations — they obscure stack traces and hinder Effect's error tracking.
+
 ### Dual APIs (data-first vs data-last)
 - **data-last** (`pipe(effect, Effect.map(fn), ...)`): chaining multiple operations.
 - **data-first** (`Effect.map(effect, fn)`): single standalone operation.
