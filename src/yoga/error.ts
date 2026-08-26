@@ -1,6 +1,6 @@
 import { Schema } from "effect";
 
-import { Division } from "../chart/model.js";
+import { Division } from "../internal/model.js";
 import { YogaIds } from "./model.js";
 
 export class UnknownYogaError extends Schema.TaggedError<UnknownYogaError>()("UnknownYogaError", {

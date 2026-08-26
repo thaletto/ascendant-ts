@@ -1,6 +1,6 @@
-import { Effect, Schema } from "effect";
+import { Array, Effect, HashSet, MutableHashSet, Schema } from "effect";
 
-import { Division } from "../chart/model.js";
+import { Division } from "../internal/model.js";
 import { housePatternDefinitions } from "./definitions/house-patterns.js";
 import { moonRelativeDefinitions } from "./definitions/moon-relative.js";
 import { InvalidYogaCatalogError } from "./error.js";
@@ -10,7 +10,7 @@ function normalizedAlias(value: string): string {
   return value.trim().toLocaleLowerCase();
 }
 
-function conditionDivisions(condition: YogaCondition): readonly (typeof Division.Type)[] {
+function conditionDivisions(condition: YogaCondition): readonly Division[] {
   return YogaCondition.$match(condition, {
     BodyPositionsCondition: ({ division }) => [division],
     HouseOccupancyCondition: ({ division }) => [division],
@@ -22,103 +22,97 @@ function conditionDivisions(condition: YogaCondition): readonly (typeof Division
 
 const freezeCondition: (condition: YogaCondition) => YogaCondition = YogaCondition.$match({
   BodyPositionsCondition: (condition) =>
-    Object.freeze(
-      YogaCondition.BodyPositionsCondition({
-        ...condition,
-        bodies: Object.freeze([...condition.bodies]),
-        expectedRelativeHouses: Object.freeze([...condition.expectedRelativeHouses]),
-      }),
-    ),
+    YogaCondition.BodyPositionsCondition({
+      ...condition,
+      bodies: Array.fromIterable(condition.bodies),
+      expectedRelativeHouses: Array.fromIterable(condition.expectedRelativeHouses),
+    }),
   HouseOccupancyCondition: (condition) =>
-    Object.freeze(
-      YogaCondition.HouseOccupancyCondition({
-        ...condition,
-        expectedRelativeHouses: Object.freeze([...condition.expectedRelativeHouses]),
-        excludedBodies: Object.freeze([...condition.excludedBodies]),
-      }),
-    ),
+    YogaCondition.HouseOccupancyCondition({
+      ...condition,
+      expectedRelativeHouses: Array.fromIterable(condition.expectedRelativeHouses),
+      excludedBodies: Array.fromIterable(condition.excludedBodies),
+    }),
   AllCondition: (condition) =>
-    Object.freeze(
-      YogaCondition.AllCondition({
-        children: Object.freeze(condition.children.map(freezeCondition)),
-      }),
-    ),
+    YogaCondition.AllCondition({
+      children: Array.map(condition.children, freezeCondition),
+    }),
   AnyCondition: (condition) =>
-    Object.freeze(
-      YogaCondition.AnyCondition({
-        children: Object.freeze(condition.children.map(freezeCondition)),
-      }),
-    ),
+    YogaCondition.AnyCondition({
+      children: Array.map(condition.children, freezeCondition),
+    }),
   NotCondition: (condition) =>
-    Object.freeze(YogaCondition.NotCondition({ child: freezeCondition(condition.child) })),
+    YogaCondition.NotCondition({ child: freezeCondition(condition.child) }),
 });
 
 function freezeDefinition(definition: YogaDefinition): YogaDefinition {
   const [firstDivision, ...otherDivisions] = definition.requiredDivisions;
   const { aliases, classification, description, id, name } = definition.yoga;
-  return Object.freeze({
-    yoga: Object.freeze({
+  return {
+    yoga: {
       id,
       name,
-      aliases: Object.freeze([...aliases]),
+      aliases: Array.fromIterable(aliases),
       classification,
       description,
-    }),
-    requiredDivisions: Object.freeze([firstDivision, ...otherDivisions] as const),
+    },
+    requiredDivisions: [firstDivision, ...otherDivisions] as const,
     strategy: YogaStrategy.$match(definition.strategy, {
       Condition: ({ condition }) =>
-        Object.freeze(YogaStrategy.Condition({ condition: freezeCondition(condition) })),
-      Evaluator: ({ evaluate, name }) => Object.freeze(YogaStrategy.Evaluator({ evaluate, name })),
+        YogaStrategy.Condition({ condition: freezeCondition(condition) }),
+      Evaluator: ({ evaluate, name }) => YogaStrategy.Evaluator({ evaluate, name }),
     }),
-  });
+  };
 }
 
 export const makeCatalog = Effect.fn("Yoga.makeCatalog")(function* (
   definitions: readonly YogaDefinition[],
 ) {
-  const ids = new Set<string>();
-  const aliases = new Set<string>();
+  const ids = MutableHashSet.empty<string>();
+  const aliases = MutableHashSet.empty<string>();
   for (const definition of definitions) {
-    if (ids.has(definition.yoga.id)) {
-      return yield* new InvalidYogaCatalogError({
+    if (MutableHashSet.has(ids, definition.yoga.id)) {
+      return yield* InvalidYogaCatalogError.make({
         yogaId: definition.yoga.id,
         issue: "DuplicateId",
         detail: `Duplicate Yoga ID: ${definition.yoga.id}`,
       });
     }
-    ids.add(definition.yoga.id);
+    MutableHashSet.add(ids, definition.yoga.id);
     if (definition.requiredDivisions.length === 0) {
-      return yield* new InvalidYogaCatalogError({
+      return yield* InvalidYogaCatalogError.make({
         yogaId: definition.yoga.id,
         issue: "EmptyDivisions",
         detail: `Yoga ${definition.yoga.id} has no required Divisions`,
       });
     }
-    const requiredDivisions = new Set<typeof Division.Type>();
+    const requiredDivisions = MutableHashSet.empty<Division>();
     for (const division of definition.requiredDivisions) {
       if (!Schema.is(Division)(division)) {
-        return yield* new InvalidYogaCatalogError({
+        return yield* InvalidYogaCatalogError.make({
           yogaId: definition.yoga.id,
           issue: "InvalidDivision",
           detail: `Yoga ${definition.yoga.id} has invalid required Division ${String(division)}`,
         });
       }
-      if (requiredDivisions.has(division)) {
-        return yield* new InvalidYogaCatalogError({
+      if (MutableHashSet.has(requiredDivisions, division)) {
+        return yield* InvalidYogaCatalogError.make({
           yogaId: definition.yoga.id,
           issue: "DuplicateDivision",
           detail: `Yoga ${definition.yoga.id} repeats required Division ${division}`,
         });
       }
-      requiredDivisions.add(division);
+      MutableHashSet.add(requiredDivisions, division);
     }
     if (YogaStrategy.$is("Condition")(definition.strategy)) {
-      const usedDivisions = new Set(conditionDivisions(definition.strategy.condition));
+      const usedDivisions = HashSet.fromIterable(conditionDivisions(definition.strategy.condition));
+      const usedList = Array.fromIterable(usedDivisions);
+      const requiredList = Array.fromIterable(requiredDivisions);
       if (
-        [...usedDivisions].some((division) => !requiredDivisions.has(division)) ||
-        [...requiredDivisions].some((division) => !usedDivisions.has(division))
+        usedList.some((division) => !MutableHashSet.has(requiredDivisions, division)) ||
+        requiredList.some((division) => !HashSet.has(usedDivisions, division))
       ) {
-        return yield* new InvalidYogaCatalogError({
+        return yield* InvalidYogaCatalogError.make({
           yogaId: definition.yoga.id,
           issue: "DivisionMismatch",
           detail: `Yoga ${definition.yoga.id} condition and required Divisions disagree`,
@@ -128,27 +122,28 @@ export const makeCatalog = Effect.fn("Yoga.makeCatalog")(function* (
     for (const alias of definition.yoga.aliases) {
       const key = normalizedAlias(alias);
       if (key.length === 0) {
-        return yield* new InvalidYogaCatalogError({
+        return yield* InvalidYogaCatalogError.make({
           yogaId: definition.yoga.id,
           issue: "EmptyAlias",
           detail: `Yoga ${definition.yoga.id} has an empty alias`,
         });
       }
-      if (aliases.has(key)) {
-        return yield* new InvalidYogaCatalogError({
+      if (MutableHashSet.has(aliases, key)) {
+        return yield* InvalidYogaCatalogError.make({
           yogaId: definition.yoga.id,
           issue: "DuplicateAlias",
           detail: `Duplicate Yoga alias: ${alias}`,
         });
       }
-      aliases.add(key);
+      MutableHashSet.add(aliases, key);
     }
   }
-  return Object.freeze(definitions.map(freezeDefinition));
+  return Array.map(definitions, freezeDefinition);
 });
 
-export const definitions = Object.freeze(
-  [...moonRelativeDefinitions, ...housePatternDefinitions].map(freezeDefinition),
+export const definitions = Array.map(
+  [...moonRelativeDefinitions, ...housePatternDefinitions],
+  freezeDefinition,
 );
 
-export const catalog = Object.freeze(definitions.map(({ yoga }) => yoga));
+export const catalog = Array.map(definitions, ({ yoga }) => yoga);

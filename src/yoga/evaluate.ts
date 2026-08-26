@@ -1,13 +1,13 @@
-import { Effect, Result, Schema } from "effect";
+import { Array, Effect, MutableHashMap, Option, Record, Result, Schema, Match } from "effect";
 
 import {
   Houses,
-  type Chart,
-  type ChartCalculation,
-  type Division,
-  type Planets,
-  type PlanetsLagna,
-} from "../chart/model.js";
+  Chart,
+  ChartCalculation,
+  Division,
+  Planets,
+  PlanetsLagna,
+} from "../internal/model.js";
 import { InvalidYogaEvidenceError } from "./error.js";
 import {
   YogaStrategy,
@@ -18,93 +18,118 @@ import {
 } from "./internal.js";
 import type { YogaEvidence } from "./model.js";
 
-function normalizeHouse(value: number): typeof Houses.Type {
+function normalizeHouse(value: number): Houses {
   return Schema.decodeUnknownSync(Houses)(((((value - 1) % 12) + 12) % 12) + 1);
 }
 
-function failure(message: string): Result.Result<IndexedDivision, InvalidYogaEvidenceError> {
-  return Result.fail(new InvalidYogaEvidenceError({ message, cause: new Error(message) }));
-}
-
 export function makeEvaluationIndex(calculation: ChartCalculation): EvaluationIndex {
-  const cache = new Map<
-    typeof Division.Type,
+  const cache = MutableHashMap.empty<
+    Division,
     Result.Result<IndexedDivision, InvalidYogaEvidenceError>
   >();
 
   const buildDivision = (
-    division: typeof Division.Type,
+    division: Division,
   ): Result.Result<IndexedDivision, InvalidYogaEvidenceError> => {
     let chart: Chart | undefined;
     for (const candidate of calculation.charts) {
       if (candidate.division !== division) continue;
       if (chart !== undefined) {
-        return failure(`Duplicate D${division} Chart in Yoga evaluation input`);
+        return Result.fail(
+          InvalidYogaEvidenceError.make({
+            message: `Duplicate D${division} Chart in Yoga evaluation input`,
+            cause: new Error(`Duplicate D${division} Chart in Yoga evaluation input`),
+          }),
+        );
       }
       chart = candidate;
     }
     if (chart === undefined) {
-      return failure(`Missing D${division} Chart in Yoga evaluation input`);
+      return Result.fail(
+        InvalidYogaEvidenceError.make({
+          message: `Missing D${division} Chart in Yoga evaluation input`,
+          cause: new Error(`Missing D${division} Chart in Yoga evaluation input`),
+        }),
+      );
     }
 
-    const positions = new Map<string, typeof Houses.Type>();
-    const occupants = new Map<typeof Houses.Type, readonly (typeof Planets.Type)[]>();
-    let lagnaHouse: typeof Houses.Type | undefined;
-    for (const [houseText, house] of Object.entries(chart.houses)) {
+    const positions = MutableHashMap.empty<string, Houses>();
+    const occupants = MutableHashMap.empty<Houses, readonly Planets[]>();
+    let lagnaHouse: Houses | undefined;
+    for (const [houseText, house] of Record.toEntries(chart.houses)) {
       const houseNumber = Schema.decodeUnknownSync(Houses)(Number(houseText));
       if (house.lagna !== null) {
         if (lagnaHouse !== undefined) {
-          return failure(`Multiple Lagna positions in D${division}`);
+          return Result.fail(
+            InvalidYogaEvidenceError.make({
+              message: `Multiple Lagna positions in D${division}`,
+              cause: new Error(`Multiple Lagna positions in D${division}`),
+            }),
+          );
         }
         lagnaHouse = houseNumber;
       }
       for (const planet of house.planets) {
-        if (positions.has(planet.name)) {
-          return failure(`Duplicate ${planet.name} position in D${division}`);
+        if (MutableHashMap.has(positions, planet.name)) {
+          return Result.fail(
+            InvalidYogaEvidenceError.make({
+              message: `Duplicate ${planet.name} position in D${division}`,
+              cause: new Error(`Duplicate ${planet.name} position in D${division}`),
+            }),
+          );
         }
-        positions.set(planet.name, houseNumber);
+        MutableHashMap.set(positions, planet.name, houseNumber);
       }
-      occupants.set(houseNumber, Object.freeze(house.planets.map((planet) => planet.name)));
+      MutableHashMap.set(
+        occupants,
+        houseNumber,
+        Array.map(house.planets, (planet) => planet.name),
+      );
     }
     if (lagnaHouse === undefined) {
-      return failure(`Missing Lagna position in D${division}`);
+      return Result.fail(
+        InvalidYogaEvidenceError.make({
+          message: `Missing Lagna position in D${division}`,
+          cause: new Error(`Missing Lagna position in D${division}`),
+        }),
+      );
     }
-    positions.set("Lagna", lagnaHouse);
+    MutableHashMap.set(positions, "Lagna", lagnaHouse);
 
-    const indexed: IndexedDivision = Object.freeze({
-      positionOf: (body: typeof PlanetsLagna.Type): typeof Houses.Type => {
-        const house = positions.get(body);
-        if (house === undefined) throw new Error(`Missing ${body} position in D${division}`);
-        return house;
+    const indexed: IndexedDivision = {
+      positionOf: (body: PlanetsLagna): Houses => {
+        const house = MutableHashMap.get(positions, body);
+        if (Option.isNone(house)) throw new Error(`Missing ${body} position in D${division}`);
+        return house.value;
       },
       occupantsAtRelativeHouse: (
-        referenceBody: typeof PlanetsLagna.Type,
-        relativeHouse: typeof Houses.Type,
-      ): readonly (typeof Planets.Type)[] => {
+        referenceBody: PlanetsLagna,
+        relativeHouse: Houses,
+      ): readonly Planets[] => {
         const referenceHouse = indexed.positionOf(referenceBody);
         const absoluteHouse = normalizeHouse(referenceHouse + relativeHouse - 1);
-        const bodies = occupants.get(absoluteHouse);
-        if (bodies === undefined) {
+        const bodies = MutableHashMap.get(occupants, absoluteHouse);
+        if (Option.isNone(bodies)) {
           throw new Error(`Missing house ${absoluteHouse} occupants in D${division}`);
         }
-        return bodies;
+        return bodies.value;
       },
-    });
+    };
     return Result.succeed(indexed);
   };
 
-  return Object.freeze({
-    forDivision: (division: typeof Division.Type) => {
-      const cached = cache.get(division);
-      if (cached !== undefined) return cached;
+  return {
+    forDivision: (division: Division) => {
+      const cached = MutableHashMap.get(cache, division);
+      if (Option.isSome(cached)) return cached.value;
       const built = buildDivision(division);
-      cache.set(division, built);
+      MutableHashMap.set(cache, division, built);
       return built;
     },
-  });
+  };
 }
 
-function requireDivision(index: EvaluationIndex, division: typeof Division.Type) {
+function requireDivision(index: EvaluationIndex, division: Division) {
   return Effect.suspend(() => {
     const result = index.forDivision(division);
     return Result.isSuccess(result) ? Effect.succeed(result.success) : Effect.fail(result.failure);
@@ -115,68 +140,89 @@ export const evaluateCondition = Effect.fn("Yoga.evaluateCondition")(function* (
   condition: YogaCondition,
   index: EvaluationIndex,
 ): Effect.fn.Return<YogaEvidence, InvalidYogaEvidenceError> {
-  switch (condition._tag) {
-    case "BodyPositionsCondition": {
-      const at = yield* requireDivision(index, condition.division);
-      const referenceHouse = at.positionOf(condition.referenceBody);
-      const observed = condition.bodies.map((body) => ({
-        body,
-        relativeHouse: normalizeHouse(at.positionOf(body) - referenceHouse + 1),
-      }));
-      const matches = observed.map(({ relativeHouse }) =>
-        condition.expectedRelativeHouses.includes(relativeHouse),
-      );
-      return {
-        _tag: "BodyPositionsEvidence",
-        division: condition.division,
-        referenceBody: condition.referenceBody,
-        bodies: condition.bodies,
-        expectedRelativeHouses: condition.expectedRelativeHouses,
-        observed,
-        quantifier: condition.quantifier,
-        matched: condition.quantifier === "All" ? matches.every(Boolean) : matches.some(Boolean),
-      };
-    }
-    case "HouseOccupancyCondition": {
-      const at = yield* requireDivision(index, condition.division);
-      const observed = condition.expectedRelativeHouses.map((relativeHouse) => ({
-        relativeHouse,
-        occupants: at.occupantsAtRelativeHouse(condition.referenceBody, relativeHouse),
-      }));
-      const occupied = observed.map(({ occupants }) =>
-        occupants.some((body) => !condition.excludedBodies.includes(body)),
-      );
-      return {
-        _tag: "HouseOccupancyEvidence",
-        division: condition.division,
-        referenceBody: condition.referenceBody,
-        expectedRelativeHouses: condition.expectedRelativeHouses,
-        observed,
-        excludedBodies: condition.excludedBodies,
-        quantifier: condition.quantifier,
-        matched:
-          condition.quantifier === "EveryHouse" ? occupied.every(Boolean) : occupied.some(Boolean),
-      };
-    }
-    case "AllCondition": {
-      const children = [];
-      for (const child of condition.children) {
-        children.push(yield* evaluateCondition(child, index));
-      }
-      return { _tag: "AllEvidence", children, matched: children.every(({ matched }) => matched) };
-    }
-    case "AnyCondition": {
-      const children = [];
-      for (const child of condition.children) {
-        children.push(yield* evaluateCondition(child, index));
-      }
-      return { _tag: "AnyEvidence", children, matched: children.some(({ matched }) => matched) };
-    }
-    case "NotCondition": {
-      const child = yield* evaluateCondition(condition.child, index);
-      return { _tag: "NotEvidence", child, matched: !child.matched };
-    }
-  }
+  return yield* Match.value(condition).pipe(
+    Match.tag("BodyPositionsCondition", (condition) =>
+      Effect.gen(function* () {
+        const at = yield* requireDivision(index, condition.division);
+        const referenceHouse = at.positionOf(condition.referenceBody);
+        const observed = condition.bodies.map((body) => ({
+          body,
+          relativeHouse: normalizeHouse(at.positionOf(body) - referenceHouse + 1),
+        }));
+        const matches = observed.map(({ relativeHouse }) =>
+          condition.expectedRelativeHouses.includes(relativeHouse),
+        );
+        return {
+          _tag: "BodyPositionsEvidence" as const,
+          division: condition.division,
+          referenceBody: condition.referenceBody,
+          bodies: condition.bodies,
+          expectedRelativeHouses: condition.expectedRelativeHouses,
+          observed,
+          quantifier: condition.quantifier,
+          matched: condition.quantifier === "All" ? matches.every(Boolean) : matches.some(Boolean),
+        };
+      }),
+    ),
+    Match.tag("HouseOccupancyCondition", (condition) =>
+      Effect.gen(function* () {
+        const at = yield* requireDivision(index, condition.division);
+        const observed = condition.expectedRelativeHouses.map((relativeHouse) => ({
+          relativeHouse,
+          occupants: at.occupantsAtRelativeHouse(condition.referenceBody, relativeHouse),
+        }));
+        const occupied = observed.map(({ occupants }) =>
+          occupants.some((body) => !condition.excludedBodies.includes(body)),
+        );
+        return {
+          _tag: "HouseOccupancyEvidence" as const,
+          division: condition.division,
+          referenceBody: condition.referenceBody,
+          expectedRelativeHouses: condition.expectedRelativeHouses,
+          observed,
+          excludedBodies: condition.excludedBodies,
+          quantifier: condition.quantifier,
+          matched:
+            condition.quantifier === "EveryHouse"
+              ? occupied.every(Boolean)
+              : occupied.some(Boolean),
+        };
+      }),
+    ),
+    Match.tag("AllCondition", (condition) =>
+      Effect.gen(function* () {
+        const children = [];
+        for (const child of condition.children) {
+          children.push(yield* evaluateCondition(child, index));
+        }
+        return {
+          _tag: "AllEvidence" as const,
+          children,
+          matched: children.every(({ matched }) => matched),
+        };
+      }),
+    ),
+    Match.tag("AnyCondition", (condition) =>
+      Effect.gen(function* () {
+        const children = [];
+        for (const child of condition.children) {
+          children.push(yield* evaluateCondition(child, index));
+        }
+        return {
+          _tag: "AnyEvidence" as const,
+          children,
+          matched: children.some(({ matched }) => matched),
+        };
+      }),
+    ),
+    Match.tag("NotCondition", (condition) =>
+      Effect.gen(function* () {
+        const child = yield* evaluateCondition(condition.child, index);
+        return { _tag: "NotEvidence" as const, child, matched: !child.matched };
+      }),
+    ),
+    Match.exhaustive,
+  );
 });
 
 export const evaluateDefinition = Effect.fn("Yoga.evaluateDefinition")(function* (
@@ -188,7 +234,7 @@ export const evaluateDefinition = Effect.fn("Yoga.evaluateDefinition")(function*
     Evaluator: ({ evaluate }) => evaluate(index),
   });
   if (typeof evidence.matched !== "boolean") {
-    return yield* new InvalidYogaEvidenceError({
+    return yield* InvalidYogaEvidenceError.make({
       message: `Yoga ${definition.yoga.id} evaluator returned invalid evidence`,
       cause: new Error(`Yoga ${definition.yoga.id} evaluator returned invalid evidence`),
     });

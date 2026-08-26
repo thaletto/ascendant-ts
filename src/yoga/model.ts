@@ -1,6 +1,6 @@
 import { Schema } from "effect";
 
-import { Division, Houses, Planets, PlanetsLagna } from "../chart/model.js";
+import { Division, Houses, Planets, PlanetsLagna, Provenance } from "../internal/model.js";
 
 export const YogaId = Schema.String.check(Schema.isPattern(/^[a-z][a-z0-9_]*$/)).pipe(
   Schema.brand("YogaId"),
@@ -109,14 +109,8 @@ export const YogaResult = Schema.Struct({
 });
 export interface YogaResult extends Schema.Schema.Type<typeof YogaResult> {}
 
-export const YogaRuleSetProvenance = Schema.Struct({
-  method: Schema.Literal("ascendant-yoga"),
-  version: Schema.Literal(1),
-});
-export interface YogaRuleSetProvenance extends Schema.Schema.Type<typeof YogaRuleSetProvenance> {}
-
 export const YogaEvaluation = Schema.Struct({
-  provenance: YogaRuleSetProvenance,
+  provenance: Provenance,
   results: Schema.Array(YogaResult),
 });
 export interface YogaEvaluation extends Schema.Schema.Type<typeof YogaEvaluation> {}
