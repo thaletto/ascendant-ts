@@ -1,6 +1,6 @@
 {
   "name": "astro-ascendant",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "homepage": "https://ascendant-docs.vercel.app",
   "license": "AGPL-3.0-or-later",
   "files": [
@@ -79,6 +79,9 @@
     "access": "public",
     "provenance": true
   },
+  "dependencies": {
+    "@swisseph/node": "^1.3.1"
+  },
   "scripts": {
     "prepare": "effect-tsgo patch --typescript --oxlint",
     "build": "tsc -p tsconfig.build.json",
@@ -97,7 +100,6 @@
     "@effect/platform-bun": "^4.0.0-rc.112",
     "@effect/tsgo": "0.37.0",
     "@effect/vitest": "^4.0.0-rc.112",
-    "@swisseph/node": "^1.3.1",
     "effect": "^4.0.0-rc.112",
     "oxfmt": "^0.65.0",
     "oxlint": "1.80.0",
@@ -106,7 +108,6 @@
     "vitest": "latest"
   },
   "peerDependencies": {
-    "@swisseph/node": "^1.3.1",
     "effect": "^4.0.0-rc.112"
   },
   "trustedDependencies": [

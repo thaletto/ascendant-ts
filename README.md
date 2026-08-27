@@ -9,13 +9,13 @@ Effect-first TypeScript library for sidereal Vedic astrology calculations.
 
 ## Installation
 
-Install the package and its peer dependencies:
+Install the package and its Effect peer dependency:
 
 ```bash
-npm install astro-ascendant effect @swisseph/node
+npm install astro-ascendant effect
 ```
 
-The package uses ES modules and includes TypeScript declarations.
+The package includes the Swiss Ephemeris adapter dependency, uses ES modules, and includes TypeScript declarations.
 
 ## Quick start
 
