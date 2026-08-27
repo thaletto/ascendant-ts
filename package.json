@@ -1,13 +1,13 @@
 {
   "name": "astro-ascendant",
   "version": "0.1.1",
+  "homepage": "https://ascendant-docs.vercel.app",
   "license": "AGPL-3.0-or-later",
   "files": [
     "dist",
     "README.md",
     "LICENSE"
   ],
-  "homepage": "https://ascendant-docs.vercel.app",
   "type": "module",
   "sideEffects": false,
   "main": "./dist/index.js",
