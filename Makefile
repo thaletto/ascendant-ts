@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help install run build test test-watch typecheck lint lint-fix format format-check package-check check
+.PHONY: help install run build test test-watch typecheck lint lint-fix format format-check package-check publish check
 
 help: ## Show available commands
 	@awk 'BEGIN {FS = ":.*## "; printf "Usage: make <target>\n\nTargets:\n"} /^[a-zA-Z_-]+:.*## / {printf "  %-14s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -8,8 +8,8 @@ help: ## Show available commands
 install: ## Install dependencies
 	bun install
 
-run: ## Run the chart example (requires moment environment variables)
-	bun run examples/chart.ts
+run: ## Select and run an example
+	bun run examples/index.ts
 
 build: ## Build the npm package into dist/
 	bun run build
@@ -37,6 +37,9 @@ format-check: ## Check project formatting
 
 package-check: build ## Inspect the npm package contents
 	bun run package:check
+
+publish: ## Publish the package to npm
+	npm publish --access public
 
 check: typecheck test lint format-check build ## Run all verification checks
 

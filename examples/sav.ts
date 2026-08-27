@@ -1,16 +1,7 @@
-import { BunRuntime } from "@effect/platform-bun";
-import { Config, Console, DateTime, Effect, Layer, Record } from "effect";
-import { DevTools } from "effect/unstable/devtools";
+import { Console, Effect, Record } from "effect";
 
-import { AstroParams, Chart, SAV } from "../src/index.ts";
-import * as Swisseph from "../src/swisseph/index.ts";
-
-const config = Effect.gen(function* () {
-  const date = yield* Config.string("MOMENT_DATE");
-  const latitude = yield* Config.number("LATITUDE");
-  const longitude = yield* Config.number("LONGITUDE");
-  return { date, latitude, longitude };
-});
+import { Chart, SAV } from "../src/index.ts";
+import type { ExampleInput } from "./input.ts";
 
 const printSAV = Effect.fn("Examples.printSAV")(function* (result: SAV.AshtakavargaResult) {
   yield* Console.log("Bhinnashtakavarga and Sarvashtakavarga");
@@ -57,22 +48,17 @@ const printSAV = Effect.fn("Examples.printSAV")(function* (result: SAV.Ashtakava
   yield* Console.table([result.totals]);
 });
 
-const program = Effect.gen(function* () {
-  const { date, latitude, longitude } = yield* config;
+export const savExample = Effect.fn("Examples.sav")(function* ({
+  moment,
+  latitude,
+  longitude,
+}: ExampleInput) {
   const calculation = yield* Chart.generate(
     Chart.LocatedMoment.make({
-      moment: Chart.Moment.make({ date: DateTime.makeUnsafe(date) }),
+      moment,
       latitude,
       longitude,
     }),
   );
   yield* SAV.calculate(calculation.placements).pipe(Effect.tap(printSAV));
 });
-
-const runtimeLayer = Layer.mergeAll(
-  AstroParams.DefaultAstroParams,
-  Swisseph.SwissephLayer,
-  DevTools.layer(),
-);
-
-BunRuntime.runMain(program.pipe(Effect.provide(runtimeLayer)));

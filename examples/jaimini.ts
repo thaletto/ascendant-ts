@@ -1,32 +1,24 @@
-import { BunRuntime } from "@effect/platform-bun";
-import { Config, Console, DateTime, Effect, Layer } from "effect";
-import { DevTools } from "effect/unstable/devtools";
+import { Console, Effect } from "effect";
 
 import {
   Argala,
   ArudhaPada,
-  AstroParams,
   Chart,
   CharaKarakas,
   Karakamsha,
   RashiDrishti,
   Upapada,
 } from "../src/index.ts";
-import * as Swisseph from "../src/swisseph/index.ts";
+import type { ExampleInput } from "./input.ts";
 
-const config = Effect.gen(function* () {
-  const date = yield* Config.string("MOMENT_DATE");
-  const latitude = yield* Config.number("LATITUDE");
-  const longitude = yield* Config.number("LONGITUDE");
-  return { date, latitude, longitude };
-});
-
-const program = Effect.gen(function* () {
-  const { date, latitude, longitude } = yield* config;
-
+export const jaiminiExample = Effect.fn("Examples.jaimini")(function* ({
+  moment,
+  latitude,
+  longitude,
+}: ExampleInput) {
   const calculation = yield* Chart.generate(
     Chart.LocatedMoment.make({
-      moment: Chart.Moment.make({ date: DateTime.makeUnsafe(date) }),
+      moment,
       latitude,
       longitude,
     }),
@@ -98,11 +90,3 @@ const program = Effect.gen(function* () {
     },
   ]);
 });
-
-const runtimeLayer = Layer.mergeAll(
-  AstroParams.DefaultAstroParams,
-  Swisseph.SwissephLayer,
-  DevTools.layer(),
-);
-
-BunRuntime.runMain(program.pipe(Effect.provide(runtimeLayer)));

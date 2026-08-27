@@ -1,16 +1,7 @@
-import { BunRuntime } from "@effect/platform-bun";
-import { Config, Console, DateTime, Effect, Layer } from "effect";
-import { DevTools } from "effect/unstable/devtools";
+import { Console, DateTime, Effect } from "effect";
 
-import { AstroParams, Chart, Dasha } from "../src/index.ts";
-import * as Swisseph from "../src/swisseph/index.ts";
-
-const config = Effect.gen(function* () {
-  const date = yield* Config.string("MOMENT_DATE");
-  const latitude = yield* Config.number("LATITUDE");
-  const longitude = yield* Config.number("LONGITUDE");
-  return { date, latitude, longitude };
-});
+import { Chart, Dasha } from "../src/index.ts";
+import type { ExampleInput } from "./input.ts";
 
 const printDasha = Effect.fn("Examples.printDasha")(function* (timeline: Dasha.VimshottariDasha) {
   yield* Console.log("Vimshottari Mahadashas");
@@ -36,19 +27,13 @@ const printDasha = Effect.fn("Examples.printDasha")(function* (timeline: Dasha.V
   }
 });
 
-const program = Effect.gen(function* () {
-  const { date, latitude, longitude } = yield* config;
-  const moment = Chart.Moment.make({ date: DateTime.makeUnsafe(date) });
+export const dashaExample = Effect.fn("Examples.dasha")(function* ({
+  moment,
+  latitude,
+  longitude,
+}: ExampleInput) {
   const calculation = yield* Chart.generate(
     Chart.LocatedMoment.make({ moment, latitude, longitude }),
   );
   yield* Dasha.calculate(moment, calculation.placements).pipe(Effect.tap(printDasha));
 });
-
-const runtimeLayer = Layer.mergeAll(
-  AstroParams.DefaultAstroParams,
-  Swisseph.SwissephLayer,
-  DevTools.layer(),
-);
-
-BunRuntime.runMain(program.pipe(Effect.provide(runtimeLayer)));

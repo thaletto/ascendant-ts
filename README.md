@@ -152,17 +152,18 @@ Import namespaces from the package root or use focused entry points:
 
 ## Examples
 
-The executable examples read `MOMENT_DATE`, `LATITUDE`, and `LONGITUDE` from the environment:
+The executable examples first let you choose either environment configuration or interactive input:
 
 ```bash
-MOMENT_DATE=2000-01-01T12:00:00.000Z \
-LATITUDE=12.9716 \
-LONGITUDE=77.5946 \
-bun run examples/chart.ts
+make run
 ```
 
-Replace `chart.ts` with `dasha.ts`, `sav.ts`, `yoga.ts`, or `jaimini.ts` to print the
-corresponding tables.
+The environment option reads `MOMENT_DATE`, `LATITUDE`, and `LONGITUDE` from the process
+environment, `.env.local`, `.env`, or `.env.test` (in that precedence order). If those values are
+missing or invalid, the runner prints a concise error and continues with manual input. The input option
+collects a `DD/MM/YYYY` date, 24-hour `HH:MM` time, and searchable IANA timezone. It then
+offers presets for common Indian cities or manual latitude and longitude before presenting the
+example selector.
 The Jaimini example composes Chara Karakas, Rashi Drishti, Karakamsha, Arudha Pada,
 Upapada, and Argala through their separately named operations.
 
