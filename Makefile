@@ -39,7 +39,7 @@ package-check: build ## Inspect the npm package contents
 	bun run package:check
 
 publish: ## Publish the package to npm
-	npm publish --access public
+	npm publish --access public --provenance=false
 
 check: typecheck test lint format-check build ## Run all verification checks
 
