@@ -30,7 +30,6 @@ import * as SchemaGetter from "./SchemaGetter.ts"
 import * as SchemaIssue from "./SchemaIssue.ts"
 import type * as SchemaParser from "./SchemaParser.ts"
 import * as SchemaTransformation from "./SchemaTransformation.ts"
-import type * as FastCheck from "./testing/FastCheck.ts"
 
 /**
  * Discriminated union of all AST node types.
@@ -658,6 +657,16 @@ export abstract class Base {
 }
 
 /**
+ * Parser factory carried by a {@link Declaration}.
+ *
+ * @category models
+ * @since 4.0.0
+ */
+export type DeclarationRun = (
+  typeParameters: ReadonlyArray<AST>
+) => (input: unknown, self: Declaration, options: ParseOptions) => Effect.Effect<any, SchemaIssue.Issue, any>
+
+/**
  * AST node for user-defined opaque types with custom parsing logic.
  *
  * **When to use**
@@ -679,26 +688,29 @@ export abstract class Base {
 export class Declaration extends Base {
   readonly _tag = "Declaration"
   readonly typeParameters: ReadonlyArray<AST>
-  readonly run: (
-    typeParameters: ReadonlyArray<AST>
-  ) => (input: unknown, self: Declaration, options: ParseOptions) => Effect.Effect<any, SchemaIssue.Issue, any>
+  readonly run: DeclarationRun
   readonly encodingChecks: Checks | undefined
+  /**
+   * Parser factory {@link flip} swaps in, so a declaration can behave
+   * differently when encoding. `undefined` reuses {@link run}.
+   */
+  readonly encodingRun: DeclarationRun | undefined
 
   constructor(
     typeParameters: ReadonlyArray<AST>,
-    run: (
-      typeParameters: ReadonlyArray<AST>
-    ) => (input: unknown, self: Declaration, options: ParseOptions) => Effect.Effect<any, SchemaIssue.Issue, any>,
+    run: DeclarationRun,
     annotations?: Schema.Annotations.Annotations,
     checks?: Checks,
     encoding?: Encoding,
     context?: Context,
-    encodingChecks?: Checks
+    encodingChecks?: Checks,
+    encodingRun?: DeclarationRun
   ) {
     super(annotations, checks, encoding, context)
     this.typeParameters = typeParameters
     this.run = run
     this.encodingChecks = encodingChecks
+    this.encodingRun = encodingRun
   }
   /** @internal */
   getParser(): SchemaParser.Parser {
@@ -708,19 +720,26 @@ export class Declaration extends Base {
       return (run ??= this.run(this.typeParameters))(input, this, options)
     }
   }
-  private _rebuild(recur: (ast: AST) => AST, checks: Checks | undefined, encodingChecks: Checks | undefined) {
+  private _rebuild(
+    recur: (ast: AST) => AST,
+    checks: Checks | undefined,
+    encodingChecks: Checks | undefined,
+    run: DeclarationRun,
+    encodingRun: DeclarationRun | undefined
+  ) {
     const tps = mapOrSame(this.typeParameters, recur)
-    return tps === this.typeParameters && checks === this.checks && encodingChecks === this.encodingChecks ?
+    return tps === this.typeParameters && checks === this.checks && encodingChecks === this.encodingChecks &&
+        run === this.run && encodingRun === this.encodingRun ?
       this :
-      new Declaration(tps, this.run, this.annotations, checks, undefined, this.context, encodingChecks)
+      new Declaration(tps, run, this.annotations, checks, undefined, this.context, encodingChecks, encodingRun)
   }
   /** @internal */
   recur(recur: (ast: AST) => AST) {
-    return this._rebuild(recur, this.checks, this.encodingChecks)
+    return this._rebuild(recur, this.checks, this.encodingChecks, this.run, this.encodingRun)
   }
   /** @internal */
   flip(recur: (ast: AST) => AST) {
-    return this._rebuild(recur, this.encodingChecks, this.checks)
+    return this._rebuild(recur, this.encodingChecks, this.checks, this.encodingRun ?? this.run, this.run)
   }
   /** @internal */
   getExpected(): string {
@@ -3306,11 +3325,8 @@ export function isFinite(annotations?: Schema.Annotations.Filter) {
       },
       toJsonSchema: () => ({ type: "number" }),
       toCode: () => ({ runtime: "Schema.isFinite()" }),
-      arbitrary: {
-        constraint: {
-          noInfinity: true,
-          noNaN: true
-        }
+      arbitraryConstraint: {
+        number: "finite"
       },
       ...annotations
     }
@@ -3347,8 +3363,9 @@ const numberToJson = new Link(
  *
  * **Gotchas**
  *
- * When deriving an arbitrary, only `regExp.source` is used. Regular expression
- * flags are ignored because fast-check does not support them.
+ * Arbitrary metadata preserves both `regExp.source` and `regExp.flags`.
+ * Implementations that cannot consume all flags may still use the source as a
+ * generation hint because the Schema filter validates every generated value.
  *
  * **Example** (Validating an email pattern)
  *
@@ -3379,10 +3396,8 @@ export function isPattern(regExp: globalThis.RegExp, annotations?: Schema.Annota
         payload: { source, flags: regExp.flags }
       },
       toJsonSchema: () => ({ pattern: source }),
-      arbitrary: {
-        constraint: {
-          patterns: [regExp.source]
-        }
+      arbitraryConstraint: {
+        patterns: [{ source: regExp.source, flags: regExp.flags }]
       },
       ...annotations
     }
@@ -3939,14 +3954,6 @@ function segmentTemplateLiteralParts(
   return go(0, 0) ? out : undefined
 }
 
-/** @internal */
-export const enumsToLiterals = memoize((ast: Enum): Union<Literal> => {
-  return new Union(
-    ast.enums.map((e) => new Literal(e[1], { title: e[0] })),
-    "anyOf"
-  )
-})
-
 const parameterFromPropertyKey = applyToSelfOrLastLinkEncodingIdempotent((ast) => {
   switch (ast._tag) {
     default:
@@ -4342,8 +4349,7 @@ export const Json = new Declaration(
     },
     expected: "JSON value",
     toCodecJson: () => undefined,
-    toCodecStringTree: () => unknownToStringTree,
-    toArbitrary: () => (fc: typeof FastCheck) => fc.jsonValue()
+    toCodecStringTree: () => unknownToStringTree
   }
 )
 
