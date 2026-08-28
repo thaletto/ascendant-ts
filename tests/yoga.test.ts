@@ -15,7 +15,7 @@ function evaluate(calculation: Chart.ChartCalculation, ids?: readonly string[]) 
 }
 
 describe("Yoga", () => {
-  it("publishes the ten-definition rule set without strength or prose in results", () => {
+  it("publishes the Moon-relative rule set without strength or prose in results", () => {
     expect(
       Equal.equals(
         Yoga.catalog.map(({ id }) => id),
@@ -27,6 +27,13 @@ describe("Yoga", () => {
           "kemadruma",
           "chandra_mangala",
           "adhi",
+          "sakata",
+          "amala",
+          "kusuma",
+          "thrilochana",
+          "bhaskara",
+          "marud",
+          "budha",
           "chatussagara",
           "vasumathi",
           "rajalakshana",
@@ -142,6 +149,77 @@ describe("Yoga", () => {
         expect(kemadruma.evidence.child.matched).toBe(true);
       }
       expect(Yoga.formatEvidence(kemadruma.evidence)).toContain("Negated condition does not match");
+    }),
+  );
+
+  it.effect("uses Astrotalk's stated Moon-relative occupancy exclusions", () =>
+    Effect.gen(function* () {
+      const result = yield* evaluate(
+        fixtures.calculationFromHouses({
+          Moon: 1,
+          Sun: 2,
+          Mars: 5,
+          Mercury: 5,
+          Jupiter: 5,
+          Venus: 5,
+          Saturn: 5,
+          Rahu: 12,
+          Ketu: 5,
+        }),
+        ["sunapha", "anapha", "dhurdhua", "kemadruma"],
+      );
+
+      expect(
+        Equal.equals(
+          result.results.map(({ present }) => present),
+          [false, true, true, false],
+        ),
+      ).toBe(true);
+    }),
+  );
+
+  it.effect("requires all three natural benefics for Adhi Yoga", () =>
+    Effect.gen(function* () {
+      const present = yield* evaluate(
+        fixtures.calculationFromHouses({
+          Moon: 1,
+          Mercury: 6,
+          Jupiter: 7,
+          Venus: 8,
+        }),
+        ["adhi"],
+      );
+      const absent = yield* evaluate(
+        fixtures.calculationFromHouses({
+          Moon: 1,
+          Mercury: 6,
+          Jupiter: 7,
+          Venus: 9,
+        }),
+        ["adhi"],
+      );
+
+      expect(present.results[0]?.present).toBe(true);
+      expect(absent.results[0]?.present).toBe(false);
+    }),
+  );
+
+  it.effect("evaluates the added Moon-relative source rules", () =>
+    Effect.gen(function* () {
+      const cases = [
+        ["sakata", { Jupiter: 1, Moon: 6 }],
+        ["amala", { Moon: 1, Jupiter: 10 }],
+        ["kusuma", { Jupiter: 1, Moon: 7, Sun: 2 }],
+        ["thrilochana", { Moon: 1, Sun: 5, Mars: 9 }],
+        ["bhaskara", { Sun: 1, Mercury: 2, Moon: 12, Jupiter: 4 }],
+        ["marud", { Venus: 1, Jupiter: 5, Moon: 9, Sun: 12 }],
+        ["budha", { Jupiter: 1, Moon: 4, Rahu: 5, Sun: 7, Mars: 7 }],
+      ] as const;
+
+      for (const [id, houses] of cases) {
+        const result = yield* evaluate(fixtures.calculationFromHouses(houses), [id]);
+        expect(result.results[0]?.present).toBe(true);
+      }
     }),
   );
 
