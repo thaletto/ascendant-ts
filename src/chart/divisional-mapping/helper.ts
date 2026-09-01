@@ -11,6 +11,11 @@ export function sourcePositionOf(longitude: Longitude): SourcePosition {
   };
 }
 
+/**
+ * Locates a degree within one of a division's equal subdivisions. Exact internal
+ * boundaries belong to the following subdivision, while 30 degrees remains in
+ * the final subdivision despite floating-point representation noise.
+ */
 export const subdivisionOf = Function.dual<
   (division: Division) => (degree: number) => Subdivision,
   (degree: number, division: Division) => Subdivision
@@ -30,6 +35,11 @@ export const subdivisionOf = Function.dual<
   };
 });
 
+/**
+ * Applies the supported classical target-sign rule for a source subdivision.
+ * Each division has its own starting-sign convention; D30 instead uses its
+ * unequal classical degree bands.
+ */
 export const targetSignOf = Function.dual<
   (subdivision: Subdivision, division: Exclude<Division, 1>) => (source: SourcePosition) => number,
   (source: SourcePosition, subdivision: Subdivision, division: Exclude<Division, 1>) => number

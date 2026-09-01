@@ -40,6 +40,11 @@ const validateInput = Effect.fn("astro-ascendant/chart/validateInput")(function*
   }
 });
 
+/**
+ * Obtains the single ephemeris evidence set shared by all derived charts: house
+ * cusps/angles and sidereal positions for the seven classical planets and Rahu.
+ * Ketu is deliberately derived later as Rahu's exact opposition.
+ */
 const calculatePlacementEvidence = Effect.fn("astro-ascendant/chart/calculatePlacementEvidence")(
   function* (input: LocatedMoment) {
     const astroParams = yield* AstroParams;
@@ -72,6 +77,12 @@ const calculatePlacementEvidence = Effect.fn("astro-ascendant/chart/calculatePla
   ),
 );
 
+/**
+ * Produces one internally consistent chart calculation for a located moment.
+ * It validates coordinates, calculates sidereal placement evidence once, derives
+ * D1 and requested divisions from those placements, and builds the configured
+ * cusp-based Bhava chart from the same ephemeris house data.
+ */
 export const generate = Effect.fn("astro-ascendant/chart/generate")(function* (
   input: LocatedMoment,
   divisions: readonly Division[] = [],

@@ -18,6 +18,11 @@ function sequenceFrom(startIndex: number, direction: Direction): readonly Rashis
   );
 }
 
+/**
+ * Creates one sign Mahadasha with twelve contiguous equal-month antardashas.
+ * The final child is clamped to the calendar-shifted parent end so rounding in
+ * fractional calendar years cannot leave a gap or overrun the parent interval.
+ */
 function makeRashiMahaDasha(
   mahadasha: Rashis,
   start: DateTime.Utc,

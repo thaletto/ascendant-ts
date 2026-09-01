@@ -11,6 +11,11 @@ export function powerOfTen(exponent: number): bigint {
   return 10n ** BigInt(exponent);
 }
 
+/**
+ * Preserves a longitude's exact decimal degree within its sign as an integer
+ * coefficient and scale. It avoids floating-point ties changing Chara Karaka
+ * ranks or deterministic Dasha strength tie-breaks.
+ */
 export const exactDegreeOf = Effect.fn("exactDegreeOf")(function* (longitude: Longitude) {
   const [mantissa, exponentText] = longitude.toString().toLowerCase().split("e");
   if (mantissa === undefined) {

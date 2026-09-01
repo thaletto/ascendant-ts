@@ -11,6 +11,11 @@ export interface PlacementEvidence {
   readonly planetEntries: readonly (readonly [SourcePlanet["name"], PlanetaryPosition])[];
 }
 
+/**
+ * Converts ephemeris evidence into the canonical sidereal Placements source.
+ * Longitudes are normalized to `[0, 360)`, each source nakshatra is derived
+ * from that longitude, and Ketu is added exactly 180 degrees from Rahu.
+ */
 export const placementsFromEvidence = Effect.fn("Chart.placementsFromEvidence")(
   function* (evidence: PlacementEvidence) {
     const sourcePlanets = yield* Effect.all(

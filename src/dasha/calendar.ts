@@ -24,6 +24,11 @@ function calendarDuration(decimalYears: number): CalendarDuration {
   return { years, months, days, hours, minutes };
 }
 
+/**
+ * Applies the module's established year-to-calendar conversion (12 months per
+ * year and 30 days per residual month) in either temporal direction. It is
+ * shared by Vimshottari and sign Dasha timelines to preserve interval arithmetic.
+ */
 function shiftDate(date: DateTime.Utc, decimalYears: number, direction: 1 | -1): DateTime.Utc {
   const duration = calendarDuration(decimalYears);
   const months = duration.years * 12 + duration.months;

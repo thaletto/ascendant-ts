@@ -36,6 +36,11 @@ function rotate<T>(values: readonly T[], start: number): readonly T[] {
   return [...values.slice(start), ...values.slice(0, start)];
 }
 
+/**
+ * Derives the nine Vimshottari Mahadashas from the Moon's nakshatra and birth
+ * balance. Each Mahadasha contains proportional Antardashas in cyclic order;
+ * the final child is set to the parent end to retain contiguous UTC intervals.
+ */
 export const calculate = Effect.fn("astro-ascendant/dasha/calculate")(
   function* (moment: Moment, placements: Placements) {
     const moon = placements.planets.find((planet) => planet.name === "Moon");

@@ -54,6 +54,10 @@ const signScores = Effect.fn("SAV.signScores")(function* (scores: readonly numbe
 
 const total = (scores: SignScores): number => RASHIS.reduce((sum, rashi) => sum + scores[rashi], 0);
 
+/**
+ * Locates Lagna and the seven classical planets by Rashi, requiring exactly one
+ * placement for every contributing planet before any Ashtakavarga table is built.
+ */
 const entityPositions = Effect.fn("SAV.entityPositions")(function* (placements: Placements) {
   const planetPosition = Effect.fn("planetPosition")(function* (name: AshtakavargaPlanets) {
     const matches = placements.planets.filter((planet) => planet.name === name);
@@ -81,6 +85,10 @@ const entityPositions = Effect.fn("SAV.entityPositions")(function* (placements: 
   ) as EntityPositions;
 });
 
+/**
+ * Builds one Bhinna Ashtakavarga row by testing every contributor's classical
+ * offset list relative to each target sign.
+ */
 const calculateSignScores = Effect.fn("SAV.calculateSignScores")(function* (
   target: AshtakavargaEntities,
   positions: EntityPositions,
@@ -138,6 +146,11 @@ const calculateSarva = Effect.fn("SAV.calculateSarva")(function* (bhinna: Bhinna
   return sarva;
 });
 
+/**
+ * Applies classical Trikona reduction followed by Ekadhipatya reduction to one
+ * BAV row. This preserves raw BAV/SAV and produces only the separate table used
+ * for Shodhya Pinda.
+ */
 const reduceScores = Effect.fn("SAV.reduceScores")(function* (scores: SignScores) {
   const reduced = RASHIS.map((rashi) => scores[rashi]);
 
@@ -183,6 +196,7 @@ function calculatePlanetPinda(scores: SignScores, positions: EntityPositions): P
   return { rashi_pinda, graha_pinda, shodhya_pinda: rashi_pinda + graha_pinda } satisfies Pinda;
 }
 
+/** Computes Rashi Pinda, Graha Pinda, and their sum for every reduced planetary BAV row. */
 function calculateShodhyaPinda(
   reduced: ReducedAshtakavarga,
   positions: EntityPositions,
@@ -205,6 +219,11 @@ const calculateTotals = Effect.fn("SAV.calculateTotals")(function* (bhinna: Bhin
   return Record.fromEntries([...entityTotals, ["sarva", sarvaTotal]]) as AshtakavargaTotals;
 });
 
+/**
+ * Derives the full classical Ashtakavarga result from Placements: eight BAV
+ * tables, seven-planet SAV, reduced planetary BAV, Shodhya Pinda, and invariant
+ * totals. Canonical BAV and SAV totals are validated before reduction.
+ */
 export const calculate = Effect.fn("SAV.calculate")(function* (placements: Placements) {
   const positions = yield* entityPositions(placements);
   const bhinna = yield* calculateBhinna(positions);

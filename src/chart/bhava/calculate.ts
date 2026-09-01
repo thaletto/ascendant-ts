@@ -15,6 +15,11 @@ import { distributePlanets, forwardDistance, normalizeAngle } from "./helper.js"
 
 const HOUSE_NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] as const;
 
+/**
+ * Creates a cusp-based Bhava chart from ephemeris house data and D1 planets.
+ * It validates that the twelve normalized cusp intervals cover exactly one
+ * circle, then assigns each planet to one half-open interval `[cusp, next cusp)`.
+ */
 export const bhavaFromHouseData = Effect.fn("Chart.Bhava.fromHouseData")(function* (
   houses: HouseData,
   d1: Chart,

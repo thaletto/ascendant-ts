@@ -23,6 +23,11 @@ const DUAL = HashSet.fromIterable([
   "Pisces",
 ] as const satisfies readonly Rashis[]);
 
+/**
+ * Returns the exactly three signs aspected by a reference under Jaimini Rashi
+ * Drishti: movable signs aspect non-adjacent fixed signs, fixed signs aspect
+ * non-adjacent movable signs, and dual signs aspect the other dual signs.
+ */
 export function targetsOf(reference: Rashis): readonly [Rashis, Rashis, Rashis] {
   const referenceIndex = RASHIS.indexOf(reference);
   const targets = RASHIS.filter((candidate) => {

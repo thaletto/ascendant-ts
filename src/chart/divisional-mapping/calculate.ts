@@ -12,6 +12,7 @@ import {
 
 export const DIVISIONAL_MAPPING = "ascendant-divisional-mapping" as const;
 
+/** Normalizes an arbitrary longitude into the half-open sidereal zodiac. */
 export const normalizeLongitude = Effect.fn("Chart.DivisionalMapping.normalizeLongitude")(
   function* (longitude: number) {
     if (!Number.isFinite(longitude)) {
@@ -29,6 +30,11 @@ export const normalizeLongitude = Effect.fn("Chart.DivisionalMapping.normalizeLo
   },
 );
 
+/**
+ * Maps a D1 longitude into a supported divisional chart. D1 preserves the
+ * normalized source position; other divisions select a source-sign subdivision
+ * and apply that division's classical target-sign rule.
+ */
 export const getDivisionalTarget = Effect.fn("Chart.DivisionalMapping.getDivisionalTarget")(
   function* (longitude: number, division: Division) {
     const source = yield* normalizeLongitude(longitude).pipe(Effect.map(sourcePositionOf));
