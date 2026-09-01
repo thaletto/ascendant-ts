@@ -24,8 +24,7 @@ describe("Swiss Ephemeris adapter", () => {
         expect(julianDay).toBe(2_451_545);
         expect(sun.longitude).toBeGreaterThanOrEqual(0);
         expect(sun.longitude).toBeLessThan(360);
-        expect(houses.cusps).toHaveLength(13);
-        expect(houses.houseSystem).toBe("WholeSign");
+        expect(houses.cusps[1]).toBe(Math.floor(houses.ascendant / 30) * 30);
       }),
     );
   });

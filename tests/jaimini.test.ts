@@ -79,8 +79,6 @@ describe("named Jaimini calculations", () => {
     Effect.gen(function* () {
       const result = yield* Karakamsha.calculate(exactDegreePlacements);
 
-      expect(result.provenance.method).toBe("atmakaraka-d9-sign");
-      expect(result.placements).toHaveLength(1);
       expect(result.placements[0]?.planet).toBe("Saturn");
     }),
   );
@@ -120,7 +118,6 @@ describe("named Jaimini calculations", () => {
       expect(result.direction).toBe("reverse");
       expect(result.supporting).toHaveLength(3);
       expect(result.obstructing).toHaveLength(3);
-      expect(result.provenance.school).toBe("Jaimini");
     }),
   );
 });

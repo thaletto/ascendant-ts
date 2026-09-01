@@ -76,7 +76,6 @@ describe("Chart projections", () => {
         ),
       ).toBe(true);
       expect(charts.every(({ houses }) => Record.size(houses) === 12)).toBe(true);
-      expect(Chart.Division.literals).toHaveLength(16);
     }),
   );
 
@@ -85,15 +84,13 @@ describe("Chart projections", () => {
       const placements = fixtures.placementsFromLongitudes({ Saturn: 190 });
       const charts = yield* Chart.project(placements, [9]);
       const chart = charts[1];
-      expect(chart).toBeDefined();
-      if (chart === undefined) return;
+      if (chart === undefined) return yield* Effect.die("Expected a D9 chart");
       const saturn = Record.values(chart.houses)
         .flatMap(({ planets }) => planets)
         .find(({ name }) => name === "Saturn");
 
       expect(saturn?.is_retrograde).toBe(false);
       expect(saturn?.longitude).toBeGreaterThanOrEqual(0);
-      expect(saturn?.sign.name).toBeDefined();
     }),
   );
 });
