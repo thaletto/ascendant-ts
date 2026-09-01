@@ -1,6 +1,7 @@
 import { Effect } from "effect";
 
 import * as Chart from "../src/chart/index.js";
+import { methods } from "../src/provenance.js";
 import { definitions, makeCatalog } from "../src/yoga/catalog.js";
 import { evaluateDefinition, makeEvaluationIndex } from "../src/yoga/evaluate.js";
 import * as Yoga from "../src/yoga/index.js";
@@ -70,7 +71,7 @@ const calculation = new Chart.ChartCalculation({
   }),
   charts: [
     new Chart.Chart({
-      provenance: { method: "ascendant-divisional-mapping", version: "1" },
+      provenance: methods.chartProjection.provenance,
       division: 1,
       houses,
     }),
@@ -150,7 +151,11 @@ const pilotBounded = await measure(definitions, pilotIterations, 4);
 const syntheticSequential = await measure(synthetic, syntheticIterations, 1);
 const syntheticBounded = await measure(synthetic, syntheticIterations, 4);
 
-console.log(`Yoga Service pilot (${pilotIterations} ten-rule evaluations)`);
+const yogaMethod = methods.yoga.provenance;
+
+console.log(
+  `Yoga Service ${yogaMethod.school}/${yogaMethod.method}@${yogaMethod.version} pilot (${pilotIterations} ten-rule evaluations)`,
+);
 console.log(`concurrency 1: ${(pilotSequential / 1000).toFixed(2)} s`);
 console.log(`concurrency 4: ${(pilotBounded / 1000).toFixed(2)} s`);
 console.log(`Yoga Service scale sample (${syntheticIterations} 300-rule evaluations)`);
