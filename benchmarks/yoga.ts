@@ -1,10 +1,10 @@
 import { Effect } from "effect";
 
 import * as Chart from "../src/chart/index.js";
-import { definitions } from "../src/yoga/catalog.js";
+import { definitions, makeCatalog } from "../src/yoga/catalog.js";
+import { evaluateDefinition, makeEvaluationIndex } from "../src/yoga/evaluate.js";
 import * as Yoga from "../src/yoga/index.js";
 import type { YogaDefinition } from "../src/yoga/internal.js";
-import { makeLayer } from "../src/yoga/service.js";
 
 const signs = Chart.Rashis.literals;
 const planetHouses: Record<typeof Chart.Planets.Type, typeof Chart.Houses.Type> = {
@@ -70,7 +70,7 @@ const calculation = new Chart.ChartCalculation({
   }),
   charts: [
     new Chart.Chart({
-      provenance: { method: "ascendant-divisional-mapping", version: 1 },
+      provenance: { method: "ascendant-divisional-mapping", version: "1" },
       division: 1,
       houses,
     }),
@@ -124,12 +124,21 @@ async function measure(
   concurrency: 1 | 4,
 ): Promise<number> {
   const program = Effect.gen(function* () {
-    const yoga = yield* Yoga.Service;
-    for (let index = 0; index < 100; index++) yield* yoga.evaluateAll(calculation);
+    const validatedCatalog = yield* makeCatalog(catalog);
+    const evaluateCatalog = () =>
+      Effect.gen(function* () {
+        const index = makeEvaluationIndex(calculation);
+        return yield* Effect.all(
+          validatedCatalog.map((definition) => evaluateDefinition(definition, index)),
+          { concurrency },
+        );
+      });
+
+    for (let index = 0; index < 100; index++) yield* evaluateCatalog();
     const startedAt = performance.now();
-    for (let index = 0; index < iterations; index++) yield* yoga.evaluateAll(calculation);
+    for (let index = 0; index < iterations; index++) yield* evaluateCatalog();
     return performance.now() - startedAt;
-  }).pipe(Effect.provide(makeLayer(catalog, { concurrency })));
+  });
   return Effect.runPromise(program);
 }
 
