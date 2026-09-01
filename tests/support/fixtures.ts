@@ -45,7 +45,11 @@ function sourcePlanet(
 
 function placementsFromLongitudes(
   overrides: Partial<Record<Model.Planets, number>> = {},
-  options: { readonly omit?: readonly Model.Planets[]; readonly duplicate?: Model.Planets } = {},
+  options: {
+    readonly omit?: readonly Model.Planets[];
+    readonly duplicate?: Model.Planets;
+    readonly lagnaLongitude?: number;
+  } = {},
 ): Model.Placements {
   const longitudes: Record<Model.Planets, number> = {
     Sun: 10,
@@ -70,7 +74,7 @@ function placementsFromLongitudes(
   return Model.Placements.make({
     lagna: Model.SourceLagna.make({
       name: "Lagna",
-      longitude: Model.Longitude.make(0),
+      longitude: Model.Longitude.make(options.lagnaLongitude ?? 0),
       nakshatra: Model.Nakshatra.make({ name: "Ashwini", lord: "Ketu", pada: 1 }),
     }),
     planets,

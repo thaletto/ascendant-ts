@@ -1,6 +1,7 @@
-import { Effect, DateTime } from "effect";
+import { Effect } from "effect";
 
 import type { Moment, Placements, Planets } from "../chart/model.js";
+import { Calendar } from "./calendar.js";
 import { DashaCalculationError } from "./error.js";
 import { AntarDasha, MahaDasha } from "./model.js";
 
@@ -31,43 +32,6 @@ const VIMSHOTTARI_YEARS: Readonly<Record<(typeof VIMSHOTTARI_PLANETS)[number], n
 const NAKSHATRA_ARC_MINUTES = 800;
 const VIMSHOTTARI_CYCLE_YEARS = 120;
 
-interface CalendarDuration {
-  readonly years: number;
-  readonly months: number;
-  readonly days: number;
-  readonly hours: number;
-  readonly minutes: number;
-}
-
-function calendarDuration(decimalYears: number): CalendarDuration {
-  const years = Math.trunc(decimalYears);
-
-  const monthsValue = (decimalYears - years) * 12;
-  const months = Math.trunc(monthsValue);
-
-  const daysValue = (monthsValue - months) * 30;
-  const days = Math.trunc(daysValue);
-
-  const hoursValue = (daysValue - days) * 24;
-  const hours = Math.trunc(hoursValue);
-
-  const minutes = Math.trunc((hoursValue - hours) * 60);
-  return { years, months, days, hours, minutes };
-}
-
-function shiftDate(date: DateTime.Utc, decimalYears: number, direction: 1 | -1): DateTime.Utc {
-  const duration = calendarDuration(decimalYears);
-  const months = duration.years * 12 + duration.months;
-  const shiftedMonth = DateTime.add(date, {
-    months: direction * months,
-  });
-  return DateTime.add(shiftedMonth, {
-    days: direction * duration.days,
-    hours: direction * duration.hours,
-    minutes: direction * duration.minutes,
-  });
-}
-
 function rotate<T>(values: readonly T[], start: number): readonly T[] {
   return [...values.slice(start), ...values.slice(0, start)];
 }
@@ -91,10 +55,10 @@ export const calculate = Effect.fn("astro-ascendant/dasha/calculate")(
     const lordYears = VIMSHOTTARI_YEARS[nakshatraLord];
     const elapsedYears = lordYears - (lordYears / NAKSHATRA_ARC_MINUTES) * remainingArcMinutes;
 
-    let mahadashaStart = shiftDate(moment.date, elapsedYears, -1);
+    let mahadashaStart = Calendar.shiftDate(moment.date, elapsedYears, -1);
     return sequence.map((mahadasha) => {
       const mahadashaYears = VIMSHOTTARI_YEARS[mahadasha];
-      const mahadashaEnd = shiftDate(mahadashaStart, mahadashaYears, 1);
+      const mahadashaEnd = Calendar.shiftDate(mahadashaStart, mahadashaYears, 1);
       const antardashaSequence = rotate(sequence, sequence.indexOf(mahadasha));
       let antardashaStart = mahadashaStart;
       let elapsedAntardashaYears = 0;
@@ -105,7 +69,7 @@ export const calculate = Effect.fn("astro-ascendant/dasha/calculate")(
         const antardashaEnd =
           index === antardashaSequence.length - 1
             ? mahadashaEnd
-            : shiftDate(mahadashaStart, elapsedAntardashaYears, 1);
+            : Calendar.shiftDate(mahadashaStart, elapsedAntardashaYears, 1);
         const period = AntarDasha.make({
           mahadasha,
           antardasha,
