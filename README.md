@@ -5,7 +5,7 @@
 
 Effect-first TypeScript library for sidereal Vedic astrology calculations.
 
-`astro-ascendant` calculates planetary Placements once for a Located Moment, then derives charts, Vimshottari Dasha timelines, Ashtakavarga, Yogas, and Jaimini results from that shared calculation. It includes a Swiss Ephemeris adapter for Node.js and Bun, plus a runtime-neutral ephemeris interface for custom adapters.
+`astro-ascendant` calculates planetary Placements once for a Located Moment, then derives charts, Vimshottari, Chara, and Sthira Dasha timelines, Ashtakavarga, Yogas, and Jaimini results from that shared calculation. It includes a Swiss Ephemeris adapter for Node.js and Bun, plus a runtime-neutral ephemeris interface for custom adapters.
 
 ## Installation
 
@@ -49,7 +49,7 @@ console.log(calculation.charts[1]); // D9
 The package exposes named operations for each calculation surface:
 
 - **Charts**: D1 and 15 divisional charts, plus a configured Bhava chart
-- **Vimshottari Dasha**: Mahadasha and Antardasha timelines with date queries
+- **Dasha**: Vimshottari planetary periods plus Jaimini Chara and Sthira sign periods with date queries
 - **Ashtakavarga**: Bhinnashtakavarga, Sarvashtakavarga, reduced BAV, and Shodhya Pinda
 - **Yogas**: versioned classical Yoga catalog with structured evidence
 - **Jaimini**: Chara Karakas, Rashi Drishti, Karakamsha, Arudha Pada, Upapada, and Argala
@@ -63,11 +63,16 @@ import { Dasha, SAV } from "astro-ascendant";
 const derived = Effect.gen(function* () {
   const timeline = yield* Dasha.calculate(input.moment, calculation.placements);
   const current = yield* Dasha.at(timeline, input.moment.date);
+  const chara = yield* Dasha.calculateChara(input.moment, calculation.placements);
+  const sthira = yield* Dasha.calculateSthira(input.moment, calculation.placements);
+  const currentRashi = yield* Dasha.atRashi(chara, input.moment.date);
   const ashtakavarga = yield* SAV.calculate(calculation.placements);
 
-  return { timeline, current, ashtakavarga };
+  return { timeline, current, chara, sthira, currentRashi, ashtakavarga };
 });
 ```
+
+Chara deterministically resolves Scorpio's Mars/Ketu and Aquarius's Saturn/Rahu co-lords: it uses the co-lord with more sign associations, then the higher exact within-sign degree, then the traditional planet in an exact tie. Sthira deterministically selects Brahma using its returned strength scorecard.
 
 ## Configuration
 
@@ -92,7 +97,7 @@ Use the package root for the main namespaces, or import a focused entry point:
 | ------------------------------- | ----------------------------------------------------------------------------------- |
 | `astro-ascendant`               | `AstroParams`, `Chart`, `Dasha`, `Ephemeris`, `SAV`, `Yoga`, and Jaimini namespaces |
 | `astro-ascendant/chart`         | Chart models, generation, projection, and errors                                    |
-| `astro-ascendant/dasha`         | Vimshottari Dasha calculation and queries                                           |
+| `astro-ascendant/dasha`         | Vimshottari, Chara, and Sthira Dasha calculations and queries                       |
 | `astro-ascendant/sav`           | Ashtakavarga calculation and models                                                 |
 | `astro-ascendant/yoga`          | Yoga catalog, evaluation, and evidence formatting                                   |
 | `astro-ascendant/swisseph`      | Swiss Ephemeris adapter                                                             |

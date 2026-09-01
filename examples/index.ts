@@ -254,7 +254,7 @@ const runSelectedExample = Effect.fn("Examples.runSelectedExample")(function* ()
       },
       {
         title: "Dasha",
-        description: "Calculate and print the Vimshottari Dasha timeline",
+        description: "Calculate a Chara, Sthira, or Vimshottari timeline",
         value: "dasha",
       },
       {

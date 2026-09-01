@@ -29,3 +29,14 @@ const focused = await import("astro-ascendant/chara-karakas");
 if (typeof focused.calculate !== "function") {
   throw new Error("The focused Jaimini subpath is not available");
 }
+
+const dasha = await import("astro-ascendant/dasha");
+if (
+  typeof dasha.calculate !== "function" ||
+  typeof dasha.at !== "function" ||
+  typeof dasha.calculateChara !== "function" ||
+  typeof dasha.calculateSthira !== "function" ||
+  typeof dasha.atRashi !== "function"
+) {
+  throw new Error("The focused Dasha interface is not available");
+}

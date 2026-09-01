@@ -38,11 +38,14 @@ const packageWorkflow = Effect.gen(function* () {
   const calculation = yield* Chart.generate(input, [9]);
   const timeline = yield* Dasha.calculate(moment, calculation.placements);
   const current = yield* Dasha.at(timeline, moment.date);
+  const chara = yield* Dasha.calculateChara(moment, calculation.placements);
+  const sthira = yield* Dasha.calculateSthira(moment, calculation.placements);
+  const currentRashi = yield* Dasha.atRashi(chara, moment.date);
   const sav = yield* SAV.calculate(calculation.placements);
   const yogas = yield* Yoga.evaluateAll(calculation);
   const charaKarakas = yield* CharaKarakas.calculate(calculation.placements);
 
-  return { calculation, timeline, current, sav, yogas, charaKarakas };
+  return { calculation, timeline, current, chara, sthira, currentRashi, sav, yogas, charaKarakas };
 });
 
 void Chart.generate;
@@ -55,8 +58,16 @@ void AstroParams.DefaultAstroParams;
 void Ephemeris.Ephemeris;
 void Dasha.calculate;
 void Dasha.at;
+void Dasha.calculateChara;
+void Dasha.calculateSthira;
+void Dasha.atRashi;
 void FocusedDasha.calculate;
 void FocusedDasha.at;
+void FocusedDasha.calculateChara;
+void FocusedDasha.calculateSthira;
+void FocusedDasha.atRashi;
+void FocusedDasha.CharaDasha;
+void FocusedDasha.SthiraDasha;
 void SAV.calculate;
 void FocusedSAV.calculate;
 void Yoga.catalog;
