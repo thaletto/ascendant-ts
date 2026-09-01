@@ -8,10 +8,11 @@ import {
   FileSystem,
   Match,
   Option,
+  Schema,
 } from "effect";
 import { Prompt } from "effect/unstable/cli";
 
-import { Chart } from "../src/index.ts";
+import { AstroParams, Chart } from "../src/index.ts";
 import { chartExample } from "./chart.ts";
 import { dashaExample } from "./dasha.ts";
 import { jaiminiExample } from "./jaimini.ts";
@@ -24,6 +25,7 @@ const TIME_PATTERN = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
 const ENVIRONMENT_INPUT_ERROR = [
   "Could not load a complete moment from the environment.",
   "Set MOMENT_DATE (an ISO 8601 date and time), LATITUDE (-90 to 90), and LONGITUDE (-180 to 180).",
+  "Optionally set AYANAMSA and HOUSE_SYSTEM; they default to Lahiri and WholeSign.",
   "Values are read in this order: process environment, .env.local, .env, then .env.test.",
   "Continue by entering the moment manually.",
 ].join("\n");
@@ -48,6 +50,10 @@ const TIME_ZONE_CHOICES = ["Asia/Kolkata", "UTC", ...Intl.supportedValuesOf("tim
     return left.localeCompare(right);
   })
   .map((timeZone) => ({ title: timeZone, value: timeZone }));
+const DEFAULT_ASTRO_PARAMS = AstroParams.Options.make({
+  ayanamsa: "Lahiri",
+  houseSystem: "WholeSign",
+});
 
 function makeMomentFromEnvironment(value: string): Effect.Effect<Chart.Moment, string> {
   return Option.match(DateTime.make(value), {
@@ -82,6 +88,19 @@ function validateTime(value: string): Effect.Effect<string, string> {
     Match.when(true, () => Effect.succeed(value)),
     Match.when(false, () => Effect.fail("Enter a 24-hour time in HH:MM format")),
     Match.exhaustive,
+  );
+}
+
+function makeAstroParams(
+  ayanamsa: string,
+  houseSystem: string,
+): Effect.Effect<AstroParams.Options, string> {
+  return Schema.decodeUnknownEffect(AstroParams.Options)({ ayanamsa, houseSystem }).pipe(
+    Effect.mapError(
+      () =>
+        `AYANAMSA must be one of: ${AstroParams.Ayanamsa.literals.join(", ")}. ` +
+        `HOUSE_SYSTEM must be one of: ${AstroParams.HouseSystem.literals.join(", ")}.`,
+    ),
   );
 }
 
@@ -185,10 +204,19 @@ const inputFromEnvironment = Effect.fn("Examples.inputFromEnvironment")(function
   const date = yield* Config.string("MOMENT_DATE").parse(provider);
   const latitude = yield* Config.number("LATITUDE").parse(provider);
   const longitude = yield* Config.number("LONGITUDE").parse(provider);
+  const ayanamsa = yield* Config.withDefault(
+    Config.string("AYANAMSA"),
+    DEFAULT_ASTRO_PARAMS.ayanamsa,
+  ).parse(provider);
+  const houseSystem = yield* Config.withDefault(
+    Config.string("HOUSE_SYSTEM"),
+    DEFAULT_ASTRO_PARAMS.houseSystem,
+  ).parse(provider);
   const moment = yield* makeMomentFromEnvironment(date);
   const validLatitude = yield* validateCoordinate(latitude, "LATITUDE", -90, 90);
   const validLongitude = yield* validateCoordinate(longitude, "LONGITUDE", -180, 180);
-  return { moment, latitude: validLatitude, longitude: validLongitude };
+  const astroParams = yield* makeAstroParams(ayanamsa, houseSystem);
+  return { moment, latitude: validLatitude, longitude: validLongitude, astroParams };
 });
 
 const promptInput = Effect.fn("Examples.promptInput")(function* () {
@@ -208,7 +236,7 @@ const promptInput = Effect.fn("Examples.promptInput")(function* () {
   });
   const moment = yield* makeMomentFromInput(date, time, timeZone);
   const coordinates = yield* selectLocation();
-  return { moment, ...coordinates };
+  return { moment, ...coordinates, astroParams: DEFAULT_ASTRO_PARAMS };
 });
 
 const selectInput = Effect.fn("Examples.selectInput")(function* () {
@@ -275,7 +303,7 @@ const runSelectedExample = Effect.fn("Examples.runSelectedExample")(function* ()
     ],
   });
 
-  yield* Match.value(example).pipe(
+  const program = Match.value(example).pipe(
     Match.when("chart", () => chartExample(input)),
     Match.when("dasha", () => dashaExample(input)),
     Match.when("jaimini", () => jaiminiExample(input)),
@@ -283,6 +311,7 @@ const runSelectedExample = Effect.fn("Examples.runSelectedExample")(function* ()
     Match.when("yoga", () => yogaExample(input)),
     Match.exhaustive,
   );
+  yield* program.pipe(Effect.provide(AstroParams.layer(input.astroParams)));
 });
 
 const examples = runSelectedExample().pipe(
