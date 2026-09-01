@@ -5,8 +5,10 @@ import {
   Chart,
   ChartCalculation,
   Division,
+  PlanetDignity,
   Planets,
   PlanetsLagna,
+  Rashis,
 } from "../chart/model.js";
 import { InvalidYogaEvidenceError } from "./error.js";
 import {
@@ -54,6 +56,8 @@ export function makeEvaluationIndex(calculation: ChartCalculation): EvaluationIn
     }
 
     const positions = MutableHashMap.empty<string, Houses>();
+    const dignities = MutableHashMap.empty<Planets, readonly PlanetDignity[]>();
+    const signs = MutableHashMap.empty<Planets, Rashis>();
     const occupants = MutableHashMap.empty<Houses, readonly Planets[]>();
     let lagnaHouse: Houses | undefined;
     for (const [houseText, house] of Record.toEntries(chart.houses)) {
@@ -79,6 +83,8 @@ export function makeEvaluationIndex(calculation: ChartCalculation): EvaluationIn
           );
         }
         MutableHashMap.set(positions, planet.name, houseNumber);
+        MutableHashMap.set(dignities, planet.name, planet.in_sign);
+        MutableHashMap.set(signs, planet.name, planet.sign.name);
       }
       MutableHashMap.set(
         occupants,
@@ -101,6 +107,18 @@ export function makeEvaluationIndex(calculation: ChartCalculation): EvaluationIn
         const house = MutableHashMap.get(positions, body);
         if (Option.isNone(house)) throw new Error(`Missing ${body} position in D${division}`);
         return house.value;
+      },
+      dignitiesOf: (body: Planets): readonly PlanetDignity[] => {
+        const bodyDignities = MutableHashMap.get(dignities, body);
+        if (Option.isNone(bodyDignities)) {
+          throw new Error(`Missing ${body} dignity in D${division}`);
+        }
+        return bodyDignities.value;
+      },
+      signOf: (body: Planets): Rashis => {
+        const sign = MutableHashMap.get(signs, body);
+        if (Option.isNone(sign)) throw new Error(`Missing ${body} sign in D${division}`);
+        return sign.value;
       },
       occupantsAtRelativeHouse: (
         referenceBody: PlanetsLagna,
@@ -161,6 +179,48 @@ export const evaluateCondition = Effect.fn("Yoga.evaluateCondition")(function* (
           observed,
           quantifier: condition.quantifier,
           matched: condition.quantifier === "All" ? matches.every(Boolean) : matches.some(Boolean),
+        };
+      }),
+    ),
+    Match.tag("BodyDignitiesCondition", (condition) =>
+      Effect.gen(function* () {
+        const at = yield* requireDivision(index, condition.division);
+        const referenceHouse = at.positionOf(condition.referenceBody);
+        const observed = condition.bodies.map((body) => ({
+          body,
+          relativeHouse: normalizeHouse(at.positionOf(body) - referenceHouse + 1),
+          dignities: at.dignitiesOf(body),
+        }));
+        return {
+          _tag: "BodyDignitiesEvidence" as const,
+          division: condition.division,
+          referenceBody: condition.referenceBody,
+          bodies: condition.bodies,
+          expectedRelativeHouses: condition.expectedRelativeHouses,
+          expectedDignities: condition.expectedDignities,
+          observed,
+          quantifier: "All" as const,
+          matched: observed.every(
+            ({ relativeHouse, dignities }) =>
+              condition.expectedRelativeHouses.includes(relativeHouse) &&
+              dignities.some((dignity) => condition.expectedDignities.includes(dignity)),
+          ),
+        };
+      }),
+    ),
+    Match.tag("OccupiedSignCountCondition", (condition) =>
+      Effect.gen(function* () {
+        const at = yield* requireDivision(index, condition.division);
+        const observed = condition.bodies.map((body) => ({ body, sign: at.signOf(body) }));
+        const observedSignCount = new Set(observed.map(({ sign }) => sign)).size;
+        return {
+          _tag: "OccupiedSignCountEvidence" as const,
+          division: condition.division,
+          bodies: condition.bodies,
+          expectedSignCount: condition.expectedSignCount,
+          observed,
+          observedSignCount,
+          matched: observedSignCount === condition.expectedSignCount,
         };
       }),
     ),

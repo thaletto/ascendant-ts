@@ -10,6 +10,16 @@ export function formatEvidence(evidence: YogaEvidence): string {
         `${evidence.bodies.join(", ")} ${evidence.matched ? "match" : "do not match"} houses ${evidence.expectedRelativeHouses.join(", ")} from ${evidence.referenceBody}; observed ${evidence.observed.map(({ body, relativeHouse }) => `${body} in ${relativeHouse}`).join(", ")}.`,
     ),
     Match.tag(
+      "BodyDignitiesEvidence",
+      (evidence) =>
+        `${evidence.bodies.join(", ")} match ${evidence.expectedDignities.join(" or ")} dignity and houses ${evidence.expectedRelativeHouses.join(", ")} from ${evidence.referenceBody}; observed ${evidence.observed.map(({ body, relativeHouse, dignities }) => `${body} in ${relativeHouse} (${dignities.join(", ") || "none"})`).join(", ")}.`,
+    ),
+    Match.tag(
+      "OccupiedSignCountEvidence",
+      (evidence) =>
+        `${evidence.bodies.join(", ")} occupy ${evidence.observedSignCount} signs; expected ${evidence.expectedSignCount}.`,
+    ),
+    Match.tag(
       "HouseOccupancyEvidence",
       (evidence) =>
         `Houses ${evidence.expectedRelativeHouses.join(", ")} from ${evidence.referenceBody} ${evidence.matched ? "meet" : "do not meet"} ${evidence.quantifier}; observed ${evidence.observed.map(({ relativeHouse, occupants }) => `${relativeHouse}: ${occupants.join(", ") || "empty"}`).join("; ")}.`,

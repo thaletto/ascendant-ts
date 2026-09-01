@@ -3,6 +3,9 @@ import { Array, Effect, HashSet, MutableHashSet, Schema } from "effect";
 import { Division } from "../chart/model.js";
 import { housePatternDefinitions } from "./definitions/house-patterns.js";
 import { moonRelativeDefinitions } from "./definitions/moon-relative.js";
+import { panchaMahapurushaDefinitions } from "./definitions/pancha-mahapurusha.js";
+import { relativePatternDefinitions } from "./definitions/relative-patterns.js";
+import { signCardinalityDefinitions } from "./definitions/sign-cardinality.js";
 import { InvalidYogaCatalogError } from "./error.js";
 import { YogaCondition, type YogaDefinition, YogaStrategy } from "./internal.js";
 
@@ -13,6 +16,8 @@ function normalizedAlias(value: string): string {
 function conditionDivisions(condition: YogaCondition): readonly Division[] {
   return YogaCondition.$match(condition, {
     BodyPositionsCondition: ({ division }) => [division],
+    BodyDignitiesCondition: ({ division }) => [division],
+    OccupiedSignCountCondition: ({ division }) => [division],
     HouseOccupancyCondition: ({ division }) => [division],
     AllCondition: ({ children }) => children.flatMap(conditionDivisions),
     AnyCondition: ({ children }) => children.flatMap(conditionDivisions),
@@ -26,6 +31,18 @@ const freezeCondition: (condition: YogaCondition) => YogaCondition = YogaConditi
       ...condition,
       bodies: Array.fromIterable(condition.bodies),
       expectedRelativeHouses: Array.fromIterable(condition.expectedRelativeHouses),
+    }),
+  BodyDignitiesCondition: (condition) =>
+    YogaCondition.BodyDignitiesCondition({
+      ...condition,
+      bodies: Array.fromIterable(condition.bodies),
+      expectedRelativeHouses: Array.fromIterable(condition.expectedRelativeHouses),
+      expectedDignities: Array.fromIterable(condition.expectedDignities),
+    }),
+  OccupiedSignCountCondition: (condition) =>
+    YogaCondition.OccupiedSignCountCondition({
+      ...condition,
+      bodies: Array.fromIterable(condition.bodies),
     }),
   HouseOccupancyCondition: (condition) =>
     YogaCondition.HouseOccupancyCondition({
@@ -142,7 +159,13 @@ export const makeCatalog = Effect.fn("Yoga.makeCatalog")(function* (
 });
 
 export const definitions = Array.map(
-  [...moonRelativeDefinitions, ...housePatternDefinitions],
+  [
+    ...moonRelativeDefinitions,
+    ...relativePatternDefinitions,
+    ...panchaMahapurushaDefinitions,
+    ...signCardinalityDefinitions,
+    ...housePatternDefinitions,
+  ],
   freezeDefinition,
 );
 

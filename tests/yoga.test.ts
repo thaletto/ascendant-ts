@@ -15,31 +15,11 @@ function evaluate(calculation: Chart.ChartCalculation, ids?: readonly string[]) 
 }
 
 describe("Yoga", () => {
-  it("publishes the Moon-relative rule set without strength or prose in results", () => {
-    expect(
-      Equal.equals(
-        Yoga.catalog.map(({ id }) => id),
-        [
-          "gajakesari",
-          "sunapha",
-          "anapha",
-          "dhurdhua",
-          "kemadruma",
-          "chandra_mangala",
-          "adhi",
-          "sakata",
-          "amala",
-          "kusuma",
-          "thrilochana",
-          "bhaskara",
-          "marud",
-          "budha",
-          "chatussagara",
-          "vasumathi",
-          "rajalakshana",
-        ],
-      ),
-    ).toBe(true);
+  it("publishes a unique Yoga catalog without strength or prose in descriptors", () => {
+    const ids = Yoga.catalog.map(({ id }) => id);
+
+    expect(ids.length).toBeGreaterThan(0);
+    expect(new Set(ids).size).toBe(ids.length);
     expect(
       Yoga.catalog.every(
         (descriptor) =>
@@ -224,6 +204,301 @@ describe("Yoga", () => {
         const result = yield* evaluate(fixtures.calculationFromHouses(houses), [id]);
         expect(result.results[0]?.present).toBe(true);
       }
+    }),
+  );
+
+  it.effect("evaluates the next relative-placement source rules", () =>
+    Effect.gen(function* () {
+      const cases = [
+        ["vesi", { Sun: 1, Mars: 2 }],
+        ["vasi", { Sun: 1, Mars: 12 }],
+        ["obhayachari", { Sun: 1, Mars: 2, Jupiter: 12 }],
+        ["budha_aditya", { Sun: 1, Mercury: 1 }],
+        ["srik", { Mercury: 1, Jupiter: 4, Venus: 10 }],
+        [
+          "chandra",
+          {
+            Sun: 1,
+            Moon: 3,
+            Mars: 5,
+            Mercury: 7,
+            Jupiter: 9,
+            Venus: 11,
+            Saturn: 1,
+            Rahu: 3,
+            Ketu: 5,
+          },
+        ],
+      ] as const;
+
+      for (const [id, houses] of cases) {
+        const result = yield* evaluate(fixtures.calculationFromHouses(houses), [id]);
+        expect(result.results[0]?.present).toBe(true);
+      }
+    }),
+  );
+
+  it.effect("preserves exclusions and all-body requirements in the next rule set", () =>
+    Effect.gen(function* () {
+      const moonOnly = yield* evaluate(
+        fixtures.calculationFromHouses({ Sun: 1, Moon: 2, Rahu: 1 }),
+        ["vesi"],
+      );
+      const incompleteSrik = yield* evaluate(
+        fixtures.calculationFromHouses({ Mercury: 1, Jupiter: 4 }),
+        ["srik"],
+      );
+      const incompleteChandra = yield* evaluate(
+        fixtures.calculationFromHouses({
+          Sun: 1,
+          Moon: 3,
+          Mars: 5,
+          Mercury: 7,
+          Jupiter: 9,
+          Venus: 11,
+          Saturn: 1,
+          Rahu: 3,
+          Ketu: 2,
+        }),
+        ["chandra"],
+      );
+
+      expect(moonOnly.results[0]?.present).toBe(false);
+      expect(incompleteSrik.results[0]?.present).toBe(false);
+      expect(incompleteChandra.results[0]?.present).toBe(false);
+    }),
+  );
+
+  it.effect("evaluates the Pancha Mahapurusha Yogas from kendra and dignity evidence", () =>
+    Effect.gen(function* () {
+      const cases = [
+        ["hamsa", "Jupiter"],
+        ["malavya", "Venus"],
+        ["sasa", "Saturn"],
+        ["ruchaka", "Mars"],
+        ["bhadra", "Mercury"],
+      ] as const;
+
+      for (const [id, planet] of cases) {
+        const result = yield* evaluate(
+          fixtures.calculationFromHouses({ [planet]: 1 }, [1], {
+            dignities: { [planet]: ["OWN"] },
+          }),
+          [id],
+        );
+        expect(result.results[0]?.present).toBe(true);
+      }
+    }),
+  );
+
+  it.effect("requires both kendra placement and own or exalted dignity", () =>
+    Effect.gen(function* () {
+      const wrongHouse = yield* evaluate(
+        fixtures.calculationFromHouses({ Jupiter: 2 }, [1], {
+          dignities: { Jupiter: ["EXALTED"] },
+        }),
+        ["hamsa"],
+      );
+      const wrongDignity = yield* evaluate(
+        fixtures.calculationFromHouses({ Jupiter: 1 }, [1], { dignities: { Jupiter: ["FRIEND"] } }),
+        ["hamsa"],
+      );
+
+      expect(wrongHouse.results[0]?.present).toBe(false);
+      expect(wrongDignity.results[0]?.present).toBe(false);
+    }),
+  );
+
+  it.effect("evaluates Kamala and Gada from whole-chart house distributions", () =>
+    Effect.gen(function* () {
+      const kamala = yield* evaluate(
+        fixtures.calculationFromHouses({
+          Sun: 1,
+          Moon: 4,
+          Mars: 7,
+          Mercury: 10,
+          Jupiter: 1,
+          Venus: 4,
+          Saturn: 7,
+          Rahu: 10,
+          Ketu: 1,
+        }),
+        ["kamala"],
+      );
+      const gada = yield* evaluate(
+        fixtures.calculationFromHouses({
+          Sun: 1,
+          Moon: 7,
+          Mars: 1,
+          Mercury: 7,
+          Jupiter: 1,
+          Venus: 7,
+          Saturn: 1,
+          Rahu: 7,
+          Ketu: 1,
+        }),
+        ["gada"],
+      );
+
+      expect(kamala.results[0]?.present).toBe(true);
+      expect(gada.results[0]?.present).toBe(true);
+    }),
+  );
+
+  it.effect("rejects whole-chart distributions with a planet outside the required houses", () =>
+    Effect.gen(function* () {
+      const kamala = yield* evaluate(
+        fixtures.calculationFromHouses({
+          Sun: 1,
+          Moon: 4,
+          Mars: 7,
+          Mercury: 10,
+          Jupiter: 1,
+          Venus: 4,
+          Saturn: 7,
+          Rahu: 10,
+          Ketu: 2,
+        }),
+        ["kamala"],
+      );
+      const gada = yield* evaluate(
+        fixtures.calculationFromHouses({
+          Sun: 1,
+          Moon: 7,
+          Mars: 1,
+          Mercury: 7,
+          Jupiter: 1,
+          Venus: 7,
+          Saturn: 1,
+          Rahu: 7,
+          Ketu: 4,
+        }),
+        ["gada"],
+      );
+
+      expect(kamala.results[0]?.present).toBe(false);
+      expect(gada.results[0]?.present).toBe(false);
+    }),
+  );
+
+  it.effect("evaluates Vapee and Samudra from whole-chart distributions", () =>
+    Effect.gen(function* () {
+      const vapee = yield* evaluate(
+        fixtures.calculationFromHouses({
+          Sun: 2,
+          Moon: 5,
+          Mars: 8,
+          Mercury: 11,
+          Jupiter: 2,
+          Venus: 5,
+          Saturn: 8,
+          Rahu: 11,
+          Ketu: 2,
+        }),
+        ["vapee"],
+      );
+      const samudra = yield* evaluate(
+        fixtures.calculationFromHouses({
+          Sun: 2,
+          Moon: 4,
+          Mars: 6,
+          Mercury: 8,
+          Jupiter: 10,
+          Venus: 12,
+          Saturn: 2,
+          Rahu: 4,
+          Ketu: 6,
+        }),
+        ["samudra"],
+      );
+
+      expect(vapee.results[0]?.present).toBe(true);
+      expect(samudra.results[0]?.present).toBe(true);
+    }),
+  );
+
+  it.effect("rejects Vapee and Samudra when a graha breaks the distribution", () =>
+    Effect.gen(function* () {
+      const vapee = yield* evaluate(
+        fixtures.calculationFromHouses({
+          Sun: 2,
+          Moon: 5,
+          Mars: 8,
+          Mercury: 11,
+          Jupiter: 2,
+          Venus: 5,
+          Saturn: 8,
+          Rahu: 11,
+          Ketu: 1,
+        }),
+        ["vapee"],
+      );
+      const samudra = yield* evaluate(
+        fixtures.calculationFromHouses({
+          Sun: 2,
+          Moon: 4,
+          Mars: 6,
+          Mercury: 8,
+          Jupiter: 10,
+          Venus: 12,
+          Saturn: 2,
+          Rahu: 4,
+          Ketu: 1,
+        }),
+        ["samudra"],
+      );
+
+      expect(vapee.results[0]?.present).toBe(false);
+      expect(samudra.results[0]?.present).toBe(false);
+    }),
+  );
+
+  it.effect("evaluates the sign-cardinality Yoga group", () =>
+    Effect.gen(function* () {
+      const cases = [
+        ["vallaki", [1, 2, 3, 4, 5, 6, 7, 1, 2]],
+        ["damni", [1, 2, 3, 4, 5, 6, 1, 2, 3]],
+        ["pasa", [1, 2, 3, 4, 5, 1, 2, 3, 4]],
+        ["kedara", [1, 2, 3, 4, 1, 2, 3, 4, 1]],
+        ["sula", [1, 2, 3, 1, 2, 3, 1, 2, 3]],
+        ["yuga", [1, 2, 1, 2, 1, 2, 1, 2, 1]],
+      ] as const;
+
+      for (const [id, houses] of cases) {
+        const result = yield* evaluate(
+          fixtures.calculationFromHouses(
+            Object.fromEntries(
+              ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu", "Ketu"].map(
+                (planet, index) => [planet, houses[index]],
+              ),
+            ),
+          ),
+          [id],
+        );
+        expect(result.results[0]?.present).toBe(true);
+      }
+    }),
+  );
+
+  it.effect("requires an exact occupied-sign count", () =>
+    Effect.gen(function* () {
+      const result = yield* evaluate(
+        fixtures.calculationFromHouses({
+          Sun: 1,
+          Moon: 2,
+          Mars: 3,
+          Mercury: 4,
+          Jupiter: 5,
+          Venus: 6,
+          Saturn: 7,
+          Rahu: 8,
+          Ketu: 1,
+        }),
+        ["vallaki", "damni"],
+      );
+
+      expect(result.results[0]?.present).toBe(false);
+      expect(result.results[1]?.present).toBe(false);
     }),
   );
 

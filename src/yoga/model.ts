@@ -1,6 +1,6 @@
 import { Schema } from "effect";
 
-import { Division, Houses, Planets, PlanetsLagna } from "../chart/model.js";
+import { Division, Houses, PlanetDignity, Planets, PlanetsLagna, Rashis } from "../chart/model.js";
 import { YogaProvenance } from "../provenance.js";
 
 export const YogaId = Schema.String.check(Schema.isPattern(/^[a-z][a-z0-9_]*$/)).pipe(
@@ -29,6 +29,13 @@ export interface BodyPositionObservation extends Schema.Schema.Type<
   typeof BodyPositionObservation
 > {}
 
+export const BodyDignityObservation = Schema.Struct({
+  body: Planets,
+  relativeHouse: Houses,
+  dignities: Schema.Array(PlanetDignity),
+});
+export interface BodyDignityObservation extends Schema.Schema.Type<typeof BodyDignityObservation> {}
+
 export const HouseOccupancyObservation = Schema.Struct({
   relativeHouse: Houses,
   occupants: Schema.Array(Planets),
@@ -47,6 +54,36 @@ export const BodyPositionsEvidence = Schema.TaggedStruct("BodyPositionsEvidence"
   matched: Schema.Boolean,
 });
 export interface BodyPositionsEvidence extends Schema.Schema.Type<typeof BodyPositionsEvidence> {}
+
+export const BodyDignitiesEvidence = Schema.TaggedStruct("BodyDignitiesEvidence", {
+  division: Division,
+  referenceBody: PlanetsLagna,
+  bodies: Schema.Array(Planets),
+  expectedRelativeHouses: Schema.Array(Houses),
+  expectedDignities: Schema.Array(PlanetDignity),
+  observed: Schema.Array(BodyDignityObservation),
+  quantifier: Schema.Literal("All"),
+  matched: Schema.Boolean,
+});
+export interface BodyDignitiesEvidence extends Schema.Schema.Type<typeof BodyDignitiesEvidence> {}
+
+export const BodySignObservation = Schema.Struct({
+  body: Planets,
+  sign: Rashis,
+});
+export interface BodySignObservation extends Schema.Schema.Type<typeof BodySignObservation> {}
+
+export const OccupiedSignCountEvidence = Schema.TaggedStruct("OccupiedSignCountEvidence", {
+  division: Division,
+  bodies: Schema.Array(Planets),
+  expectedSignCount: Schema.Finite,
+  observed: Schema.Array(BodySignObservation),
+  observedSignCount: Schema.Finite,
+  matched: Schema.Boolean,
+});
+export interface OccupiedSignCountEvidence extends Schema.Schema.Type<
+  typeof OccupiedSignCountEvidence
+> {}
 
 export const HouseOccupancyEvidence = Schema.TaggedStruct("HouseOccupancyEvidence", {
   division: Division,
@@ -79,6 +116,8 @@ export interface NotEvidence {
 
 export type YogaEvidence =
   | BodyPositionsEvidence
+  | BodyDignitiesEvidence
+  | OccupiedSignCountEvidence
   | HouseOccupancyEvidence
   | AllEvidence
   | AnyEvidence
@@ -88,6 +127,8 @@ const YogaEvidenceRef = Schema.suspend((): Schema.Codec<YogaEvidence> => YogaEvi
 
 export const YogaEvidence: Schema.Codec<YogaEvidence> = Schema.Union([
   BodyPositionsEvidence,
+  BodyDignitiesEvidence,
+  OccupiedSignCountEvidence,
   HouseOccupancyEvidence,
   Schema.TaggedStruct("AllEvidence", {
     children: Schema.Array(YogaEvidenceRef),

@@ -1,6 +1,13 @@
 import { Data, type Effect, type Result, Schema } from "effect";
 
-import type { Division, Houses, Planets, PlanetsLagna } from "../chart/model.js";
+import type {
+  Division,
+  Houses,
+  PlanetDignity,
+  Planets,
+  PlanetsLagna,
+  Rashis,
+} from "../chart/model.js";
 import type { InvalidYogaEvidenceError } from "./error.js";
 import type { YogaDescriptor, YogaEvidence } from "./model.js";
 
@@ -11,6 +18,18 @@ export type YogaCondition = Data.TaggedEnum<{
     readonly bodies: readonly Planets[];
     readonly expectedRelativeHouses: readonly Houses[];
     readonly quantifier: "All" | "Any";
+  };
+  BodyDignitiesCondition: {
+    readonly division: Division;
+    readonly referenceBody: PlanetsLagna;
+    readonly bodies: readonly Planets[];
+    readonly expectedRelativeHouses: readonly Houses[];
+    readonly expectedDignities: readonly PlanetDignity[];
+  };
+  OccupiedSignCountCondition: {
+    readonly division: Division;
+    readonly bodies: readonly Planets[];
+    readonly expectedSignCount: number;
   };
   HouseOccupancyCondition: {
     readonly division: Division;
@@ -28,6 +47,8 @@ export const YogaCondition = Data.taggedEnum<YogaCondition>();
 
 export interface IndexedDivision {
   readonly positionOf: (body: PlanetsLagna) => Houses;
+  readonly dignitiesOf: (body: Planets) => readonly PlanetDignity[];
+  readonly signOf: (body: Planets) => Rashis;
   readonly occupantsAtRelativeHouse: (
     referenceBody: PlanetsLagna,
     relativeHouse: Houses,

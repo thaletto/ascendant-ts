@@ -81,7 +81,11 @@ function placementsFromLongitudes(
   });
 }
 
-function planetForHouse(name: Model.Planets, house: Model.Houses): Model.Planet {
+function planetForHouse(
+  name: Model.Planets,
+  house: Model.Houses,
+  dignities: readonly Model.PlanetDignity[] = [],
+): Model.Planet {
   const longitude = (house - 1) * 30;
   const sign = Array.getUnsafe(RASHIS, house - 1);
   return Model.Planet.make({
@@ -89,7 +93,7 @@ function planetForHouse(name: Model.Planets, house: Model.Houses): Model.Planet 
     longitude: Model.Longitude.make(longitude),
     degree: Model.Degree.make(0),
     is_retrograde: false,
-    in_sign: [],
+    in_sign: dignities,
     sign: Model.Sign.make({ name: sign, lord: SIGN_LORDS[sign] }),
   });
 }
@@ -97,6 +101,9 @@ function planetForHouse(name: Model.Planets, house: Model.Houses): Model.Planet 
 function calculationFromHouses(
   overrides: Partial<Record<Model.Planets, Model.Houses>> = {},
   divisions: readonly Model.Division[] = [1],
+  options: {
+    readonly dignities?: Partial<Record<Model.Planets, readonly Model.PlanetDignity[]>>;
+  } = {},
 ): Model.ChartCalculation {
   const planetHouses: Record<Model.Planets, Model.Houses> = {
     Sun: 3,
@@ -110,7 +117,9 @@ function calculationFromHouses(
     Ketu: 7,
     ...overrides,
   };
-  const planets = ALL_PLANETS.map((name) => planetForHouse(name, planetHouses[name]));
+  const planets = ALL_PLANETS.map((name) =>
+    planetForHouse(name, planetHouses[name], options.dignities?.[name]),
+  );
   const houses = Record.fromEntries(
     RASHIS.map((sign, index) => {
       const house = (index + 1) as Model.Houses;
