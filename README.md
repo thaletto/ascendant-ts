@@ -74,6 +74,19 @@ const derived = Effect.gen(function* () {
 
 Chara deterministically resolves Scorpio's Mars/Ketu and Aquarius's Saturn/Rahu co-lords: it uses the co-lord with more sign associations, then the higher exact within-sign degree, then the traditional planet in an exact tie. Sthira deterministically selects Brahma using its returned strength scorecard.
 
+## Method provenance
+
+Every result that exposes provenance identifies its versioned `{ school, method, version }` record. The canonical `Provenance.methods` registry also publishes the calculation steps and verification criteria for every implemented chart, Yoga, Jaimini, and sign-Dasha method. This makes a result's method identity directly traceable to its executable specification.
+
+```typescript
+import { Provenance } from "astro-ascendant";
+
+const sthiraMethod = Provenance.methods.sthiraDasha;
+console.log(sthiraMethod.provenance);
+console.log(sthiraMethod.steps);
+console.log(sthiraMethod.verification);
+```
+
 ## Configuration
 
 Pass an `AstroParams` layer to select the ayanamsa and house system:
@@ -93,21 +106,22 @@ Supported divisions are `D1`, `D2`, `D3`, `D4`, `D7`, `D9`, `D10`, `D12`, `D16`,
 
 Use the package root for the main namespaces, or import a focused entry point:
 
-| Entry point                     | Contents                                                                            |
-| ------------------------------- | ----------------------------------------------------------------------------------- |
-| `astro-ascendant`               | `AstroParams`, `Chart`, `Dasha`, `Ephemeris`, `SAV`, `Yoga`, and Jaimini namespaces |
-| `astro-ascendant/chart`         | Chart models, generation, projection, and errors                                    |
-| `astro-ascendant/dasha`         | Vimshottari, Chara, and Sthira Dasha calculations and queries                       |
-| `astro-ascendant/sav`           | Ashtakavarga calculation and models                                                 |
-| `astro-ascendant/yoga`          | Yoga catalog, evaluation, and evidence formatting                                   |
-| `astro-ascendant/swisseph`      | Swiss Ephemeris adapter                                                             |
-| `astro-ascendant/astro-params`  | Calculation parameter models and layers                                             |
-| `astro-ascendant/argala`        | Jaimini Argala calculation                                                          |
-| `astro-ascendant/arudha-pada`   | Jaimini Arudha Pada calculation                                                     |
-| `astro-ascendant/chara-karakas` | Jaimini Chara Karaka calculation                                                    |
-| `astro-ascendant/karakamsha`    | Jaimini Karakamsha calculation                                                      |
-| `astro-ascendant/rashi-drishti` | Jaimini Rashi Drishti calculation                                                   |
-| `astro-ascendant/upapada`       | Jaimini Upapada calculation                                                         |
+| Entry point                     | Contents                                                                                          |
+| ------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `astro-ascendant`               | `AstroParams`, `Chart`, `Dasha`, `Ephemeris`, `Provenance`, `SAV`, `Yoga`, and Jaimini namespaces |
+| `astro-ascendant/chart`         | Chart models, generation, projection, and errors                                                  |
+| `astro-ascendant/dasha`         | Vimshottari, Chara, and Sthira Dasha calculations and queries                                     |
+| `astro-ascendant/provenance`    | Auditable calculation-method registry                                                             |
+| `astro-ascendant/sav`           | Ashtakavarga calculation and models                                                               |
+| `astro-ascendant/yoga`          | Yoga catalog, evaluation, and evidence formatting                                                 |
+| `astro-ascendant/swisseph`      | Swiss Ephemeris adapter                                                                           |
+| `astro-ascendant/astro-params`  | Calculation parameter models and layers                                                           |
+| `astro-ascendant/argala`        | Jaimini Argala calculation                                                                        |
+| `astro-ascendant/arudha-pada`   | Jaimini Arudha Pada calculation                                                                   |
+| `astro-ascendant/chara-karakas` | Jaimini Chara Karaka calculation                                                                  |
+| `astro-ascendant/karakamsha`    | Jaimini Karakamsha calculation                                                                    |
+| `astro-ascendant/rashi-drishti` | Jaimini Rashi Drishti calculation                                                                 |
+| `astro-ascendant/upapada`       | Jaimini Upapada calculation                                                                       |
 
 See the [API documentation](https://ascendant-docs.vercel.app) for the complete public surface and methodology details.
 

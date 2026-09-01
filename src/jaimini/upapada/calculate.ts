@@ -1,19 +1,20 @@
 import { Effect } from "effect";
 
 import type { Placements } from "../../chart/model.js";
+import { methods } from "../../provenance.js";
 import { calculateUpapada } from "./helper.js";
 import type { Result } from "./model.js";
-import { Provenance } from "./model.js";
 
+/**
+ * Returns the twelfth-house Arudha Pada as Upapada. It delegates the projection
+ * to the shared Arudha calculation while exposing its own Jaimini provenance and
+ * typed evidence failures.
+ */
 export const calculate = Effect.fn("Upapada.calculate")(function* (placements: Placements) {
   const arudhaPada = yield* calculateUpapada(placements);
 
   return {
-    provenance: {
-      school: "Jaimini" as const,
-      method: "twelfth-house-plain-projection" as const,
-      version: 1 as const,
-    } satisfies Provenance,
+    provenance: methods.jaiminiUpapada.provenance,
     house: 12 as const,
     sourceSign: arudhaPada.sourceSign,
     lord: arudhaPada.lord,

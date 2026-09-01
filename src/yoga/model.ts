@@ -1,6 +1,7 @@
 import { Schema } from "effect";
 
-import { Division, Houses, Planets, PlanetsLagna, Provenance } from "../chart/model.js";
+import { Division, Houses, Planets, PlanetsLagna } from "../chart/model.js";
+import { YogaProvenance } from "../provenance.js";
 
 export const YogaId = Schema.String.check(Schema.isPattern(/^[a-z][a-z0-9_]*$/)).pipe(
   Schema.brand("YogaId"),
@@ -110,7 +111,7 @@ export const YogaResult = Schema.Struct({
 export interface YogaResult extends Schema.Schema.Type<typeof YogaResult> {}
 
 export const YogaEvaluation = Schema.Struct({
-  provenance: Provenance,
+  provenance: YogaProvenance,
   results: Schema.Array(YogaResult),
 });
 export interface YogaEvaluation extends Schema.Schema.Type<typeof YogaEvaluation> {}

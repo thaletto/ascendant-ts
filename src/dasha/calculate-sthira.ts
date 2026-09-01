@@ -8,6 +8,7 @@ import { compareExactDegrees, exactDegreeOf } from "../jaimini/chara-karakas/hel
 import * as CharaKarakas from "../jaimini/chara-karakas/index.js";
 import type { ClassicalPlanets, ExactDegree, Role } from "../jaimini/chara-karakas/model.js";
 import { targetsOf } from "../jaimini/rashi-drishti/helper.js";
+import { methods } from "../provenance.js";
 import { DashaEvidenceError } from "./error.js";
 import { validateUniquePlanetPlacements } from "./evidence.js";
 import type { BrahmaCandidateScore, EligibleBrahmaPlanet, RashiBala } from "./model.js";
@@ -90,6 +91,11 @@ function durationOf(sign: Rashis): 7 | 8 | 9 {
   return modality === 0 ? 7 : modality === 1 ? 8 : 9;
 }
 
+/**
+ * Computes the B.V. Raman/Koch Rashi Bala used only to choose the Brahma
+ * reference between Lagna and the seventh sign: modality, occupancy, and
+ * Jaimini Rashi Drishti from the lord, Jupiter, and Mercury.
+ */
 const rashiBalaOf = Effect.fn("Dasha.rashiBalaOf")(function* (
   placements: Placements,
   sign: Rashis,
@@ -120,6 +126,13 @@ const rashiBalaOf = Effect.fn("Dasha.rashiBalaOf")(function* (
   } satisfies RashiBala;
 });
 
+/**
+ * Builds the deterministic Sthira Dasha and its reproducible Brahma scorecard.
+ * It selects the stronger of Lagna and its seventh sign, scores eligible sixth,
+ * eighth, and twelfth lords by dignity, Chara Karaka, and Kendradi Bala, then
+ * resolves equal scores by exact degree and natural strength. Mahadashas begin
+ * from Brahma's sign and use the fixed 7/8/9-year modality durations.
+ */
 export const calculateSthira = Effect.fn("astro-ascendant/dasha/calculateSthira")(function* (
   moment: Moment,
   placements: Placements,
@@ -247,11 +260,7 @@ export const calculateSthira = Effect.fn("astro-ascendant/dasha/calculateSthira"
 
   return SthiraDasha.make({
     system: "Sthira",
-    provenance: {
-      school: "Jaimini",
-      method: "bv-raman-koch-brahma-strength",
-      version: 2,
-    },
+    provenance: methods.sthiraDasha.provenance,
     brahma: {
       planet: winner.planet,
       sign: winner.sign,

@@ -33,6 +33,10 @@
       "types": "./dist/ephemeris/index.d.ts",
       "import": "./dist/ephemeris/index.js"
     },
+    "./provenance": {
+      "types": "./dist/provenance.d.ts",
+      "import": "./dist/provenance.js"
+    },
     "./sav": {
       "types": "./dist/sav/index.d.ts",
       "import": "./dist/sav/index.js"

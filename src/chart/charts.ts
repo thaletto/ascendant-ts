@@ -1,5 +1,6 @@
 import { Array, Effect, Order, pipe, Record as Struct } from "effect";
 
+import { methods } from "../provenance.js";
 import { getDivisionalTarget } from "./divisional-mapping/calculate.js";
 import { ChartCalculationError } from "./error.js";
 import { inSignStatus } from "./helper.js";
@@ -16,6 +17,10 @@ import {
   Sign,
 } from "./model.js";
 
+/**
+ * Assembles a Whole Sign chart from division-mapped Lagna and planet positions.
+ * House one is the mapped Lagna sign and every following house advances one sign.
+ */
 function chartFromMappedPlacements({
   division,
   lagna,
@@ -42,15 +47,13 @@ function chartFromMappedPlacements({
   ) as Record<Houses, House>;
 
   return Chart.make({
-    provenance: {
-      method: "ascendant-divisional-mapping",
-      version: "1",
-    },
+    provenance: methods.chartProjection.provenance,
     division,
     houses,
   });
 }
 
+/** Maps canonical D1 Placements into one requested division before house assembly. */
 const chartFromPlacements = Effect.fn("astro-ascendant/chart/chartFromPlacements")(function* (
   placements: Placements,
   division: Division,
@@ -106,6 +109,11 @@ function requestedDivisions(divisions: readonly Division[]): readonly [Division,
   return [1, ...requested];
 }
 
+/**
+ * Projects D1 plus requested divisional charts from shared Placements. D1 is
+ * always first; duplicate requests are removed and remaining divisions sort in
+ * ascending numeric order, preserving a stable calculation result.
+ */
 export const project = Effect.fn("astro-ascendant/chart/project")(
   function* (placements: Placements, divisions: readonly Division[] = []) {
     const requested = requestedDivisions(divisions);

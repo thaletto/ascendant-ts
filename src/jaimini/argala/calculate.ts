@@ -3,10 +3,16 @@ import { Effect, HashMap, Option } from "effect";
 import { PLANETS, RASHIS } from "../../chart/internal/constants.js";
 import { signAt, signIndexOf } from "../../chart/internal/position.js";
 import { Planets, Rashis, type Placements } from "../../chart/model.js";
+import { methods } from "../../provenance.js";
 import { relation } from "./helper.js";
 import type { Reference, Result } from "./model.js";
 import { EvidenceError } from "./model.js";
 
+/**
+ * Calculates Jaimini Argala around a supplied sign or Ketu reference. It first
+ * validates one placement per planet, then returns the fixed supporting and
+ * obstructing positions; Ketu reverses their directional counting.
+ */
 export const calculate = Effect.fn("astro-ascendant/jaimini/argala/calculate")(function* (
   placements: Placements,
   reference: Reference,
@@ -41,11 +47,7 @@ export const calculate = Effect.fn("astro-ascendant/jaimini/argala/calculate")(f
   const referenceIndex = RASHIS.indexOf(referenceSign);
 
   return {
-    provenance: {
-      school: "Jaimini" as const,
-      method: "structural-positions" as const,
-      version: 1 as const,
-    },
+    provenance: methods.jaiminiArgala.provenance,
     reference,
     referenceSign,
     direction: reverse ? ("reverse" as const) : ("forward" as const),

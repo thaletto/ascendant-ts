@@ -6,6 +6,7 @@ export * as CharaKarakas from "./jaimini/chara-karakas/index.js";
 export * as Dasha from "./dasha/index.js";
 export * as Ephemeris from "./ephemeris/index.js";
 export * as Karakamsha from "./jaimini/karakamsha/index.js";
+export * as Provenance from "./provenance.js";
 export * as RashiDrishti from "./jaimini/rashi-drishti/index.js";
 export * as SAV from "./sav/index.js";
 export * as Upapada from "./jaimini/upapada/index.js";

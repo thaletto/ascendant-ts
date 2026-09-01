@@ -1,6 +1,7 @@
 import { Schema } from "effect";
 
 import { Options as AstroParamsOptions } from "../astro-params/model.js";
+import { ChartProjectionProvenance } from "../provenance.js";
 import {
   PLANETS,
   CLASSICAL_PLANETS,
@@ -109,14 +110,10 @@ export class Placements extends Schema.Class<Placements>("Placements")({
   planets: Schema.Array(SourcePlanet),
 }) {}
 
-export const Provenance = Schema.Struct({
-  method: Schema.String,
-  version: Schema.String,
-});
-export interface Provenance extends Schema.Schema.Type<typeof Provenance> {}
+export { ChartProjectionProvenance as Provenance } from "../provenance.js";
 
 export class Chart extends Schema.Class<Chart>("Chart")({
-  provenance: Provenance,
+  provenance: ChartProjectionProvenance,
   division: Division,
   houses: ChartHouses,
 }) {}

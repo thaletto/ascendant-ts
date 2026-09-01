@@ -139,7 +139,7 @@ function calculationFromHouses(
   );
   const charts = divisions.map((division) =>
     Model.Chart.make({
-      provenance: { method: "ascendant-divisional-mapping", version: "1" },
+      provenance: { school: "Ascendant", method: "ascendant-divisional-mapping", version: "1" },
       division,
       houses,
     }),

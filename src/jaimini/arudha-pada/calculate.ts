@@ -2,10 +2,16 @@ import { Effect } from "effect";
 
 import { signAt, signIndexOf } from "../../chart/internal/position.js";
 import { Houses, type Placements } from "../../chart/model.js";
+import { methods } from "../../provenance.js";
 import { distanceBetween, lordOfSign, projectedSign, sourceSignOf } from "./helper.js";
 import type { Result } from "./model.js";
-import { EvidenceError, Provenance } from "./model.js";
+import { EvidenceError } from "./model.js";
 
+/**
+ * Projects a requested D1 house's sign through its lord using the plain Arudha
+ * rule. The result deliberately does not apply exceptional source- or seventh-
+ * sign adjustments and reports the full derivation evidence.
+ */
 export const calculate = Effect.fn("astro-ascendant/jaimini/arudha-pada/calculate")(function* (
   placements: Placements,
   house: Houses,
@@ -30,11 +36,7 @@ export const calculate = Effect.fn("astro-ascendant/jaimini/arudha-pada/calculat
   const sign = projectedSign(distance)(lordSignIndex);
 
   return {
-    provenance: {
-      school: "Jaimini" as const,
-      method: "plain-projection" as const,
-      version: 1 as const,
-    } satisfies Provenance,
+    provenance: methods.jaiminiArudhaPada.provenance,
     house,
     sourceSign,
     lord,

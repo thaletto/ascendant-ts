@@ -4,6 +4,7 @@ import { RASHIS, SIGN_LORDS } from "../chart/internal/constants.js";
 import { signAt, signIndexOf } from "../chart/internal/position.js";
 import type { Moment, Placements, Planets, Rashis } from "../chart/model.js";
 import { compareExactDegrees, exactDegreeOf } from "../jaimini/chara-karakas/helper.js";
+import { methods } from "../provenance.js";
 import { DashaEvidenceError } from "./error.js";
 import { validateUniquePlanetPlacements } from "./evidence.js";
 import { CharaDasha } from "./model.js";
@@ -37,6 +38,12 @@ function distanceInDirection(from: number, to: number, direction: Direction): nu
   return ((to - from) * direction + RASHIS.length) % RASHIS.length;
 }
 
+/**
+ * Resolves Scorpio's Mars/Ketu or Aquarius's Saturn/Rahu co-lord without an
+ * interpretive strength judgement. Occupation makes the other co-lord active;
+ * otherwise sign associations, exact degree, then the traditional planet break
+ * the tie. A shared occupation means the sign receives its full twelve years.
+ */
 const resolveCoLord = Effect.fn("Dasha.resolveCharaCoLord")(function* <Candidate extends Planets>(
   placements: Placements,
   sign: "Scorpio" | "Aquarius",
@@ -80,6 +87,11 @@ const resolveCoLord = Effect.fn("Dasha.resolveCharaCoLord")(function* <Candidate
   return candidates[0];
 });
 
+/**
+ * Counts the sign lord in that sign's pada direction, excluding the starting
+ * sign. A lord in its own sign, including a jointly occupied co-lord sign,
+ * receives the conventional twelve-year duration.
+ */
 const durationOf = Effect.fn("Dasha.charaDurationOf")(function* (
   placements: Placements,
   sign: Rashis,
@@ -105,6 +117,12 @@ const durationOf = Effect.fn("Dasha.charaDurationOf")(function* (
   return distance === 0 ? 12 : distance;
 });
 
+/**
+ * Builds the twelve-sign Jaimini Chara Dasha from Lagna. The ninth sign's pada
+ * group determines the forward or reverse order; each sign's own pada direction
+ * determines its duration. Antardashas are equal twelfths and end exactly with
+ * their parent Mahadasha.
+ */
 export const calculateChara = Effect.fn("astro-ascendant/dasha/calculateChara")(function* (
   moment: Moment,
   placements: Placements,
@@ -133,11 +151,7 @@ export const calculateChara = Effect.fn("astro-ascendant/dasha/calculateChara")(
 
   return CharaDasha.make({
     system: "Chara",
-    provenance: {
-      school: "Jaimini",
-      method: "kn-rao-co-lord-strength",
-      version: 2,
-    },
+    provenance: methods.charaDasha.provenance,
     mahadashas,
   });
 });

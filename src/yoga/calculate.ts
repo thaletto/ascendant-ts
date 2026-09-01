@@ -1,6 +1,7 @@
 import { Effect, Array, pipe, HashSet, Order, MutableHashSet, HashMap, Option } from "effect";
 
 import type { ChartCalculation } from "../chart/model.js";
+import { methods } from "../provenance.js";
 import { definitions as builtInDefinitions, makeCatalog } from "./catalog.js";
 import {
   DuplicateYogaSelectionError,
@@ -11,7 +12,6 @@ import {
 import { evaluateDefinition, makeEvaluationIndex } from "./evaluate.js";
 import type { YogaDefinition } from "./internal.js";
 import type { YogaEvaluation, YogaId } from "./model.js";
-import { provenance } from "./provenance.js";
 
 export const getCatalog = Effect.fn("getCatalog")(function* (
   unvalidatedDefinitions: readonly YogaDefinition[] = builtInDefinitions,
@@ -50,6 +50,11 @@ const missingEvidence = Effect.fn(function* (
   return yield* MissingYogaEvidenceError.make({ affectedYogaIds, missingDivisions });
 });
 
+/**
+ * Evaluates an already validated Yoga selection against one calculation. It
+ * constructs the shared evidence index once, then evaluates definitions with
+ * bounded Fiber concurrency while retaining catalogue or caller-selected order.
+ */
 const evaluateYoga = Effect.fn("evaluateYoga")(function* (
   calculation: ChartCalculation,
   selected: readonly YogaDefinition[],
@@ -62,7 +67,7 @@ const evaluateYoga = Effect.fn("evaluateYoga")(function* (
     { concurrency: 4 },
   );
 
-  return { provenance, results } as YogaEvaluation;
+  return { provenance: methods.yoga.provenance, results } as YogaEvaluation;
 });
 
 export const evaluateAll = Effect.fn("evaluateAll")(function* (calculation: ChartCalculation) {

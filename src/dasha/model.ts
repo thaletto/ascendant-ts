@@ -2,6 +2,9 @@ import { Schema } from "effect";
 
 import { Degree, PlanetDignity, Planets, Rashis } from "../chart/model.js";
 import { Roles } from "../jaimini/chara-karakas/model.js";
+import { CharaDashaProvenance, SthiraDashaProvenance } from "../provenance.js";
+
+export { CharaDashaProvenance, SthiraDashaProvenance } from "../provenance.js";
 
 export const AntarDasha = Schema.Struct({
   mahadasha: Planets,
@@ -43,20 +46,6 @@ export const RashiMahaDasha = Schema.Struct({
   antardashas: Schema.Array(RashiAntarDasha),
 });
 export interface RashiMahaDasha extends Schema.Schema.Type<typeof RashiMahaDasha> {}
-
-export const CharaDashaProvenance = Schema.Struct({
-  school: Schema.Literal("Jaimini"),
-  method: Schema.Literal("kn-rao-co-lord-strength"),
-  version: Schema.Literal(2),
-});
-export interface CharaDashaProvenance extends Schema.Schema.Type<typeof CharaDashaProvenance> {}
-
-export const SthiraDashaProvenance = Schema.Struct({
-  school: Schema.Literal("Jaimini"),
-  method: Schema.Literal("bv-raman-koch-brahma-strength"),
-  version: Schema.Literal(2),
-});
-export interface SthiraDashaProvenance extends Schema.Schema.Type<typeof SthiraDashaProvenance> {}
 
 export const EligibleBrahmaPlanets = Schema.Literals([
   "Sun",

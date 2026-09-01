@@ -1,16 +1,12 @@
 import { Schema } from "effect";
 
 import { Rashis } from "../../chart/model.js";
+import { JaiminiRashiDrishtiProvenance } from "../../provenance.js";
 
-export const Provenance = Schema.Struct({
-  school: Schema.Literal("Jaimini"),
-  method: Schema.Literal("movable-fixed-dual"),
-  version: Schema.Literal(1),
-});
-export interface Provenance extends Schema.Schema.Type<typeof Provenance> {}
+export { JaiminiRashiDrishtiProvenance as Provenance } from "../../provenance.js";
 
 export const Result = Schema.Struct({
-  provenance: Provenance,
+  provenance: JaiminiRashiDrishtiProvenance,
   reference: Rashis,
   targets: Schema.Tuple([Rashis, Rashis, Rashis]),
 });

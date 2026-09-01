@@ -54,9 +54,13 @@ describe("Yoga", () => {
       Effect.gen(function* () {
         const result = yield* evaluate(fixtures.calculationFromHouses(), undefined);
 
-        expect(Equal.equals(result.provenance, { method: "ascendant-yoga", version: "v1" })).toBe(
-          true,
-        );
+        expect(
+          Equal.equals(result.provenance, {
+            school: "Parashari",
+            method: "ascendant-yoga",
+            version: "v1",
+          }),
+        ).toBe(true);
         expect(
           Equal.equals(
             result.results.map(({ yoga }) => yoga.id),

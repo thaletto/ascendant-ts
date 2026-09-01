@@ -1,6 +1,9 @@
 import { Schema } from "effect";
 
 import { Degree } from "../../chart/model.js";
+import { JaiminiCharaKarakasProvenance } from "../../provenance.js";
+
+export { JaiminiCharaKarakasProvenance as Provenance } from "../../provenance.js";
 
 export const ClassicalPlanets = Schema.Literals([
   "Sun",
@@ -24,13 +27,6 @@ export const Roles = Schema.Literals([
 ] as const);
 export type Role = typeof Roles.Type;
 
-export const Provenance = Schema.Struct({
-  school: Schema.Literal("Jaimini"),
-  method: Schema.Literal("exact-degree-shared-roles"),
-  version: Schema.Literal(1),
-});
-export interface Provenance extends Schema.Schema.Type<typeof Provenance> {}
-
 export const Holder = Schema.Struct({
   planet: ClassicalPlanets,
   degree: Degree,
@@ -51,7 +47,7 @@ export const Assignments = Schema.Record(Roles, Schema.NonEmptyArray(Holder));
 export interface Assignments extends Schema.Schema.Type<typeof Assignments> {}
 
 export const Result = Schema.Struct({
-  provenance: Provenance,
+  provenance: JaiminiCharaKarakasProvenance,
   assignments: Assignments,
 });
 export interface Result extends Schema.Schema.Type<typeof Result> {}

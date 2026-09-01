@@ -1,16 +1,12 @@
 import { Schema } from "effect";
 
 import { Houses, RashiLords, Rashis } from "../../chart/model.js";
+import { JaiminiArudhaPadaProvenance } from "../../provenance.js";
 
-export const Provenance = Schema.Struct({
-  school: Schema.Literal("Jaimini"),
-  method: Schema.Literal("plain-projection"),
-  version: Schema.Literal(1),
-});
-export interface Provenance extends Schema.Schema.Type<typeof Provenance> {}
+export { JaiminiArudhaPadaProvenance as Provenance } from "../../provenance.js";
 
 export const Result = Schema.Struct({
-  provenance: Provenance,
+  provenance: JaiminiArudhaPadaProvenance,
   house: Houses,
   sourceSign: Rashis,
   lord: RashiLords,

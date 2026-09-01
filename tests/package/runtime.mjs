@@ -11,6 +11,7 @@ const expectedExports = HashSet.make(
   "Dasha",
   "Ephemeris",
   "Karakamsha",
+  "Provenance",
   "RashiDrishti",
   "SAV",
   "Upapada",
@@ -28,6 +29,11 @@ if (typeof Yoga.evaluateAll !== "function" || !Array.isArray(Yoga.catalog)) {
 const focused = await import("astro-ascendant/chara-karakas");
 if (typeof focused.calculate !== "function") {
   throw new Error("The focused Jaimini subpath is not available");
+}
+
+const provenance = await import("astro-ascendant/provenance");
+if (provenance.methods.sthiraDasha?.provenance.method !== "bv-raman-koch-brahma-strength") {
+  throw new Error("The focused provenance registry is not available");
 }
 
 const dasha = await import("astro-ascendant/dasha");

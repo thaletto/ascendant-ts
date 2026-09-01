@@ -2,11 +2,17 @@ import { Effect } from "effect";
 
 import { getDivisionalTarget } from "../../chart/divisional-mapping/calculate.js";
 import { Placements } from "../../chart/model.js";
+import { methods } from "../../provenance.js";
 import * as CharaKarakas from "../chara-karakas/index.js";
 import { signOf } from "./helper.js";
 import type { Result } from "./model.js";
-import { CalculationError, EvidenceError, Provenance } from "./model.js";
+import { CalculationError, EvidenceError } from "./model.js";
 
+/**
+ * Returns the D9 sign for every Atmakaraka holder. It reuses the exact-degree
+ * Chara Karaka result, preserving all genuine Atmakaraka ties rather than
+ * selecting one planet, and converts its failures to Karakamsha evidence errors.
+ */
 export const calculate = Effect.fn("Karakamsha.calculate")(function* (placements: Placements) {
   const charaKarakas = yield* CharaKarakas.calculate(placements).pipe(
     Effect.mapError((error) => {
@@ -52,11 +58,7 @@ export const calculate = Effect.fn("Karakamsha.calculate")(function* (placements
   if (first === undefined) throw new Error("Karakamsha requires at least one Atmakaraka");
 
   return {
-    provenance: {
-      school: "Jaimini" as const,
-      method: "atmakaraka-d9-sign" as const,
-      version: 1 as const,
-    } satisfies Provenance,
+    provenance: methods.jaiminiKarakamsha.provenance,
     placements: [first, ...karakamshaPlacements.slice(1)],
   } satisfies Result;
 });

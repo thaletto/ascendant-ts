@@ -7,6 +7,7 @@ import {
   Dasha,
   Ephemeris,
   Karakamsha,
+  Provenance,
   RashiDrishti,
   SAV,
   Upapada,
@@ -18,6 +19,7 @@ import * as FocusedCharaKarakas from "astro-ascendant/chara-karakas";
 import * as DivisionalMapping from "astro-ascendant/chart/divisional-mapping";
 import * as FocusedDasha from "astro-ascendant/dasha";
 import * as FocusedKarakamsha from "astro-ascendant/karakamsha";
+import * as FocusedProvenance from "astro-ascendant/provenance";
 import * as FocusedRashiDrishti from "astro-ascendant/rashi-drishti";
 import * as FocusedSAV from "astro-ascendant/sav";
 import * as Swisseph from "astro-ascendant/swisseph";
@@ -79,12 +81,14 @@ void Argala.calculate;
 void ArudhaPada.calculate;
 void CharaKarakas.calculate;
 void Karakamsha.calculate;
+void Provenance.methods;
 void RashiDrishti.calculate;
 void Upapada.calculate;
 void FocusedArgala.calculate;
 void FocusedArudhaPada.calculate;
 void FocusedCharaKarakas.calculate;
 void FocusedKarakamsha.calculate;
+void FocusedProvenance.methods;
 void FocusedRashiDrishti.calculate;
 void FocusedUpapada.calculate;
 void DivisionalMapping.getDivisionalTarget;

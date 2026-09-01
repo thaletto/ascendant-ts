@@ -52,6 +52,14 @@ _Avoid_: Compatibility score, probability, prediction
 A school of Jyotisha containing distinct calculations such as Chara Karakas, Rashi Drishti, Karakamsha, Arudha Padas, Upapada, and Argala. It identifies a method's provenance, not a calculation requested as a whole.
 _Avoid_: Jaimini calculation, Jaimini mode, Jaimini core as a user request
 
+**Calculation provenance**:
+The versioned school and method identity attached to a result, expressed as `school`, `method`, and `version`. It identifies one specification in the canonical method registry.
+_Avoid_: Source code location, informal method name, citation
+
+**Method specification**:
+The canonical registry record for one implemented astrological method, containing its provenance, ordered calculation steps, and executable verification criteria.
+_Avoid_: Implementation detail, undocumented convention, result evidence
+
 **Chara Karakas**:
 Seven planetary roles assigned in descending order from the Degrees derived exactly from the classical planets' stored D1 longitudes. Planets at the same position within their Signs jointly hold every role occupied by their tied ranks.
 _Avoid_: requesting Jaimini, approximate tie, arbitrary tiebreaker, Rahu tie fallback

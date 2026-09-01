@@ -54,6 +54,7 @@ describe("Chart projections", () => {
       expect(chart.division).toBe(1);
       expect(
         Equal.equals(chart.provenance, {
+          school: "Ascendant",
           method: "ascendant-divisional-mapping",
           version: "1",
         }),
