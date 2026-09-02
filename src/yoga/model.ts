@@ -73,6 +73,27 @@ export const BodySignObservation = Schema.Struct({
 });
 export interface BodySignObservation extends Schema.Schema.Type<typeof BodySignObservation> {}
 
+export const SignModality = Schema.Literals(["Movable", "Fixed", "Dual"] as const);
+export type SignModality = typeof SignModality.Type;
+
+export const SignModalityObservation = Schema.Struct({
+  body: Planets,
+  sign: Rashis,
+  modality: SignModality,
+});
+export interface SignModalityObservation extends Schema.Schema.Type<
+  typeof SignModalityObservation
+> {}
+
+export const SignModalityEvidence = Schema.TaggedStruct("SignModalityEvidence", {
+  division: Division,
+  bodies: Schema.Array(Planets),
+  expectedModality: SignModality,
+  observed: Schema.Array(SignModalityObservation),
+  matched: Schema.Boolean,
+});
+export interface SignModalityEvidence extends Schema.Schema.Type<typeof SignModalityEvidence> {}
+
 export const OccupiedSignCountEvidence = Schema.TaggedStruct("OccupiedSignCountEvidence", {
   division: Division,
   bodies: Schema.Array(Planets),
@@ -117,6 +138,7 @@ export interface NotEvidence {
 export type YogaEvidence =
   | BodyPositionsEvidence
   | BodyDignitiesEvidence
+  | SignModalityEvidence
   | OccupiedSignCountEvidence
   | HouseOccupancyEvidence
   | AllEvidence
@@ -128,6 +150,7 @@ const YogaEvidenceRef = Schema.suspend((): Schema.Codec<YogaEvidence> => YogaEvi
 export const YogaEvidence: Schema.Codec<YogaEvidence> = Schema.Union([
   BodyPositionsEvidence,
   BodyDignitiesEvidence,
+  SignModalityEvidence,
   OccupiedSignCountEvidence,
   HouseOccupancyEvidence,
   Schema.TaggedStruct("AllEvidence", {

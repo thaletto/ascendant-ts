@@ -24,6 +24,12 @@ function normalizeHouse(value: number): Houses {
   return Schema.decodeUnknownSync(Houses)(((((value - 1) % 12) + 12) % 12) + 1);
 }
 
+function signModality(sign: Rashis): "Movable" | "Fixed" | "Dual" {
+  if (["Aries", "Cancer", "Libra", "Capricorn"].includes(sign)) return "Movable";
+  if (["Taurus", "Leo", "Scorpio", "Aquarius"].includes(sign)) return "Fixed";
+  return "Dual";
+}
+
 export function makeEvaluationIndex(calculation: ChartCalculation): EvaluationIndex {
   const cache = MutableHashMap.empty<
     Division,
@@ -221,6 +227,23 @@ export const evaluateCondition = Effect.fn("Yoga.evaluateCondition")(function* (
           observed,
           observedSignCount,
           matched: observedSignCount === condition.expectedSignCount,
+        };
+      }),
+    ),
+    Match.tag("SignModalityCondition", (condition) =>
+      Effect.gen(function* () {
+        const at = yield* requireDivision(index, condition.division);
+        const observed = condition.bodies.map((body) => {
+          const sign = at.signOf(body);
+          return { body, sign, modality: signModality(sign) };
+        });
+        return {
+          _tag: "SignModalityEvidence" as const,
+          division: condition.division,
+          bodies: condition.bodies,
+          expectedModality: condition.expectedModality,
+          observed,
+          matched: observed.every(({ modality }) => modality === condition.expectedModality),
         };
       }),
     ),

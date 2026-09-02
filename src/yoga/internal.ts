@@ -31,6 +31,11 @@ export type YogaCondition = Data.TaggedEnum<{
     readonly bodies: readonly Planets[];
     readonly expectedSignCount: number;
   };
+  SignModalityCondition: {
+    readonly division: Division;
+    readonly bodies: readonly Planets[];
+    readonly expectedModality: "Movable" | "Fixed" | "Dual";
+  };
   HouseOccupancyCondition: {
     readonly division: Division;
     readonly referenceBody: PlanetsLagna;

@@ -20,6 +20,11 @@ export function formatEvidence(evidence: YogaEvidence): string {
         `${evidence.bodies.join(", ")} occupy ${evidence.observedSignCount} signs; expected ${evidence.expectedSignCount}.`,
     ),
     Match.tag(
+      "SignModalityEvidence",
+      (evidence) =>
+        `${evidence.bodies.join(", ")} ${evidence.matched ? "are" : "are not"} all in ${evidence.expectedModality.toLocaleLowerCase()} signs; observed ${evidence.observed.map(({ body, sign, modality }) => `${body} in ${sign} (${modality.toLocaleLowerCase()})`).join(", ")}.`,
+    ),
+    Match.tag(
       "HouseOccupancyEvidence",
       (evidence) =>
         `Houses ${evidence.expectedRelativeHouses.join(", ")} from ${evidence.referenceBody} ${evidence.matched ? "meet" : "do not meet"} ${evidence.quantifier}; observed ${evidence.observed.map(({ relativeHouse, occupants }) => `${relativeHouse}: ${occupants.join(", ") || "empty"}`).join("; ")}.`,
