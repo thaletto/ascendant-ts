@@ -1,11 +1,20 @@
 import { Array, Effect, HashSet, MutableHashSet, Schema } from "effect";
 
 import { Division } from "../chart/model.js";
+import { continuousSignPatternDefinitions } from "./definitions/continuous-sign-patterns.js";
+import { golaCardinalityDefinitions } from "./definitions/gola-cardinality.js";
+import { houseLordCombinationDefinitions } from "./definitions/house-lord-combinations.js";
+import { houseLordPlacementDefinitions } from "./definitions/house-lord-placement.js";
 import { housePatternDefinitions } from "./definitions/house-patterns.js";
+import { kendraContinuousPatternDefinitions } from "./definitions/kendra-continuous-patterns.js";
+import { kulavardhanaDefinitions } from "./definitions/kulavardhana.js";
+import { malikaPatternDefinitions } from "./definitions/malika-patterns.js";
 import { moonRelativeDefinitions } from "./definitions/moon-relative.js";
+import { naturalPlanetGroupDefinitions } from "./definitions/natural-planet-group.js";
 import { panchaMahapurushaDefinitions } from "./definitions/pancha-mahapurusha.js";
 import { relativePatternDefinitions } from "./definitions/relative-patterns.js";
 import { signCardinalityDefinitions } from "./definitions/sign-cardinality.js";
+import { signModalityDefinitions } from "./definitions/sign-modality.js";
 import { InvalidYogaCatalogError } from "./error.js";
 import { YogaCondition, type YogaDefinition, YogaStrategy } from "./internal.js";
 
@@ -18,7 +27,11 @@ function conditionDivisions(condition: YogaCondition): readonly Division[] {
     BodyPositionsCondition: ({ division }) => [division],
     BodyDignitiesCondition: ({ division }) => [division],
     OccupiedSignCountCondition: ({ division }) => [division],
+    SignModalityCondition: ({ division }) => [division],
+    NaturalPlanetGroupPositionsCondition: ({ division }) => [division],
+    ContinuousSignWindowCondition: ({ division }) => [division],
     HouseOccupancyCondition: ({ division }) => [division],
+    HouseLordPlacementCondition: ({ division }) => [division],
     AllCondition: ({ children }) => children.flatMap(conditionDivisions),
     AnyCondition: ({ children }) => children.flatMap(conditionDivisions),
     NotCondition: ({ child }) => conditionDivisions(child),
@@ -44,11 +57,31 @@ const freezeCondition: (condition: YogaCondition) => YogaCondition = YogaConditi
       ...condition,
       bodies: Array.fromIterable(condition.bodies),
     }),
+  SignModalityCondition: (condition) =>
+    YogaCondition.SignModalityCondition({
+      ...condition,
+      bodies: Array.fromIterable(condition.bodies),
+    }),
+  NaturalPlanetGroupPositionsCondition: (condition) =>
+    YogaCondition.NaturalPlanetGroupPositionsCondition({
+      ...condition,
+      expectedRelativeHouses: Array.fromIterable(condition.expectedRelativeHouses),
+    }),
+  ContinuousSignWindowCondition: (condition) =>
+    YogaCondition.ContinuousSignWindowCondition({
+      ...condition,
+      bodies: Array.fromIterable(condition.bodies),
+    }),
   HouseOccupancyCondition: (condition) =>
     YogaCondition.HouseOccupancyCondition({
       ...condition,
       expectedRelativeHouses: Array.fromIterable(condition.expectedRelativeHouses),
       excludedBodies: Array.fromIterable(condition.excludedBodies),
+    }),
+  HouseLordPlacementCondition: (condition) =>
+    YogaCondition.HouseLordPlacementCondition({
+      ...condition,
+      expectedRelativeHouses: Array.fromIterable(condition.expectedRelativeHouses),
     }),
   AllCondition: (condition) =>
     YogaCondition.AllCondition({
@@ -164,7 +197,16 @@ export const definitions = Array.map(
     ...relativePatternDefinitions,
     ...panchaMahapurushaDefinitions,
     ...signCardinalityDefinitions,
+    ...golaCardinalityDefinitions,
+    ...signModalityDefinitions,
+    ...naturalPlanetGroupDefinitions,
+    ...continuousSignPatternDefinitions,
     ...housePatternDefinitions,
+    ...houseLordPlacementDefinitions,
+    ...houseLordCombinationDefinitions,
+    ...kulavardhanaDefinitions,
+    ...malikaPatternDefinitions,
+    ...kendraContinuousPatternDefinitions,
   ],
   freezeDefinition,
 );

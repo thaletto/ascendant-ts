@@ -417,6 +417,25 @@ describe("Yoga", () => {
     }),
   );
 
+  it.effect("evaluates the latest house-lord Yoga additions", () =>
+    Effect.gen(function* () {
+      const cases = [
+        ["duryoga", { Saturn: 6 }],
+        ["daridra", { Saturn: 8 }],
+        ["harsha", { Mercury: 6 }],
+        ["sarala", { Mars: 8 }],
+        ["vimala", { Jupiter: 12 }],
+        ["siva", { Sun: 9, Jupiter: 10, Saturn: 5 }],
+        ["sareera_soukhya", { Jupiter: 4 }],
+      ] as const;
+
+      for (const [id, houses] of cases) {
+        const result = yield* evaluate(fixtures.calculationFromHouses(houses), [id]);
+        expect(result.results[0]?.present).toBe(true);
+      }
+    }),
+  );
+
   it.effect("rejects Vapee and Samudra when a graha breaks the distribution", () =>
     Effect.gen(function* () {
       const vapee = yield* evaluate(

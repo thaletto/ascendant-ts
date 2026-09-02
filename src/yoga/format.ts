@@ -20,9 +20,29 @@ export function formatEvidence(evidence: YogaEvidence): string {
         `${evidence.bodies.join(", ")} occupy ${evidence.observedSignCount} signs; expected ${evidence.expectedSignCount}.`,
     ),
     Match.tag(
+      "SignModalityEvidence",
+      (evidence) =>
+        `${evidence.bodies.join(", ")} ${evidence.matched ? "are" : "are not"} all in ${evidence.expectedModality.toLocaleLowerCase()} signs; observed ${evidence.observed.map(({ body, sign, modality }) => `${body} in ${sign} (${modality.toLocaleLowerCase()})`).join(", ")}.`,
+    ),
+    Match.tag(
+      "NaturalPlanetGroupPositionsEvidence",
+      (evidence) =>
+        `${evidence.group} ${evidence.matched ? "match" : "do not match"} houses ${evidence.expectedRelativeHouses.join(", ")} from ${evidence.referenceBody}; observed ${evidence.observed.map(({ body, relativeHouse }) => `${body} in ${relativeHouse}`).join(", ")}.`,
+    ),
+    Match.tag(
+      "ContinuousSignWindowEvidence",
+      (evidence) =>
+        `${evidence.bodies.join(", ")} ${evidence.matched ? "occupy" : "do not occupy"} the consecutive signs ${evidence.expectedSigns.join(", ")} from house ${evidence.startingRelativeHouse} relative to ${evidence.referenceBody}; observed ${evidence.observed.map(({ body, sign }) => `${body} in ${sign}`).join(", ")}.`,
+    ),
+    Match.tag(
       "HouseOccupancyEvidence",
       (evidence) =>
         `Houses ${evidence.expectedRelativeHouses.join(", ")} from ${evidence.referenceBody} ${evidence.matched ? "meet" : "do not meet"} ${evidence.quantifier}; observed ${evidence.observed.map(({ relativeHouse, occupants }) => `${relativeHouse}: ${occupants.join(", ") || "empty"}`).join("; ")}.`,
+    ),
+    Match.tag(
+      "HouseLordPlacementEvidence",
+      (evidence) =>
+        `${evidence.observed.lord} (lord of house ${evidence.lordOfHouse}) ${evidence.matched ? "is" : "is not"} in house ${evidence.expectedRelativeHouses.join(", ")} from ${evidence.referenceBody}; observed in ${evidence.observed.observedRelativeHouse}.`,
     ),
     Match.tag(
       "AllEvidence",

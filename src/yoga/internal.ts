@@ -31,12 +31,37 @@ export type YogaCondition = Data.TaggedEnum<{
     readonly bodies: readonly Planets[];
     readonly expectedSignCount: number;
   };
+  SignModalityCondition: {
+    readonly division: Division;
+    readonly bodies: readonly Planets[];
+    readonly expectedModality: "Movable" | "Fixed" | "Dual";
+  };
+  NaturalPlanetGroupPositionsCondition: {
+    readonly division: Division;
+    readonly referenceBody: PlanetsLagna;
+    readonly group: "NaturalMalefics";
+    readonly expectedRelativeHouses: readonly Houses[];
+    readonly quantifier: "All" | "Any";
+  };
+  ContinuousSignWindowCondition: {
+    readonly division: Division;
+    readonly referenceBody: PlanetsLagna;
+    readonly bodies: readonly Planets[];
+    readonly startingRelativeHouse: Houses;
+    readonly signCount: number;
+  };
   HouseOccupancyCondition: {
     readonly division: Division;
     readonly referenceBody: PlanetsLagna;
     readonly expectedRelativeHouses: readonly Houses[];
     readonly excludedBodies: readonly Planets[];
     readonly quantifier: "EveryHouse" | "AnyHouse";
+  };
+  HouseLordPlacementCondition: {
+    readonly division: Division;
+    readonly referenceBody: PlanetsLagna;
+    readonly lordOfHouse: Houses;
+    readonly expectedRelativeHouses: readonly Houses[];
   };
   AllCondition: { readonly children: readonly YogaCondition[] };
   AnyCondition: { readonly children: readonly YogaCondition[] };
@@ -49,6 +74,7 @@ export interface IndexedDivision {
   readonly positionOf: (body: PlanetsLagna) => Houses;
   readonly dignitiesOf: (body: Planets) => readonly PlanetDignity[];
   readonly signOf: (body: Planets) => Rashis;
+  readonly signAtRelativeHouse: (referenceBody: PlanetsLagna, relativeHouse: Houses) => Rashis;
   readonly occupantsAtRelativeHouse: (
     referenceBody: PlanetsLagna,
     relativeHouse: Houses,

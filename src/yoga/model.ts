@@ -1,6 +1,14 @@
 import { Schema } from "effect";
 
-import { Division, Houses, PlanetDignity, Planets, PlanetsLagna, Rashis } from "../chart/model.js";
+import {
+  Division,
+  Houses,
+  PlanetDignity,
+  Planets,
+  PlanetsLagna,
+  Rashis,
+  RashiLords,
+} from "../chart/model.js";
 import { YogaProvenance } from "../provenance.js";
 
 export const YogaId = Schema.String.check(Schema.isPattern(/^[a-z][a-z0-9_]*$/)).pipe(
@@ -44,6 +52,27 @@ export interface HouseOccupancyObservation extends Schema.Schema.Type<
   typeof HouseOccupancyObservation
 > {}
 
+export const HouseLordPlacementObservation = Schema.Struct({
+  lordOfHouse: Houses,
+  lord: RashiLords,
+  observedRelativeHouse: Houses,
+});
+export interface HouseLordPlacementObservation extends Schema.Schema.Type<
+  typeof HouseLordPlacementObservation
+> {}
+
+export const HouseLordPlacementEvidence = Schema.TaggedStruct("HouseLordPlacementEvidence", {
+  division: Division,
+  referenceBody: PlanetsLagna,
+  lordOfHouse: Houses,
+  expectedRelativeHouses: Schema.Array(Houses),
+  observed: HouseLordPlacementObservation,
+  matched: Schema.Boolean,
+});
+export interface HouseLordPlacementEvidence extends Schema.Schema.Type<
+  typeof HouseLordPlacementEvidence
+> {}
+
 export const BodyPositionsEvidence = Schema.TaggedStruct("BodyPositionsEvidence", {
   division: Division,
   referenceBody: PlanetsLagna,
@@ -72,6 +101,61 @@ export const BodySignObservation = Schema.Struct({
   sign: Rashis,
 });
 export interface BodySignObservation extends Schema.Schema.Type<typeof BodySignObservation> {}
+
+export const NaturalPlanetGroup = Schema.Literal("NaturalMalefics");
+export type NaturalPlanetGroup = typeof NaturalPlanetGroup.Type;
+
+export const NaturalPlanetGroupPositionsEvidence = Schema.TaggedStruct(
+  "NaturalPlanetGroupPositionsEvidence",
+  {
+    division: Division,
+    referenceBody: PlanetsLagna,
+    group: NaturalPlanetGroup,
+    bodies: Schema.Array(Planets),
+    expectedRelativeHouses: Schema.Array(Houses),
+    observed: Schema.Array(BodyPositionObservation),
+    quantifier: Schema.Literals(["All", "Any"] as const),
+    matched: Schema.Boolean,
+  },
+);
+export interface NaturalPlanetGroupPositionsEvidence extends Schema.Schema.Type<
+  typeof NaturalPlanetGroupPositionsEvidence
+> {}
+
+export const ContinuousSignWindowEvidence = Schema.TaggedStruct("ContinuousSignWindowEvidence", {
+  division: Division,
+  referenceBody: PlanetsLagna,
+  bodies: Schema.Array(Planets),
+  startingRelativeHouse: Houses,
+  signCount: Schema.Finite,
+  expectedSigns: Schema.Array(Rashis),
+  observed: Schema.Array(BodySignObservation),
+  matched: Schema.Boolean,
+});
+export interface ContinuousSignWindowEvidence extends Schema.Schema.Type<
+  typeof ContinuousSignWindowEvidence
+> {}
+
+export const SignModality = Schema.Literals(["Movable", "Fixed", "Dual"] as const);
+export type SignModality = typeof SignModality.Type;
+
+export const SignModalityObservation = Schema.Struct({
+  body: Planets,
+  sign: Rashis,
+  modality: SignModality,
+});
+export interface SignModalityObservation extends Schema.Schema.Type<
+  typeof SignModalityObservation
+> {}
+
+export const SignModalityEvidence = Schema.TaggedStruct("SignModalityEvidence", {
+  division: Division,
+  bodies: Schema.Array(Planets),
+  expectedModality: SignModality,
+  observed: Schema.Array(SignModalityObservation),
+  matched: Schema.Boolean,
+});
+export interface SignModalityEvidence extends Schema.Schema.Type<typeof SignModalityEvidence> {}
 
 export const OccupiedSignCountEvidence = Schema.TaggedStruct("OccupiedSignCountEvidence", {
   division: Division,
@@ -117,8 +201,12 @@ export interface NotEvidence {
 export type YogaEvidence =
   | BodyPositionsEvidence
   | BodyDignitiesEvidence
+  | NaturalPlanetGroupPositionsEvidence
+  | ContinuousSignWindowEvidence
+  | SignModalityEvidence
   | OccupiedSignCountEvidence
   | HouseOccupancyEvidence
+  | HouseLordPlacementEvidence
   | AllEvidence
   | AnyEvidence
   | NotEvidence;
@@ -128,8 +216,12 @@ const YogaEvidenceRef = Schema.suspend((): Schema.Codec<YogaEvidence> => YogaEvi
 export const YogaEvidence: Schema.Codec<YogaEvidence> = Schema.Union([
   BodyPositionsEvidence,
   BodyDignitiesEvidence,
+  NaturalPlanetGroupPositionsEvidence,
+  ContinuousSignWindowEvidence,
+  SignModalityEvidence,
   OccupiedSignCountEvidence,
   HouseOccupancyEvidence,
+  HouseLordPlacementEvidence,
   Schema.TaggedStruct("AllEvidence", {
     children: Schema.Array(YogaEvidenceRef),
     matched: Schema.Boolean,

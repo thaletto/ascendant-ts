@@ -9,6 +9,7 @@ import {
   Planets,
   PlanetsLagna,
   Rashis,
+  RashiLords,
 } from "../chart/model.js";
 import { InvalidYogaEvidenceError } from "./error.js";
 import {
@@ -22,6 +23,56 @@ import type { YogaEvidence } from "./model.js";
 
 function normalizeHouse(value: number): Houses {
   return Schema.decodeUnknownSync(Houses)(((((value - 1) % 12) + 12) % 12) + 1);
+}
+
+function signModality(sign: Rashis): "Movable" | "Fixed" | "Dual" {
+  if (["Aries", "Cancer", "Libra", "Capricorn"].includes(sign)) return "Movable";
+  if (["Taurus", "Leo", "Scorpio", "Aquarius"].includes(sign)) return "Fixed";
+  return "Dual";
+}
+
+const zodiacSigns: readonly Rashis[] = [
+  "Aries",
+  "Taurus",
+  "Gemini",
+  "Cancer",
+  "Leo",
+  "Virgo",
+  "Libra",
+  "Scorpio",
+  "Sagittarius",
+  "Capricorn",
+  "Aquarius",
+  "Pisces",
+];
+
+const naturalMalefics = ["Sun", "Mars", "Saturn", "Rahu", "Ketu"] as const;
+
+function consecutiveSigns(start: Rashis, count: number): readonly Rashis[] {
+  const startIndex = zodiacSigns.indexOf(start);
+  if (startIndex === -1) throw new Error(`Unknown zodiac sign: ${start}`);
+  return globalThis.Array.from(
+    { length: count },
+    (_, offset) => zodiacSigns[(startIndex + offset) % 12]!,
+  );
+}
+
+function rashiLord(sign: Rashis): RashiLords {
+  const lords: Record<Rashis, RashiLords> = {
+    Aries: "Mars",
+    Taurus: "Venus",
+    Gemini: "Mercury",
+    Cancer: "Moon",
+    Leo: "Sun",
+    Virgo: "Mercury",
+    Libra: "Venus",
+    Scorpio: "Mars",
+    Sagittarius: "Jupiter",
+    Capricorn: "Saturn",
+    Aquarius: "Saturn",
+    Pisces: "Jupiter",
+  };
+  return lords[sign];
 }
 
 export function makeEvaluationIndex(calculation: ChartCalculation): EvaluationIndex {
@@ -119,6 +170,13 @@ export function makeEvaluationIndex(calculation: ChartCalculation): EvaluationIn
         const sign = MutableHashMap.get(signs, body);
         if (Option.isNone(sign)) throw new Error(`Missing ${body} sign in D${division}`);
         return sign.value;
+      },
+      signAtRelativeHouse: (referenceBody, relativeHouse) => {
+        const referenceHouse = indexed.positionOf(referenceBody);
+        const absoluteHouse = normalizeHouse(referenceHouse + relativeHouse - 1);
+        const house = chart?.houses[absoluteHouse];
+        if (house === undefined) throw new Error(`Missing house ${absoluteHouse} in D${division}`);
+        return house.sign;
       },
       occupantsAtRelativeHouse: (
         referenceBody: PlanetsLagna,
@@ -224,6 +282,70 @@ export const evaluateCondition = Effect.fn("Yoga.evaluateCondition")(function* (
         };
       }),
     ),
+    Match.tag("SignModalityCondition", (condition) =>
+      Effect.gen(function* () {
+        const at = yield* requireDivision(index, condition.division);
+        const observed = condition.bodies.map((body) => {
+          const sign = at.signOf(body);
+          return { body, sign, modality: signModality(sign) };
+        });
+        return {
+          _tag: "SignModalityEvidence" as const,
+          division: condition.division,
+          bodies: condition.bodies,
+          expectedModality: condition.expectedModality,
+          observed,
+          matched: observed.every(({ modality }) => modality === condition.expectedModality),
+        };
+      }),
+    ),
+    Match.tag("NaturalPlanetGroupPositionsCondition", (condition) =>
+      Effect.gen(function* () {
+        const at = yield* requireDivision(index, condition.division);
+        const bodies = naturalMalefics;
+        const referenceHouse = at.positionOf(condition.referenceBody);
+        const observed = bodies.map((body) => ({
+          body,
+          relativeHouse: normalizeHouse(at.positionOf(body) - referenceHouse + 1),
+        }));
+        const matches = observed.map(({ relativeHouse }) =>
+          condition.expectedRelativeHouses.includes(relativeHouse),
+        );
+        return {
+          _tag: "NaturalPlanetGroupPositionsEvidence" as const,
+          division: condition.division,
+          referenceBody: condition.referenceBody,
+          group: condition.group,
+          bodies,
+          expectedRelativeHouses: condition.expectedRelativeHouses,
+          observed,
+          quantifier: condition.quantifier,
+          matched: condition.quantifier === "All" ? matches.every(Boolean) : matches.some(Boolean),
+        };
+      }),
+    ),
+    Match.tag("ContinuousSignWindowCondition", (condition) =>
+      Effect.gen(function* () {
+        const at = yield* requireDivision(index, condition.division);
+        const startSign = at.signAtRelativeHouse(
+          condition.referenceBody,
+          condition.startingRelativeHouse,
+        );
+        const expectedSigns = consecutiveSigns(startSign, condition.signCount);
+        const observed = condition.bodies.map((body) => ({ body, sign: at.signOf(body) }));
+        return {
+          _tag: "ContinuousSignWindowEvidence" as const,
+          division: condition.division,
+          referenceBody: condition.referenceBody,
+          bodies: condition.bodies,
+          startingRelativeHouse: condition.startingRelativeHouse,
+          signCount: condition.signCount,
+          expectedSigns,
+          observed,
+          matched: observed.every(({ sign }) => expectedSigns.includes(sign)),
+        };
+      }),
+    ),
     Match.tag("HouseOccupancyCondition", (condition) =>
       Effect.gen(function* () {
         const at = yield* requireDivision(index, condition.division);
@@ -246,6 +368,25 @@ export const evaluateCondition = Effect.fn("Yoga.evaluateCondition")(function* (
             condition.quantifier === "EveryHouse"
               ? occupied.every(Boolean)
               : occupied.some(Boolean),
+        };
+      }),
+    ),
+    Match.tag("HouseLordPlacementCondition", (condition) =>
+      Effect.gen(function* () {
+        const at = yield* requireDivision(index, condition.division);
+        const lord = rashiLord(
+          at.signAtRelativeHouse(condition.referenceBody, condition.lordOfHouse),
+        );
+        const referenceHouse = at.positionOf(condition.referenceBody);
+        const observedRelativeHouse = normalizeHouse(at.positionOf(lord) - referenceHouse + 1);
+        return {
+          _tag: "HouseLordPlacementEvidence" as const,
+          division: condition.division,
+          referenceBody: condition.referenceBody,
+          lordOfHouse: condition.lordOfHouse,
+          expectedRelativeHouses: condition.expectedRelativeHouses,
+          observed: { lordOfHouse: condition.lordOfHouse, lord, observedRelativeHouse },
+          matched: condition.expectedRelativeHouses.includes(observedRelativeHouse),
         };
       }),
     ),
