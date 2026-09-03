@@ -13,11 +13,6 @@ const printYogas = Effect.fn("Examples.printYogas")(function* (evaluation: Yoga.
       Present: present ? "Yes" : "No",
     })),
   );
-
-  for (const { yoga, evidence } of evaluation.results) {
-    // if (!present) continue;
-    yield* Console.log(`${yoga.name}: ${Yoga.formatEvidence(evidence)}\n`);
-  }
 });
 
 export const yogaExample = Effect.fn("Examples.yoga")(function* ({
