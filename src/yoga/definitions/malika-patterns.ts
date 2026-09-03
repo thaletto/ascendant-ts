@@ -1,8 +1,7 @@
+import { CLASSICAL_PLANETS } from "../../chart/internal/constants.js";
 import type { Houses } from "../../chart/model.js";
 import { YogaCondition, type YogaDefinition, YogaStrategy } from "../internal.js";
 import { YogaIds } from "../model.js";
-
-const classicalPlanets = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"] as const;
 
 function houseWindow(start: Houses): readonly Houses[] {
   return Array.from({ length: 7 }, (_, offset) => (((start - 1 + offset) % 12) + 1) as Houses);
@@ -26,7 +25,7 @@ function malikaDefinition(id: string, name: string, start: Houses): YogaDefiniti
           YogaCondition.BodyPositionsCondition({
             division: 1,
             referenceBody: "Lagna",
-            bodies: classicalPlanets,
+            bodies: CLASSICAL_PLANETS,
             expectedRelativeHouses,
             quantifier: "All",
           }),

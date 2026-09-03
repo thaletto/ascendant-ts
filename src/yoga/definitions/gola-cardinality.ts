@@ -1,22 +1,11 @@
+import { PLANETS } from "../../chart/internal/constants.js";
 import { YogaCondition, type YogaDefinition, YogaStrategy } from "../internal.js";
 import { YogaIds } from "../model.js";
-
-const allModeledPlanets = [
-  "Sun",
-  "Moon",
-  "Mars",
-  "Mercury",
-  "Jupiter",
-  "Venus",
-  "Saturn",
-  "Rahu",
-  "Ketu",
-] as const;
 
 export const golaCardinalityDefinitions = [
   {
     yoga: {
-      id: YogaIds.make("gola_single_sign"),
+      id: YogaIds.make("gola_yoga"),
       name: "Gola Yoga",
       aliases: [],
       classification: "Negative",
@@ -27,7 +16,7 @@ export const golaCardinalityDefinitions = [
     strategy: YogaStrategy.Condition({
       condition: YogaCondition.OccupiedSignCountCondition({
         division: 1,
-        bodies: allModeledPlanets,
+        bodies: PLANETS,
         expectedSignCount: 1,
       }),
     }),

@@ -1,24 +1,13 @@
+import { PLANETS } from "../../chart/internal/constants.js";
 import type { Houses } from "../../chart/model.js";
 import { YogaCondition, type YogaDefinition, YogaStrategy } from "../internal.js";
 import { YogaIds } from "../model.js";
-
-const allModeledPlanets = [
-  "Sun",
-  "Moon",
-  "Mars",
-  "Mercury",
-  "Jupiter",
-  "Venus",
-  "Saturn",
-  "Rahu",
-  "Ketu",
-] as const;
 
 function continuousSignWindow(startingRelativeHouse: Houses) {
   return YogaCondition.ContinuousSignWindowCondition({
     division: 1,
     referenceBody: "Lagna",
-    bodies: allModeledPlanets,
+    bodies: PLANETS,
     startingRelativeHouse,
     signCount: 4,
   });

@@ -1,23 +1,12 @@
+import { PLANETS } from "../../chart/internal/constants.js";
 import { YogaCondition, type YogaDefinition, YogaStrategy } from "../internal.js";
 import { YogaIds } from "../model.js";
-
-const allModeledPlanets = [
-  "Sun",
-  "Moon",
-  "Mars",
-  "Mercury",
-  "Jupiter",
-  "Venus",
-  "Saturn",
-  "Rahu",
-  "Ketu",
-] as const;
 
 function fifthFrom(referenceBody: "Lagna" | "Sun" | "Moon") {
   return YogaCondition.BodyPositionsCondition({
     division: 1,
     referenceBody,
-    bodies: allModeledPlanets,
+    bodies: PLANETS,
     expectedRelativeHouses: [5],
     quantifier: "All",
   });
