@@ -1,6 +1,7 @@
-import { Data, type Effect, type Result, Schema } from "effect";
+import { Data, type Effect, type Result } from "effect";
 
 import type {
+  ChartCalculation,
   Division,
   Houses,
   PlanetDignity,
@@ -82,6 +83,7 @@ export interface IndexedDivision {
 }
 
 export interface EvaluationIndex {
+  readonly calculation?: ChartCalculation;
   readonly forDivision: (
     division: Division,
   ) => Result.Result<IndexedDivision, InvalidYogaEvidenceError>;
@@ -90,8 +92,10 @@ export interface EvaluationIndex {
 export type YogaStrategy = Data.TaggedEnum<{
   Condition: { readonly condition: YogaCondition };
   Evaluator: {
-    readonly name: Schema.String;
-    readonly evaluate: (index: EvaluationIndex) => Effect.Effect<YogaEvidence>;
+    readonly name: string;
+    readonly evaluate: (
+      index: EvaluationIndex,
+    ) => Effect.Effect<YogaEvidence, InvalidYogaEvidenceError>;
   };
 }>;
 

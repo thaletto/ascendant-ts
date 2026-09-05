@@ -1,298 +1,300 @@
-- [x]  Gajakesari
-- [x]  Sunapha
-- [x]  Anapha
-- [x]  Dhurdhua
-- [x]  Kemadruma
-- [x]  Chandra Mangala
-- [x]  Adhi
-- [x]  Chatussagara
-- [x]  Vasumathi
-- [x]  Rajalakshana
-- [ ]  Vanchana Chora Bheethi
-- [x]  Sakata
-- [x]  Amala
-- [ ]  Parvata
-- [ ]  Kahala
-- [x]  Vesi
-- [x]  Vasi
-- [x]  Obhayachari
-- [x]  Hamsa
-- [x]  Malavya
-- [x]  Sasa
-- [x]  Ruchaka
-- [x]  Bhadra
-- [x]  Budha-Aditya
-- [ ]  Mahabhagya
-- [ ]  Pushkala
-- [ ]  Lakshmi
-- [ ]  Gauri
-- [ ]  Bharathi
-- [ ]  Chapa
-- [ ]  Sreenatha
-- [x]  Lagna Malika
-- [x]  Dhana Malika
-- [x]  Vikrama Malika
-- [x]  Sukha Malika
-- [x]  Putra Malika
-- [x]  Satru Malika
-- [x]  Kalatra Malika
-- [x]  Randhra Malika
-- [x]  Bhagya Malika
-- [x]  Karma Malika
-- [x]  Labha Malika
-- [x]  Vraya Malika
-- [ ]  Sankha
-- [ ]  Bheri
-- [ ]  Mridanga
-- [ ]  Parijatha
-- [ ]  Gaja
-- [ ]  Kalanidhi
-- [ ]  Amsavatara
-- [ ]  Harihara Brahma
-- [x]  Kusuma
-- [ ]  Matsya
-- [ ]  Kurma
-- [ ]  Devendra
-- [ ]  Makuta
-- [ ]  Chandika
-- [ ]  Jaya
-- [ ]  Vidyut
-- [ ]  Gandharva
-- [x]  Siva
-- [ ]  Vishnu
-- [ ]  Brahma
-- [ ]  Indra
-- [ ]  Ravi
-- [ ]  Garuda
-- [ ]  Go
-- [ ]  Gola
-- [x]  Thrilochana
-- [x]  Kulavardhana
-- [x]  Yupa
-- [x]  Ishu
-- [x]  Sakti
-- [x]  Danda
-- [x]  Nav
-- [x]  Kuta
-- [x]  Chhatra
-- [x]  Chapa
-- [ ]  Ardha  Chandra
-- [x]  Chandra
-- [x]  Gada
-- [ ]  Sakata
-- [ ]  Vihaga
-- [ ]  Vajra
-- [ ]  Yava
-- [ ]  Sringhataka
-- [ ]  Hala
-- [x]  Kamala
-- [x]  Vapee
-- [x]  Samudra
-- [x]  Vallaki
-- [x]  Damni
-- [x]  Pasa
-- [x]  Kedara
-- [x]  Sula
-- [x]  Yuga
-- [x]  Gola
-- [x]  Rajju
-- [x]  Musala
-- [x]  Nala
-- [x]  Srik
-- [x]  Sarpa
-- [x]  Duryoga
-- [x]  Daridra
-- [x]  Harsha
-- [x]  Sarala
-- [x]  Vimala
-- [x]  Sareera Soukhya
-- [ ]  Dehapushti
-- [ ]  Dehakashta
-- [ ]  Rogagrastha
-- [ ]  Krisanga
-- [ ]  Krisanga
-- [ ]  Dehasthoulya
-- [ ]  Dehasthoulya
-- [ ]  Dehasthoulya
-- [ ]  Sada Sanchara
-- [ ]  Dhana
-- [ ]  Dhana
-- [ ]  Dhana
-- [ ]  Dhana
-- [ ]  Dhana
-- [ ]  Dhana
-- [ ]  Dhana
-- [ ]  Dhana
-- [ ]  Dhana
-- [ ]  Dhana
-- [ ]  Bahudravyarjana
-- [ ]  Swaveeryaddhana
-- [ ]  Swaveeryaddhana
-- [ ]  Swaveeryaddhana
-- [ ]  Madhya Vayasi Dhana
-- [ ]  Anthya Vayasi Dhana
-- [ ]  Balya Dhana
-- [ ]  Bhratrumooladdhanaprapti
-- [ ]  Bhratrumooladdhanaprapti
-- [ ]  Matrumooladdhana
-- [ ]  Putramooladdhana
-- [ ]  Satrumooladdhana
-- [ ]  Kalatramooladdhana
-- [ ]  Amaranantha Dhana
-- [ ]  Ayatnadhanalabha
-- [ ]  Daridra
-- [ ]  Daridra
-- [ ]  Daridra
-- [ ]  Daridra
-- [ ]  Daridra
-- [ ]  Daridra
-- [ ]  Daridra
-- [ ]  Daridra
-- [ ]  Daridra
-- [ ]  Daridra
-- [ ]  Yukthi Samanwithavagmi
-- [ ]  Yukthi Samanwithavagmi
-- [ ]  Parihasaka
-- [ ]  Asatyavadi
-- [ ]  Jada
-- [x]  Bhaskara
-- [x]  Marud
-- [ ]  Saraswathi
-- [x]  Budha
-- [ ]  Mooka
-- [ ]  Netranasa
-- [ ]  Andha
-- [ ]  Sumukha
-- [ ]  Sumukha
-- [ ]  Durmukha
-- [ ]  Durmukha
-- [ ]  Bhojana Soukhya
-- [ ]  Annadana
-- [ ]  Parannabhojana
-- [ ]  Sraddhannabhuktha
-- [ ]  Sarpaganda
-- [ ]  Vakchalana
-- [ ]  Vishaprayoga
-- [ ]  Bhratruvriddhi
-- [ ]  Sodaranasa
-- [ ]  Ekabhagini
-- [ ]  Dwadasa Sahodara
-- [ ]  Sapthasankya Sahodara
-- [ ]  Parakrama
-- [ ]  Yuddha Praveena
-- [ ]  Yuddhatpoorvadridhachitta
-- [ ]  Yuddhatpaschaddrudha
-- [ ]  Satkathadisravana
-- [ ]  Uttama Griha
-- [ ]  Vichitra Saudha
-- [ ]  Ayatna Griha Prapta
-- [ ]  Ayatna Griha Prapta
-- [ ]  Grihanasa
-- [ ]  Grihanasa
-- [ ]  Bandhu Pujya
-- [ ]  Bandhu Pujya
-- [ ]  Bandhubhisthyaktha
-- [ ]  Matrudeerghayur
-- [ ]  Matrudeerghayur
-- [ ]  Matrunasa
-- [ ]  Matrunasa
-- [ ]  Matrugami
-- [ ]  Sahodareesangama
-- [ ]  Kapata
-- [ ]  Kapata
-- [ ]  Kapata
-- [ ]  Nishkapata
-- [ ]  Nishkapata
-- [ ]  Matru Satrutwa
-- [ ]  Matru Sneha
-- [ ]  Vahana
-- [ ]  Vahana
-- [ ]  Anapathya
-- [ ]  Sarpasapa
-- [ ]  Sarpasapa
-- [ ]  Sarpasapa
-- [ ]  Sarpasarpa
-- [ ]  Pitrusapa Sutakshaya
-- [ ]  Matrusapa Sutakshaya
-- [ ]  Bhratrusapa Sutakshaya
-- [ ]  Pretasapa
-- [ ]  Bahuputra
-- [ ]  Bahuputra
-- [ ]  Dattaputra
-- [ ]  Dattaputra
-- [ ]  Aputra
-- [ ]  Ekaputra
-- [ ]  Suputra
-- [ ]  Kalanirdesat Putra
-- [ ]  Kalanirdesat Putra
-- [ ]  Kalanirdesat Putranasa
-- [ ]  Kalanirdesat Putranasa
-- [ ]  Buddhimaturya
-- [ ]  Theevrabuddhi
-- [ ]  Buddhi Jada
-- [ ]  Thrikalagnana
-- [ ]  Putra Sukha
-- [ ]  Jara
-- [ ]  Jarajaputra
-- [ ]  Bahu Stree
-- [ ]  Satkalatra
-- [ ]  Bhaga Chumbana
-- [ ]  Bhagya
-- [ ]  Jananatpurvam Pitru Marana
-- [ ]  Dhatrutwa
-- [ ]  Apakeerti
-- [ ]  Raja
-- [ ]  Raja
-- [ ]  Raja
-- [ ]  Raja
-- [ ]  Raja
-- [ ]  Raja
-- [ ]  Raja
-- [ ]  Raja
-- [ ]  Raja
-- [ ]  Raja
-- [ ]  Raja
-- [ ]  Raja
-- [ ]  Raja
-- [ ]  Raja
-- [ ]  Raja
-- [ ]  Raja
-- [ ]  Raja
-- [ ]  Raja
-- [ ]  Raja
-- [ ]  Galakarna
-- [ ]  Vrana
-- [ ]  Sisnavyadhi
-- [ ]  Kalatrashanda
-- [ ]  Kushtaroga
-- [ ]  Kushtaroga
-- [ ]  Kshayaroga
-- [ ]  Bandhana
-- [ ]  Karascheda
-- [ ]  Sirachcheda
-- [ ]  Durmarana
-- [ ]  Yuddhe Marana
-- [ ]  Sanghataka Marana
-- [ ]  Peenasaroga
-- [ ]  Pittaroga
-- [ ]  Vikalangaptni
-- [ ]  Putrakalatraheena
-- [ ]  Bharyasahavyabhichara
-- [ ]  Vamsacheda
-- [ ]  Guhyaroga
-- [ ]  Angaheena
-- [ ]  Swetakushta
-- [ ]  Pisacha Grastha
-- [ ]  Andha
-- [ ]  Andha
-- [ ]  Vatharoga
-- [ ]  Matibhramana
-- [ ]  Matibhramana
-- [ ]  Matibhramana
-- [ ]  Matibhramana
-- [ ]  Khalwata
-- [ ]  Nishturabhashi
-- [ ]  Rajabhrashta
-- [ ]  Raja (Negative)
-- [ ]  Raja (Negative)
-- [ ]  Gohanta
+- [x] Gajakesari
+- [x] Sunapha
+- [x] Anapha
+- [x] Dhurdhua
+- [x] Kemadruma
+- [x] Chandra Mangala
+- [x] Adhi
+- [x] Chatussagara
+- [x] Vasumathi
+- [x] Rajalakshana
+- [ ] Vanchana Chora Bheethi
+- [x] Sakata
+- [x] Amala
+- [x] Parvata
+- [x] Kahala
+- [x] Vesi
+- [x] Vasi
+- [x] Obhayachari
+- [x] Hamsa
+- [x] Malavya
+- [x] Sasa
+- [x] Ruchaka
+- [x] Bhadra
+- [x] Budha-Aditya
+- [x] Mahabhagya
+- [x] Pushkala
+- [x] Lakshmi
+- [x] Gauri
+- [x] Bharathi
+- [x] Chapa
+- [x] Sreenatha
+- [x] Lagna Malika
+- [x] Dhana Malika
+- [x] Vikrama Malika
+- [x] Sukha Malika
+- [x] Putra Malika
+- [x] Satru Malika
+- [x] Kalatra Malika
+- [x] Randhra Malika
+- [x] Bhagya Malika
+- [x] Karma Malika
+- [x] Labha Malika
+- [x] Vraya Malika
+- [x] Sankha
+- [x] Bheri
+- [x] Mridanga
+- [x] Parijatha
+- [x] Gaja
+- [x] Kalanidhi
+- [x] Amsavatara
+- [x] Harihara Brahma
+- [x] Kusuma
+- [x] Matsya
+- [x] Kurma
+- [x] Devendra
+- [x] Makuta
+- [x] Chandika
+- [x] Jaya
+- [x] Vidyut
+- [x] Gandharva
+- [x] Siva
+- [x] Vishnu
+- [x] Brahma
+- [x] Indra
+- [x] Ravi
+- [x] Garuda
+- [x] Go
+- [x] Gola
+- [x] Thrilochana
+- [x] Kulavardhana
+- [x] Yupa
+- [x] Ishu
+- [x] Sakti
+- [x] Danda
+- [x] Nav
+- [x] Kuta
+- [x] Chhatra
+- [x] Chapa
+- [x] Ardha Chandra
+- [x] Chandra
+- [x] Gada
+- [x] Sakata
+- [x] Vihaga
+- [x] Vajra
+- [x] Yava
+- [x] Sringhataka
+- [x] Hala
+- [x] Kamala
+- [x] Vapee
+- [x] Samudra
+- [x] Vallaki
+- [x] Damni
+- [x] Pasa
+- [x] Kedara
+- [x] Sula
+- [x] Yuga
+- [x] Gola
+- [x] Rajju
+- [x] Musala
+- [x] Nala
+- [x] Srik
+- [x] Sarpa
+- [x] Duryoga
+- [x] Daridra
+- [x] Harsha
+- [x] Sarala
+- [x] Vimala
+- [x] Sareera Soukhya
+- [x] Dehapushti
+- [x] Dehakashta
+- [x] Rogagrastha
+- [x] Krisanga
+- [x] Krisanga
+- [x] Dehasthoulya
+- [x] Dehasthoulya
+- [x] Dehasthoulya
+- [x] Sada Sanchara
+- [x] Dhana
+- [x] Dhana
+- [x] Dhana
+- [x] Dhana
+- [x] Dhana
+- [x] Dhana
+- [x] Dhana
+- [x] Dhana
+- [x] Dhana
+- [x] Dhana
+- [x] Dhana
+- [x] Bahudravyarjana
+- [x] Swaveeryaddhana
+- [x] Swaveeryaddhana
+- [x] Swaveeryaddhana
+- [x] Madhya Vayasi Dhana
+- [x] Anthya Vayasi Dhana
+- [x] Balya Dhana
+- [x] Bhratrumooladdhanaprapti
+- [x] Bhratrumooladdhanaprapti
+- [x] Matrumooladdhana
+- [x] Putramooladdhana
+- [x] Satrumooladdhana
+- [x] Kalatramooladdhana
+- [x] Amaranantha Dhana
+- [x] Ayatnadhanalabha
+- [x] Daridra
+- [x] Daridra
+- [x] Daridra
+- [x] Daridra
+- [x] Daridra
+- [x] Daridra
+- [x] Daridra
+- [x] Daridra
+- [x] Daridra
+- [x] Daridra
+- [x] Yukthi Samanwithavagmi
+- [x] Yukthi Samanwithavagmi
+- [x] Parihasaka
+- [x] Asatyavadi
+- [ ] Jada
+- [x] Bhaskara
+- [x] Marud
+- [x] Saraswathi
+- [x] Budha
+- [x] Mooka
+- [x] Netranasa
+- [x] Andha
+- [x] Sumukha
+- [x] Sumukha
+- [x] Durmukha
+- [ ] Durmukha
+- [x] Bhojana Soukhya
+- [x] Annadana
+- [x] Parannabhojana
+- [x] Sraddhannabhuktha
+- [ ] Sarpaganda
+- [x] Vakchalana
+- [x] VishapraYoga
+- [x] Bhratruvriddhi
+- [x] Sodaranasa
+- [x] Ekabhagini
+- [x] Dwadasa Sahodara
+- [x] Sapthasankhya Sahodara
+- [x] Parakrama
+- [x] Yuddha Praveena
+- [x] Yuddhatpoorvadridhachitta
+- [x] Yuddhatpaschaddrudha
+- [x] Satkathadisravana
+- [x] Uttama Griha
+- [x] Vichitra Saudha Prakara
+- [x] Ayatna Griha Prapta
+- [x] Ayatna Griha Prapta
+- [x] Grihanasa
+- [x] Grihanasa
+- [x] Bandhu Pujya
+- [x] Bandhu Pujya
+- [x] Bandhubhisthyaktha
+- [x] Matrudeerghayur
+- [x] Matrudeerghayur
+- [x] Matrunasa
+- [x] Matrunasa
+- [x] Matrugami
+- [x] Sahodareesangama
+- [x] Kapata
+- [x] Kapata
+- [ ] Kapata
+- [x] Nishkapata
+- [x] Nishkapata
+- [x] Matru Satrutwa
+- [x] Matru Sneha
+- [x] Vahana
+- [x] Vahana
+- [x] Anapathya
+- [x] Sarpasapa
+- [x] Sarpasapa
+- [x] Sarpasapa
+- [x] Sarpasapa
+- [x] Pitrusapa Sutakshaya
+- [x] Matrusapa Sutakshaya
+- [x] Bhratrusapa Sutakshaya
+- [x] Pretasapa
+- [x] Bahuputra
+- [x] Bahuputra
+- [x] Dattaputra
+- [x] Dattaputra
+- [x] Aputra
+- [x] Ekaputra
+- [x] Suputra
+- [x] Kalanirdesat Putra
+- [x] Kalanirdesat Putra
+- [x] Kalanirdesat Putranasa
+- [x] Kalanirdesat Putranasa
+- [x] Buddhimaturya
+- [x] Theevrabuddhi
+- [x] Buddhi Jada
+- [x] Thrikalagnana
+- [x] Putra Sukha
+- [x] Jara
+- [x] Jarajaputra
+- [x] Bahu Stree
+- [x] Satkalatra
+- [x] Bhaga Chumbana
+- [x] Bhagya
+- [x] Jananatpurvam Pitru Marana
+- [x] Dhatrutwa
+- [x] Apakeerti
+- [x] Raja
+- [x] Raja
+- [x] Raja
+- [x] Raja
+- [x] Raja
+- [x] Raja
+- [x] Raja
+- [x] Raja
+- [x] Raja
+- [x] Raja
+- [x] Raja
+- [x] Raja
+- [x] Raja
+- [x] Raja
+- [x] Raja
+- [x] Raja
+- [x] Raja
+- [x] Raja
+- [x] Raja
+- [ ] Galakarna
+- [x] Vrana
+- [x] Sisnavyadhi
+- [x] Kalatrashanda
+- [x] Kushtaroga
+- [x] Kushtaroga
+- [ ] Kshayaroga
+- [x] Bandhana
+- [x] Karascheda
+- [x] Sirachcheda
+- [ ] Durmarana
+- [ ] Yuddhe Marana
+- [x] Sanghataka Marana
+- [x] Sanghataka Marana
+- [x] Peenasaroga
+- [x] Pittaroga
+- [x] Vikalangapatni
+- [x] Putrakalatraheena
+- [x] Bharyasahavyabhichara
+- [x] Vamsacheda
+- [x] Guhyaroga
+- [x] Angaheena
+- [x] Swetakushta
+- [x] Pisacha Grastha
+- [x] Andha
+- [x] Andha
+- [x] Vatharoga
+- [x] Matibhramana
+- [x] Matibhramana
+- [x] Matibhramana
+- [x] Matibhramana
+- [x] Khalwata
+- [x] Nishturabhashi
+- [x] Rajabhrashta
+- [x] Raja (Negative)
+- [x] Raja (Negative)
+- [x] Gohanta

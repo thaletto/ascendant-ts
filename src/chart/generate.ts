@@ -6,7 +6,13 @@ import { Ephemeris } from "../ephemeris/service.js";
 import { bhavaFromHouseData } from "./bhava/index.js";
 import { project } from "./charts.js";
 import { ChartCalculationError, LocatedMomentValidationError } from "./error.js";
-import { ChartCalculation, Division, LocatedMoment, type Planets } from "./model.js";
+import {
+  ChartCalculation,
+  type ChartParams,
+  Division,
+  LocatedMoment,
+  type Planets,
+} from "./model.js";
 import { placementsFromEvidence, type PlacementEvidence } from "./placements.js";
 
 const PLANET_BODY_MAP = [
@@ -84,14 +90,14 @@ const calculatePlacementEvidence = Effect.fn("astro-ascendant/chart/calculatePla
  * cusp-based Bhava chart from the same ephemeris house data.
  */
 export const generate = Effect.fn("astro-ascendant/chart/generate")(function* (
-  input: LocatedMoment,
+  input: ChartParams,
   divisions: readonly Division[] = [],
 ) {
   const astroParams = yield* AstroParams;
   yield* validateInput(input);
   const evidence = yield* calculatePlacementEvidence(input);
   const placements = yield* placementsFromEvidence(evidence);
-  const charts = yield* project(placements, divisions);
+  const charts = yield* project(placements, divisions, input.sex);
   const bhava = yield* bhavaFromHouseData(evidence.houses, charts[0]);
 
   return ChartCalculation.make({

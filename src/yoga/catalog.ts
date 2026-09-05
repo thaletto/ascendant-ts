@@ -1,6 +1,7 @@
 import { Array, Effect, HashSet, MutableHashSet, Schema } from "effect";
 
 import { Division } from "../chart/model.js";
+import { extendWithAstrotalk } from "./definitions/astrotalk.js";
 import { continuousSignPatternDefinitions } from "./definitions/continuous-sign-patterns.js";
 import { golaCardinalityDefinitions } from "./definitions/gola-cardinality.js";
 import { houseLordCombinationDefinitions } from "./definitions/house-lord-combinations.js";
@@ -105,6 +106,11 @@ function freezeDefinition(definition: YogaDefinition): YogaDefinition {
       aliases: Array.fromIterable(aliases),
       classification,
       description,
+      ...(definition.yoga.formations === undefined
+        ? {}
+        : {
+            formations: definition.yoga.formations.map((formation) => ({ ...formation })),
+          }),
     },
     requiredDivisions: [firstDivision, ...otherDivisions] as const,
     strategy: YogaStrategy.$match(definition.strategy, {
@@ -192,7 +198,7 @@ export const makeCatalog = Effect.fn("Yoga.makeCatalog")(function* (
 });
 
 export const definitions = Array.map(
-  [
+  extendWithAstrotalk([
     ...moonRelativeDefinitions,
     ...relativePatternDefinitions,
     ...panchaMahapurushaDefinitions,
@@ -207,7 +213,7 @@ export const definitions = Array.map(
     ...kulavardhanaDefinitions,
     ...malikaPatternDefinitions,
     ...kendraContinuousPatternDefinitions,
-  ],
+  ]),
   freezeDefinition,
 );
 

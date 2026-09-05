@@ -1,5 +1,5 @@
 import { describe, expect, it } from "@effect/vitest";
-import { Array, Effect, Equal, Layer, Record } from "effect";
+import { Array, Effect, Equal, Layer, Record, Schema } from "effect";
 
 import * as AstroParams from "../src/astro-params/index.js";
 import * as Chart from "../src/chart/index.js";
@@ -7,6 +7,51 @@ import { EphemerisTestLayer } from "./support/ephemeris.js";
 import { fixtures } from "./support/fixtures.js";
 
 describe("Chart projections", () => {
+  it("validates optional sex on chart parameters", () => {
+    const input = fixtures.locatedMoment();
+    expect(Chart.ChartParams.make(input)).not.toHaveProperty("sex");
+    for (const sex of Chart.Sex.literals) {
+      expect(
+        Chart.ChartParams.make({
+          moment: input.moment,
+          latitude: input.latitude,
+          longitude: input.longitude,
+          sex,
+        }).sex,
+      ).toBe(sex);
+    }
+    const decode = Schema.decodeUnknownSync(Chart.ChartParams);
+    const values = { moment: input.moment, latitude: input.latitude, longitude: input.longitude };
+    expect(() => decode({ ...values, sex: "Unknown" })).toThrow();
+    expect(() => decode({ ...values, sex: null })).toThrow();
+  });
+
+  it.effect("preserves sex through direct projection and chart schema round trips", () =>
+    Effect.gen(function* () {
+      for (const sex of Chart.Sex.literals) {
+        const charts = yield* Chart.project(fixtures.placementsFromLongitudes(), [9, 10], sex);
+        for (const chart of charts) {
+          const encoded = yield* Schema.encodeEffect(Chart.Chart)(chart);
+          expect(encoded.sex).toBe(sex);
+          const decoded = yield* Schema.decodeEffect(Chart.Chart)(encoded);
+          expect(decoded.sex).toBe(sex);
+          expect(() =>
+            Schema.decodeUnknownSync(Chart.Chart)({
+              provenance: encoded.provenance,
+              division: encoded.division,
+              houses: encoded.houses,
+              sex: "Unknown",
+            }),
+          ).toThrow();
+        }
+      }
+      const [legacy] = yield* Chart.project(fixtures.placementsFromLongitudes());
+      const encoded = yield* Schema.encodeEffect(Chart.Chart)(legacy);
+      expect(encoded).not.toHaveProperty("sex");
+      expect(yield* Schema.decodeEffect(Chart.Chart)(encoded)).not.toHaveProperty("sex");
+    }),
+  );
+
   it.effect("always includes D1 and deduplicates requested divisional charts", () =>
     Effect.gen(function* () {
       const charts = yield* Chart.project(fixtures.placementsFromLongitudes(), [10, 9, 9, 1]);
@@ -26,9 +71,28 @@ describe("Chart projections", () => {
       EphemerisTestLayer,
     ),
   )((it) => {
+    it.effect("copies supplied sex into every generated chart", () =>
+      Effect.gen(function* () {
+        for (const sex of Chart.Sex.literals) {
+          const moment = fixtures.locatedMoment();
+          const input = Chart.ChartParams.make({
+            moment: moment.moment,
+            latitude: moment.latitude,
+            longitude: moment.longitude,
+            sex,
+          });
+          const calculation = yield* Chart.generate(input, [9, 10]);
+          expect(calculation.charts.map((chart) => chart.sex)).toEqual([sex, sex, sex]);
+        }
+      }),
+    );
+
     it.effect("generates one atomic calculation through the public interface", () =>
       Effect.gen(function* () {
         const calculation = yield* Chart.generate(fixtures.locatedMoment(), [9, 9]);
+        for (const chart of calculation.charts) {
+          expect(chart).not.toHaveProperty("sex");
+        }
 
         expect(
           Equal.equals(
@@ -92,6 +156,22 @@ describe("Chart projections", () => {
 
       expect(saturn?.is_retrograde).toBe(false);
       expect(saturn?.longitude).toBeGreaterThanOrEqual(0);
+    }),
+  );
+
+  it.effect("derives dignity from each division's mapped sign", () =>
+    Effect.gen(function* () {
+      const charts = yield* Chart.project(fixtures.placementsFromLongitudes({ Jupiter: 95 }), [9]);
+      const jupiters = charts.map((chart) =>
+        Record.values(chart.houses)
+          .flatMap(({ planets }) => planets)
+          .find(({ name }) => name === "Jupiter"),
+      );
+
+      expect(jupiters[0]?.sign.name).toBe("Cancer");
+      expect(jupiters[0]?.in_sign).toEqual(["EXALTED"]);
+      expect(jupiters[1]?.sign.name).toBe("Leo");
+      expect(jupiters[1]?.in_sign).toEqual(["FRIEND"]);
     }),
   );
 });

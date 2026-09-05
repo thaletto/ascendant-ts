@@ -112,7 +112,11 @@ export class Placements extends Schema.Class<Placements>("Placements")({
 
 export { ChartProjectionProvenance as Provenance } from "../provenance.js";
 
+export const Sex = Schema.Literals(["Male", "Female"]);
+export type Sex = typeof Sex.Type;
+
 export class Chart extends Schema.Class<Chart>("Chart")({
+  sex: Schema.optionalKey(Sex),
   provenance: ChartProjectionProvenance,
   division: Division,
   houses: ChartHouses,
@@ -164,3 +168,10 @@ export class LocatedMoment extends Schema.Class<LocatedMoment>("LocatedMoment")(
   latitude: Schema.Finite,
   longitude: Schema.Finite,
 }) {}
+
+/** Birth input; sex is optional and has no inferred default. */
+export const ChartParams = Schema.Struct({
+  ...LocatedMoment.fields,
+  sex: Chart.fields.sex,
+});
+export interface ChartParams extends Schema.Schema.Type<typeof ChartParams> {}

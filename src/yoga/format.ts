@@ -5,6 +5,15 @@ import type { YogaEvidence } from "./model.js";
 export function formatEvidence(evidence: YogaEvidence): string {
   return Match.value(evidence).pipe(
     Match.tag(
+      "FormationEvidence",
+      (evidence) =>
+        `${evidence.operation}: ${evidence.matched === null ? "unresolved" : evidence.matched ? "matched" : "not matched"}. ${[
+          ...evidence.observations,
+          ...evidence.reasons,
+          ...evidence.children.map((child) => formatEvidence(child)),
+        ].join(" ")}`,
+    ),
+    Match.tag(
       "BodyPositionsEvidence",
       (evidence) =>
         `${evidence.bodies.join(", ")} ${evidence.matched ? "match" : "do not match"} houses ${evidence.expectedRelativeHouses.join(", ")} from ${evidence.referenceBody}; observed ${evidence.observed.map(({ body, relativeHouse }) => `${body} in ${relativeHouse}`).join(", ")}.`,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "@effect/vitest";
-import { Array, Effect, Equal, Record, Schema } from "effect";
+import { Array, Effect, Equal, Schema } from "effect";
 
 import * as Chart from "../src/chart/index.js";
 import * as Yoga from "../src/yoga/index.js";
@@ -20,12 +20,7 @@ describe("Yoga", () => {
 
     expect(ids.length).toBeGreaterThan(0);
     expect(new Set(ids).size).toBe(ids.length);
-    expect(
-      Yoga.catalog.every(
-        (descriptor) =>
-          !Array.some(Record.keys(descriptor), (key) => Equal.equals(key, "strength")),
-      ),
-    ).toBe(true);
+    expect(Yoga.catalog.every((descriptor) => !("strength" in descriptor))).toBe(true);
   });
 
   it.effect(
@@ -38,7 +33,7 @@ describe("Yoga", () => {
           Equal.equals(result.provenance, {
             school: "Parashari",
             method: "ascendant-yoga",
-            version: "v1",
+            version: "v2",
           }),
         ).toBe(true);
         expect(
@@ -47,14 +42,12 @@ describe("Yoga", () => {
             Yoga.catalog.map(({ id }) => id),
           ),
         ).toBe(true);
-        expect(result.results.every(({ evidence }) => typeof evidence.matched === "boolean")).toBe(
-          true,
-        );
         expect(
           result.results.every(
-            ({ yoga }) => !Array.some(Record.keys(yoga), (key) => Equal.equals(key, "strength")),
+            ({ evidence }) => typeof evidence.matched === "boolean" || evidence.matched === null,
           ),
         ).toBe(true);
+        expect(result.results.every(({ yoga }) => !("strength" in yoga))).toBe(true);
       }),
   );
 
@@ -328,13 +321,13 @@ describe("Yoga", () => {
       const gada = yield* evaluate(
         fixtures.calculationFromHouses({
           Sun: 1,
-          Moon: 7,
+          Moon: 4,
           Mars: 1,
-          Mercury: 7,
+          Mercury: 4,
           Jupiter: 1,
-          Venus: 7,
+          Venus: 4,
           Saturn: 1,
-          Rahu: 7,
+          Rahu: 4,
           Ketu: 1,
         }),
         ["gada"],
@@ -364,14 +357,14 @@ describe("Yoga", () => {
       const gada = yield* evaluate(
         fixtures.calculationFromHouses({
           Sun: 1,
-          Moon: 7,
+          Moon: 4,
           Mars: 1,
-          Mercury: 7,
+          Mercury: 4,
           Jupiter: 1,
-          Venus: 7,
+          Venus: 4,
           Saturn: 1,
-          Rahu: 7,
-          Ketu: 4,
+          Rahu: 4,
+          Ketu: 7,
         }),
         ["gada"],
       );
@@ -499,7 +492,7 @@ describe("Yoga", () => {
     }),
   );
 
-  it.effect("requires an exact occupied-sign count", () =>
+  it.effect("counts exactly the seven classical planets without adding the lunar nodes", () =>
     Effect.gen(function* () {
       const result = yield* evaluate(
         fixtures.calculationFromHouses({
@@ -516,7 +509,7 @@ describe("Yoga", () => {
         ["vallaki", "damni"],
       );
 
-      expect(result.results[0]?.present).toBe(false);
+      expect(result.results[0]?.present).toBe(true);
       expect(result.results[1]?.present).toBe(false);
     }),
   );

@@ -15,6 +15,7 @@ import {
   Planet,
   Rashis,
   Sign,
+  type Sex,
 } from "./model.js";
 
 /**
@@ -25,10 +26,12 @@ function chartFromMappedPlacements({
   division,
   lagna,
   planets,
+  sex,
 }: {
   readonly division: Division;
   readonly lagna: Lagna;
   readonly planets: readonly Planet[];
+  readonly sex: Sex | undefined;
 }): Chart {
   const lagnaSignIndex = Rashis.literals.indexOf(lagna.sign.name);
   const houses = Struct.fromEntries(
@@ -47,6 +50,7 @@ function chartFromMappedPlacements({
   ) as Record<Houses, House>;
 
   return Chart.make({
+    ...(sex === undefined ? {} : { sex }),
     provenance: methods.chartProjection.provenance,
     division,
     houses,
@@ -57,6 +61,7 @@ function chartFromMappedPlacements({
 const chartFromPlacements = Effect.fn("astro-ascendant/chart/chartFromPlacements")(function* (
   placements: Placements,
   division: Division,
+  sex: Sex | undefined,
 ) {
   const lagna = yield* getDivisionalTarget(placements.lagna.longitude, division).pipe(
     Effect.map((mapped) => {
@@ -83,7 +88,7 @@ const chartFromPlacements = Effect.fn("astro-ascendant/chart/chartFromPlacements
             longitude: mapped.longitude,
             degree: mapped.degree,
             is_retrograde: source.is_retrograde,
-            in_sign: inSignStatus(source.name, source.longitude),
+            in_sign: inSignStatus(source.name, mapped.longitude),
             sign: Sign.make({
               name: mappedSign,
               lord: SIGN_LORDS[mappedSign],
@@ -95,7 +100,7 @@ const chartFromPlacements = Effect.fn("astro-ascendant/chart/chartFromPlacements
     { concurrency: "unbounded" },
   );
 
-  return chartFromMappedPlacements({ division, lagna, planets });
+  return chartFromMappedPlacements({ division, lagna, planets, sex });
 });
 
 function requestedDivisions(divisions: readonly Division[]): readonly [Division, ...Division[]] {
@@ -113,14 +118,15 @@ function requestedDivisions(divisions: readonly Division[]): readonly [Division,
  * Projects D1 plus requested divisional charts from shared Placements. D1 is
  * always first; duplicate requests are removed and remaining divisions sort in
  * ascending numeric order, preserving a stable calculation result.
+ * Optional sex metadata is copied unchanged into every projected chart.
  */
 export const project = Effect.fn("astro-ascendant/chart/project")(
-  function* (placements: Placements, divisions: readonly Division[] = []) {
+  function* (placements: Placements, divisions: readonly Division[] = [], sex?: Sex) {
     const requested = requestedDivisions(divisions);
     const [firstDivision, ...remainingDivisions] = requested;
-    const firstChart = yield* chartFromPlacements(placements, firstDivision);
+    const firstChart = yield* chartFromPlacements(placements, firstDivision, sex);
     const remainingCharts = yield* Effect.all(
-      remainingDivisions.map((division) => chartFromPlacements(placements, division)),
+      remainingDivisions.map((division) => chartFromPlacements(placements, division, sex)),
       { concurrency: "unbounded" },
     );
 

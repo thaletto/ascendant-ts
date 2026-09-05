@@ -21,6 +21,9 @@ export const YogaClassifications = Schema.Literals(["Positive", "Negative", "Neu
 export type YogaClassification = typeof YogaClassifications.Type;
 
 export const YogaDescriptor = Schema.Struct({
+  formations: Schema.optionalKey(
+    Schema.Array(Schema.Struct({ sourceRow: Schema.Int, description: Schema.String })),
+  ),
   id: YogaIds,
   name: Schema.String,
   aliases: Schema.Array(Schema.String),
@@ -180,6 +183,26 @@ export const HouseOccupancyEvidence = Schema.TaggedStruct("HouseOccupancyEvidenc
 });
 export interface HouseOccupancyEvidence extends Schema.Schema.Type<typeof HouseOccupancyEvidence> {}
 
+/** Auditable three-valued evidence produced by the generic formation interpreter. */
+export interface FormationEvidence {
+  readonly _tag: "FormationEvidence";
+  readonly operation: string;
+  readonly matched: boolean | null;
+  readonly reasons: readonly string[];
+  readonly observations: readonly string[];
+  readonly children: readonly FormationEvidence[];
+}
+
+export const FormationEvidence: Schema.Codec<FormationEvidence> = Schema.suspend(() =>
+  Schema.TaggedStruct("FormationEvidence", {
+    operation: Schema.String,
+    matched: Schema.NullOr(Schema.Boolean),
+    reasons: Schema.Array(Schema.String),
+    observations: Schema.Array(Schema.String),
+    children: Schema.Array(FormationEvidence),
+  }),
+);
+
 export interface AllEvidence {
   readonly _tag: "AllEvidence";
   readonly children: readonly YogaEvidence[];
@@ -199,6 +222,7 @@ export interface NotEvidence {
 }
 
 export type YogaEvidence =
+  | FormationEvidence
   | BodyPositionsEvidence
   | BodyDignitiesEvidence
   | NaturalPlanetGroupPositionsEvidence
@@ -214,6 +238,7 @@ export type YogaEvidence =
 const YogaEvidenceRef = Schema.suspend((): Schema.Codec<YogaEvidence> => YogaEvidence);
 
 export const YogaEvidence: Schema.Codec<YogaEvidence> = Schema.Union([
+  FormationEvidence,
   BodyPositionsEvidence,
   BodyDignitiesEvidence,
   NaturalPlanetGroupPositionsEvidence,
@@ -238,7 +263,7 @@ export const YogaEvidence: Schema.Codec<YogaEvidence> = Schema.Union([
 
 export const YogaResult = Schema.Struct({
   yoga: YogaDescriptor,
-  present: Schema.Boolean,
+  present: Schema.NullOr(Schema.Boolean),
   evidence: YogaEvidence,
 });
 export interface YogaResult extends Schema.Schema.Type<typeof YogaResult> {}

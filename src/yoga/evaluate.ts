@@ -195,6 +195,7 @@ export function makeEvaluationIndex(calculation: ChartCalculation): EvaluationIn
   };
 
   return {
+    calculation,
     forDivision: (division: Division) => {
       const cached = MutableHashMap.get(cache, division);
       if (Option.isSome(cached)) return cached.value;
@@ -419,7 +420,7 @@ export const evaluateCondition = Effect.fn("Yoga.evaluateCondition")(function* (
     Match.tag("NotCondition", (condition) =>
       Effect.gen(function* () {
         const child = yield* evaluateCondition(condition.child, index);
-        return { _tag: "NotEvidence" as const, child, matched: !child.matched };
+        return { _tag: "NotEvidence" as const, child, matched: child.matched !== true };
       }),
     ),
     Match.exhaustive,
@@ -434,7 +435,7 @@ export const evaluateDefinition = Effect.fn("Yoga.evaluateDefinition")(function*
     Condition: ({ condition }) => evaluateCondition(condition, index),
     Evaluator: ({ evaluate }) => evaluate(index),
   });
-  if (typeof evidence.matched !== "boolean") {
+  if (typeof evidence.matched !== "boolean" && evidence.matched !== null) {
     return yield* InvalidYogaEvidenceError.make({
       message: `Yoga ${definition.yoga.id} evaluator returned invalid evidence`,
       cause: new Error(`Yoga ${definition.yoga.id} evaluator returned invalid evidence`),

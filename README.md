@@ -26,12 +26,13 @@ import { AstroParams, Chart } from "astro-ascendant";
 import * as Swisseph from "astro-ascendant/swisseph";
 import { DateTime, Effect, Layer } from "effect";
 
-const input = Chart.LocatedMoment.make({
+const input = Chart.ChartParams.make({
   moment: Chart.Moment.make({
     date: DateTime.makeUnsafe("2000-01-01T12:00:00.000Z"),
   }),
   latitude: 12.9716,
   longitude: 77.5946,
+  sex: "Male",
 });
 
 const program = Chart.generate(input, [9]);
@@ -42,7 +43,7 @@ console.log(calculation.charts[0]); // D1
 console.log(calculation.charts[1]); // D9
 ```
 
-`calculation.placements` contains the shared sidereal positions. `calculation.charts` contains D1 first, followed by the requested divisions in numeric order. `calculation.bhava` contains the cusp-defined house projection.
+`calculation.placements` contains the shared sidereal positions. `calculation.charts` contains D1 first, followed by the requested divisions in numeric order. Optional birth `sex` is copied into each chart so sex-dependent Yogas can be evaluated; omitting it leaves those predicates unresolved. `calculation.bhava` contains the cusp-defined house projection.
 
 ## Calculations
 
@@ -51,7 +52,7 @@ The package exposes named operations for each calculation surface:
 - **Charts**: D1 and 15 divisional charts, plus a configured Bhava chart
 - **Dasha**: Vimshottari planetary periods plus Jaimini Chara and Sthira sign periods with date queries
 - **Ashtakavarga**: Bhinnashtakavarga, Sarvashtakavarga, reduced BAV, and Shodhya Pinda
-- **Yogas**: versioned classical Yoga catalog with structured evidence
+- **Yogas**: the Astrotalk 300-row catalog grouped into 226 result definitions, with structured three-valued evidence; nine Gulika/Mandi rows are excluded
 - **Jaimini**: Chara Karakas, Rashi Drishti, Karakamsha, Arudha Pada, Upapada, and Argala
 - **Methodologies**: 39 predefined ayanamsas and 13 house systems
 
