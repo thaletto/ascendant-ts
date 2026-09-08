@@ -1,19 +1,19 @@
 import { Effect } from "effect";
 
-import { inSignStatus } from "../chart/helper.js";
-import { SIGN_LORDS } from "../chart/internal/constants.js";
-import { signAt, signIndexOf } from "../chart/internal/position.js";
-import type { Moment, Placements, Planets, Rashis } from "../chart/model.js";
-import { compareExactDegrees, exactDegreeOf } from "../jaimini/chara-karakas/helper.js";
-import * as CharaKarakas from "../jaimini/chara-karakas/index.js";
-import type { ClassicalPlanets, ExactDegree, Role } from "../jaimini/chara-karakas/model.js";
-import { targetsOf } from "../jaimini/rashi-drishti/helper.js";
-import { methods } from "../provenance.js";
-import { DashaEvidenceError } from "./error.js";
-import { validateUniquePlanetPlacements } from "./evidence.js";
-import type { BrahmaCandidateScore, EligibleBrahmaPlanet, RashiBala } from "./model.js";
-import { SthiraDasha } from "./model.js";
-import { RashiInternal, rashiIndex } from "./rashi-internal.js";
+import { inSignStatus } from "../../chart/helper.js";
+import { SIGN_LORDS } from "../../chart/internal/constants.js";
+import { signAt, signIndexOf } from "../../chart/internal/position.js";
+import type { Moment, Placements, Planets, Rashis } from "../../chart/model.js";
+import { compareExactDegrees, exactDegreeOf } from "../../jaimini/chara-karakas/helper.js";
+import * as CharaKarakas from "../../jaimini/chara-karakas/index.js";
+import type { ClassicalPlanets, ExactDegree, Role } from "../../jaimini/chara-karakas/model.js";
+import { targetsOf } from "../../jaimini/rashi-drishti/helper.js";
+import { methods } from "../../provenance.js";
+import { DashaEvidenceError } from "../error.js";
+import { validateUniquePlanetPlacements } from "../evidence.js";
+import type { BrahmaCandidateScore, EligibleBrahmaPlanet, RashiBala } from "../model.js";
+import { SthiraDasha } from "../model.js";
+import { RashiInternal, rashiIndex } from "../rashi-internal.js";
 
 const ELIGIBLE_BRAHMA_PLANETS = new Set<Planets>([
   "Sun",
