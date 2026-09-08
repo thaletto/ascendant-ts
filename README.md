@@ -5,7 +5,7 @@
 
 Effect-first TypeScript library for sidereal Vedic astrology calculations.
 
-`astro-ascendant` calculates planetary Placements once for a Located Moment, then derives charts, Vimshottari, Chara, and Sthira Dasha timelines, Ashtakavarga, Yogas, and Jaimini results from that shared calculation. It includes a Swiss Ephemeris adapter for Node.js and Bun, plus a runtime-neutral ephemeris interface for custom adapters.
+`astro-ascendant` calculates planetary Placements once for a Located Moment, then derives charts, Vimshottari, Chara, and Sthira Dasha timelines, Ashtakavarga, and Jaimini results from that shared calculation. It includes a Swiss Ephemeris adapter for Node.js and Bun, plus a runtime-neutral ephemeris interface for custom adapters.
 
 ## Installation
 
@@ -43,7 +43,7 @@ console.log(calculation.charts[0]); // D1
 console.log(calculation.charts[1]); // D9
 ```
 
-`calculation.placements` contains the shared sidereal positions. `calculation.charts` contains D1 first, followed by the requested divisions in numeric order. Optional birth `sex` is copied into each chart so sex-dependent Yogas can be evaluated; omitting it leaves those predicates unresolved. `calculation.bhava` contains the cusp-defined house projection.
+`calculation.placements` contains the shared sidereal positions. `calculation.charts` contains D1 first, followed by the requested divisions in numeric order. Optional birth `sex` is copied into each chart. `calculation.bhava` contains the cusp-defined house projection.
 
 ## Calculations
 
@@ -52,22 +52,10 @@ The package exposes named operations for each calculation surface:
 - **Charts**: D1 and 15 divisional charts, plus a configured Bhava chart
 - **Dasha**: Vimshottari planetary periods plus Jaimini Chara and Sthira sign periods with date queries
 - **Ashtakavarga**: Bhinnashtakavarga, Sarvashtakavarga, reduced BAV, and Shodhya Pinda
-- **Yogas**: the Astrotalk 300-row catalog grouped into 226 result definitions, with structured three-valued evidence; nine Gulika/Mandi rows are excluded
 - **Jaimini**: Chara Karakas, Rashi Drishti, Karakamsha, Arudha Pada, Upapada, and Argala
 - **Methodologies**: 39 predefined ayanamsas and 13 house systems
 
 See the [calculation and API reference](docs/reference.md) for derivation workflows, provenance, configuration, supported divisions, and focused package exports. The published [API documentation](https://ascendant-docs.vercel.app) has the complete type surface.
-
-## Run the examples
-
-The repository includes interactive examples for charts, Dasha, Jaimini, Ashtakavarga, and Yogas:
-
-```bash
-bun install
-make run
-```
-
-The runner accepts `MOMENT_DATE`, `LATITUDE`, `LONGITUDE`, `AYANAMSA`, and `HOUSE_SYSTEM` from the environment or lets you enter the moment and location interactively. `AYANAMSA` and `HOUSE_SYSTEM` default to `Lahiri` and `WholeSign` when omitted.
 
 ## Development
 
@@ -78,7 +66,7 @@ bun install
 make check
 ```
 
-Use `make help` to list all available commands. Run the non-gating Yoga benchmark with `bun run benchmark:yoga`; its methodology is documented in [benchmarks/README.md](benchmarks/README.md).
+Use `make help` to list all available commands.
 
 ## License
 
