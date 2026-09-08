@@ -1,5 +1,5 @@
 import * as AstroAscendant from "astro-ascendant";
-import { Array, Equal, HashSet, Record } from "effect";
+import { Equal, HashSet, Record } from "effect";
 
 const exports = HashSet.fromIterable(Record.keys(AstroAscendant));
 const expectedExports = HashSet.make(
@@ -15,15 +15,9 @@ const expectedExports = HashSet.make(
   "RashiDrishti",
   "SAV",
   "Upapada",
-  "Yoga",
 );
 if (!Equal.equals(exports, expectedExports)) {
   throw new Error("Unexpected root exports");
-}
-
-const Yoga = await import("astro-ascendant/yoga");
-if (typeof Yoga.evaluateAll !== "function" || !Array.isArray(Yoga.catalog)) {
-  throw new Error("The public Yoga interface is not available from the Yoga subpath");
 }
 
 const focused = await import("astro-ascendant/chara-karakas");

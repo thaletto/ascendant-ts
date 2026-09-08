@@ -10,7 +10,6 @@ import * as Karakamsha from "../src/jaimini/karakamsha/index.js";
 import * as RashiDrishti from "../src/jaimini/rashi-drishti/index.js";
 import * as Upapada from "../src/jaimini/upapada/index.js";
 import * as Provenance from "../src/provenance.js";
-import * as Yoga from "../src/yoga/index.js";
 import { fixtures } from "./support/fixtures.js";
 
 describe("Astrology method provenance", () => {
@@ -25,7 +24,6 @@ describe("Astrology method provenance", () => {
       "jaiminiRashiDrishti",
       "jaiminiUpapada",
       "sthiraDasha",
-      "yoga",
     ]);
 
     for (const specification of Object.values(Provenance.methods)) {
@@ -64,13 +62,11 @@ describe("Astrology method provenance", () => {
       const karakamsha = yield* Karakamsha.calculate(placements);
       const drishti = yield* RashiDrishti.calculate("Aries");
       const upapada = yield* Upapada.calculate(placements);
-      const yoga = yield* Yoga.evaluateAll(fixtures.calculationFromHouses());
 
       expect(
         Equal.equals(
           [
             chart.provenance,
-            yoga.provenance,
             argala.provenance,
             arudha.provenance,
             karakas.provenance,
@@ -82,7 +78,6 @@ describe("Astrology method provenance", () => {
           ],
           [
             Provenance.methods.chartProjection.provenance,
-            Provenance.methods.yoga.provenance,
             Provenance.methods.jaiminiArgala.provenance,
             Provenance.methods.jaiminiArudhaPada.provenance,
             Provenance.methods.jaiminiCharaKarakas.provenance,

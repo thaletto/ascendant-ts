@@ -11,7 +11,6 @@ import {
   RashiDrishti,
   SAV,
   Upapada,
-  Yoga,
 } from "astro-ascendant";
 import * as FocusedArgala from "astro-ascendant/argala";
 import * as FocusedArudhaPada from "astro-ascendant/arudha-pada";
@@ -24,7 +23,6 @@ import * as FocusedRashiDrishti from "astro-ascendant/rashi-drishti";
 import * as FocusedSAV from "astro-ascendant/sav";
 import * as Swisseph from "astro-ascendant/swisseph";
 import * as FocusedUpapada from "astro-ascendant/upapada";
-import * as FocusedYoga from "astro-ascendant/yoga";
 import { DateTime, Effect } from "effect";
 
 const moment = Chart.Moment.make({
@@ -44,10 +42,9 @@ const packageWorkflow = Effect.gen(function* () {
   const sthira = yield* Dasha.calculateSthira(moment, calculation.placements);
   const currentRashi = yield* Dasha.atRashi(chara, moment.date);
   const sav = yield* SAV.calculate(calculation.placements);
-  const yogas = yield* Yoga.evaluateAll(calculation);
   const charaKarakas = yield* CharaKarakas.calculate(calculation.placements);
 
-  return { calculation, timeline, current, chara, sthira, currentRashi, sav, yogas, charaKarakas };
+  return { calculation, timeline, current, chara, sthira, currentRashi, sav, charaKarakas };
 });
 
 void Chart.generate;
@@ -72,11 +69,6 @@ void FocusedDasha.CharaDasha;
 void FocusedDasha.SthiraDasha;
 void SAV.calculate;
 void FocusedSAV.calculate;
-void Yoga.catalog;
-void Yoga.evaluateAll;
-void Yoga.evaluateSelected;
-void FocusedYoga.YogaEvidence;
-void FocusedYoga.UnknownYogaError;
 void Argala.calculate;
 void ArudhaPada.calculate;
 void CharaKarakas.calculate;
