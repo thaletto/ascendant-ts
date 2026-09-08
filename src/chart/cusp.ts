@@ -1,6 +1,6 @@
-import { Function } from "effect";
+import { Array, Function, Option } from "effect";
 
-import type { Planet } from "../model.js";
+import type { Planet } from "./model.js";
 
 export function normalizeAngle(angle: number): number {
   return ((angle % 360) + 360) % 360;
@@ -31,17 +31,19 @@ export const distributePlanets = Function.dual<
     cusps: readonly number[],
     spans: readonly number[],
   ) => readonly (readonly Planet[])[]
->(3, (planets, cusps, spans) => {
-  const planetsByHouse: Planet[][] = Array.from({ length: 12 }, () => []);
-
-  for (const planet of planets) {
-    const houseIndex = houseFor(planet.longitude, cusps, spans);
-    const housePlanets = planetsByHouse[houseIndex];
-    if (housePlanets === undefined) {
-      throw new Error("Could not calculate Bhava chart");
-    }
-    housePlanets.push(planet);
-  }
-
-  return planetsByHouse;
-});
+>(3, (planets, cusps, spans) =>
+  planets.reduce(
+    (planetsByHouse, planet) => {
+      const houseIndex = houseFor(planet.longitude, cusps, spans);
+      return Option.match(Array.get(houseIndex)(planetsByHouse), {
+        onNone: () => planetsByHouse,
+        onSome: (housePlanets) =>
+          Option.getOrElse(
+            Array.modify(planetsByHouse, houseIndex, () => [...housePlanets, planet]),
+            () => planetsByHouse,
+          ),
+      });
+    },
+    Array.replicate(12)([] as readonly Planet[]),
+  ),
+);

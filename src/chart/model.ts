@@ -86,6 +86,11 @@ export class Lagna extends Schema.Class<Lagna>("Lagna")({
 
 export class House extends Schema.Class<House>("House")({
   sign: Rashis,
+  cusp: Schema.optionalKey(Longitude),
+  signLord: Schema.optionalKey(PlanetsLagna),
+  starLord: Schema.optionalKey(PlanetsLagna),
+  subLord: Schema.optionalKey(PlanetsLagna),
+  significations: Schema.optionalKey(Schema.Array(Schema.String)),
   planets: Schema.Array(Planet),
   lagna: Schema.NullOr(Lagna),
 }) {}
@@ -115,22 +120,39 @@ export { ChartProjectionProvenance as Provenance } from "../provenance.js";
 export const Sex = Schema.Literals(["Male", "Female"]);
 export type Sex = typeof Sex.Type;
 
-export class Chart extends Schema.Class<Chart>("Chart")({
-  sex: Schema.optionalKey(Sex),
-  provenance: ChartProjectionProvenance,
-  division: Division,
-  houses: ChartHouses,
+export const HOUSE_SIGNIFICATIONS = {
+  1: ["birth", "head", "physical body", "limbs", "physical features", "livelihood"],
+  2: ["wealth", "food", "right eye", "face", "speech", "family", "property"],
+  3: ["courage", "firmness", "right ear", "younger siblings", "heroism", "mental strength"],
+  4: ["house", "home", "land", "mother", "vehicle", "happiness", "learning"],
+  5: ["intellect", "children", "son", "belly", "traditional law", "virtuous acts"],
+  6: ["debt", "wounds", "disease", "enemy", "sin", "fear", "humiliation"],
+  7: ["desire", "love", "passion", "cohabitation", "partner", "public", "marriage"],
+  8: ["life", "longevity", "mental pain", "defeat", "sorrow", "scandal", "death", "obstacle"],
+  9: ["guru", "father", "worship", "virtue", "spiritual initiation", "fortune"],
+  10: ["livelihood", "work", "commerce", "business", "rank", "honor", "occupation"],
+  11: ["profit", "gain", "income", "receipt", "fulfillment", "elder siblings", "friends"],
+  12: ["disappearance", "bondage", "loss", "bed", "poverty", "decline", "left eye", "leg"],
+} as const satisfies Record<Houses, readonly string[]>;
+
+export class PlanetSignification extends Schema.Class<PlanetSignification>("PlanetSignification")({
+  planet: Planets,
+  agent: Schema.optionalKey(Planets),
+  level1: Schema.Array(Houses),
+  level2: Schema.Array(Houses),
+  level3: Schema.Array(Houses),
+  level4: Schema.Array(Houses),
 }) {}
 
-export class BhavaHouse extends Schema.Class<BhavaHouse>("BhavaHouse")({
-  cusp: Longitude,
-  planets: Schema.Array(Planet),
-  lagna: Schema.NullOr(Lagna),
+export class HouseSignificators extends Schema.Class<HouseSignificators>("HouseSignificators")({
+  house: Houses,
+  level1: Schema.Array(Planets),
+  level2: Schema.Array(Planets),
+  level3: Schema.Array(Planets),
+  level4: Schema.Array(Planets),
 }) {}
 
-export const BhavaHouses = Schema.Record(Houses, BhavaHouse);
-
-export class BhavaAngles extends Schema.Class<BhavaAngles>("BhavaAngles")({
+export class ChartAngles extends Schema.Class<ChartAngles>("ChartAngles")({
   ascendant: CircleAngle,
   mc: CircleAngle,
   armc: CircleAngle,
@@ -141,9 +163,15 @@ export class BhavaAngles extends Schema.Class<BhavaAngles>("BhavaAngles")({
   polarAscendant: CircleAngle,
 }) {}
 
-export class BhavaChart extends Schema.Class<BhavaChart>("BhavaChart")({
-  houses: BhavaHouses,
-  angles: BhavaAngles,
+export class Chart extends Schema.Class<Chart>("Chart")({
+  sex: Schema.optionalKey(Sex),
+  provenance: ChartProjectionProvenance,
+  division: Division,
+  houses: ChartHouses,
+  angles: Schema.optionalKey(ChartAngles),
+  planetSignifications: Schema.optionalKey(Schema.Record(Planets, PlanetSignification)),
+  houseSignificators: Schema.optionalKey(Schema.Record(Houses, HouseSignificators)),
+  rulingPlanets: Schema.optionalKey(Schema.Tuple([Planets, Planets, Planets, Planets, Planets])),
 }) {}
 
 export const CalculationCharts = Schema.NonEmptyArray(Chart).check(
@@ -155,7 +183,6 @@ export const CalculationCharts = Schema.NonEmptyArray(Chart).check(
 export class ChartCalculation extends Schema.Class<ChartCalculation>("ChartCalculation")({
   placements: Placements,
   charts: CalculationCharts,
-  bhava: BhavaChart,
   astroParams: AstroParamsOptions,
 }) {}
 

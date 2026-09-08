@@ -153,38 +153,9 @@ function calculationFromHouses(
       houses,
     }),
   ) as [Model.Chart, ...Model.Chart[]];
-  const bhavaHouses = Record.fromEntries(
-    RASHIS.map((_, index) => {
-      const house = (index + 1) as Model.Houses;
-      const chartHouse = houses[house];
-      if (chartHouse === undefined) throw new Error(`Missing fixture house ${house}`);
-      return [
-        String(house),
-        Model.BhavaHouse.make({
-          cusp: Model.Longitude.make(index * 30),
-          planets: chartHouse.planets,
-          lagna: chartHouse.lagna,
-        }),
-      ];
-    }),
-  ) as Record<Model.Houses, Model.BhavaHouse>;
-
   return Model.ChartCalculation.make({
     placements: sourcePlacements,
     charts,
-    bhava: Model.BhavaChart.make({
-      houses: bhavaHouses,
-      angles: Model.BhavaAngles.make({
-        ascendant: Model.CircleAngle.make(0),
-        mc: Model.CircleAngle.make(0),
-        armc: Model.CircleAngle.make(0),
-        vertex: Model.CircleAngle.make(0),
-        equatorialAscendant: Model.CircleAngle.make(0),
-        coAscendant1: Model.CircleAngle.make(0),
-        coAscendant2: Model.CircleAngle.make(0),
-        polarAscendant: Model.CircleAngle.make(0),
-      }),
-    }),
     astroParams: { ayanamsa: "Lahiri", houseSystem: "WholeSign" },
   });
 }

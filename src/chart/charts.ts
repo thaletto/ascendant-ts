@@ -1,7 +1,7 @@
 import { Array, Effect, Order, pipe, Record as Struct } from "effect";
 
 import { methods } from "../provenance.js";
-import { getDivisionalTarget } from "./divisional-mapping/calculate.js";
+import { getDivisionalTarget } from "./divisional-mapping/index.js";
 import { ChartCalculationError } from "./error.js";
 import { inSignStatus } from "./helper.js";
 import { SIGN_LORDS } from "./internal/constants.js";

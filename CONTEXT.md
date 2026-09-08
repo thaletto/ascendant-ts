@@ -109,27 +109,19 @@ The identity of a chart within the divisional system, written D1, D2, D3, and so
 _Avoid_: Chart type, Varga number
 
 **D1 / Rashi chart**:
-The sign-based D1 chart derived from Placements. Its twelve houses are counted from the Lagna sign; it is distinct from a Bhava chart.
+The D1 chart derived from Placements. Its planets and houses use the same cusp-aware Chart model as every other supported division.
 _Avoid_: Base chart, raw chart
 
 **Divisional chart**:
-A sign-based chart derived from Placements by applying the mapping for its Division to the Lagna and grahas. Its twelve houses are counted from the resulting Lagna sign.
+A chart derived from Placements by applying the mapping for its Division to the Lagna, grahas, and house cusps.
 _Avoid_: Derived D1, harmonic chart
 
 **Degree**:
 A placement's position within its sign, from zero up to but not including thirty degrees. In D1 it is the source degree within the Rashi; in a divisional chart it is the degree produced by the divisional mapping.
 _Avoid_: Absolute longitude, source longitude
 
-**Bhava chart**:
-A twelve-house cusp representation produced using a configured House system. It assigns each placement to the house whose cusp begins the placement's half-open zodiac interval, exposes the calculation's eight house angles, and is separate from the D1 / Rashi chart and divisional charts.
-_Avoid_: D1, Rashi chart
-
-**Bhava house**:
-One of the twelve cusp-bounded sections of a Bhava chart. It owns the cusp at its beginning and the placements from that cusp up to, but not including, the next cusp.
-_Avoid_: Sign, Rashi, Whole Sign house
-
 **Chart calculation**:
-The Placements, D1, requested divisional charts, and configured Bhava chart derived together under the same AstroParams. A Chart calculation always contains D1 and records its AstroParams; one given natal meaning is a natal calculation.
+The Placements and requested cusp-aware Charts derived together under the same AstroParams. A Chart calculation always contains D1 and records its AstroParams; one given natal meaning is a natal calculation.
 _Avoid_: Chart bundle, chart pack
 
 **Moment**:
@@ -141,7 +133,7 @@ A Moment paired with the latitude and longitude at which Placements are calculat
 _Avoid_: Birth, birth data, chart input, event data
 
 **AstroParams**:
-The parameters of the astrological computation: ayanamsa and house system. Separate from the Moment and location; the house system applies to a Bhava chart, not to D1 or divisional charts.
+The parameters of the astrological computation: ayanamsa and house system. Separate from the Moment and location; the house system determines cusps on every Chart.
 _Avoid_: AstroConfig, settings, options, chart config
 
 **Planet**:
@@ -165,7 +157,7 @@ The sidereal reference frame used to align tropical longitudes to the fixed zodi
 _Avoid_: Reference frame, zodiac offset
 
 **House system**:
-The method selected in AstroParams for dividing a Bhava chart into twelve houses. It is recorded on each Chart calculation and does not change the sign-based houses of D1 or divisional charts.
+The method selected in AstroParams for calculating twelve house cusps on every Chart. It is recorded on each Chart calculation and applies consistently to D1 and divisional charts.
 _Avoid_: House division, cusps method
 
 **Rahu / Ketu**:

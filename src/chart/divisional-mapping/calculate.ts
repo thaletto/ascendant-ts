@@ -10,8 +10,6 @@ import {
   targetSignOf,
 } from "./helper.js";
 
-export const DIVISIONAL_MAPPING = "ascendant-divisional-mapping" as const;
-
 /** Normalizes an arbitrary longitude into the half-open sidereal zodiac. */
 export const normalizeLongitude = Effect.fn("Chart.DivisionalMapping.normalizeLongitude")(
   function* (longitude: number) {

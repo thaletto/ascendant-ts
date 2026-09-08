@@ -474,3 +474,15 @@ export const NAKSHATRA_LORD_CYCLE = [
   "Saturn",
   "Mercury",
 ] as const;
+
+export const VIMSHOTTARI_YEARS = {
+  Ketu: 7,
+  Venus: 20,
+  Sun: 6,
+  Moon: 10,
+  Mars: 7,
+  Rahu: 18,
+  Jupiter: 16,
+  Saturn: 19,
+  Mercury: 17,
+} as const;

@@ -100,13 +100,23 @@ describe("Chart projections", () => {
             [1, 9],
           ),
         ).toBe(true);
+        const d1 = calculation.charts[0];
+        expect(d1.houses[1]?.significations).toContain("physical body");
+        expect(d1.planetSignifications?.Sun.level2).toEqual([1]);
+        expect(d1.houseSignificators?.[1].level4).toEqual(["Mars"]);
+        expect(d1.rulingPlanets).toHaveLength(5);
+        expect(d1.planetSignifications?.Rahu.agent).toBeDefined();
+        expect(d1.planetSignifications?.Ketu.agent).toBeDefined();
+        expect(d1.houses[1]?.starLord).toBe("Ketu");
+        expect(d1.houses[1]?.subLord).toBe("Ketu");
+        expect(d1.houses[1]?.signLord).toBe("Mars");
         expect(
           Equal.equals(
             calculation.astroParams,
             AstroParams.Options.make({ ayanamsa: "Raman", houseSystem: "Placidus" }),
           ),
         ).toBe(true);
-        expect(calculation.bhava.houses[1].cusp).toBe(0);
+        expect(calculation.charts[0].houses[1]?.cusp).toBe(0);
       }),
     );
   });
@@ -127,6 +137,26 @@ describe("Chart projections", () => {
       expect(Array.contains(chart.houses[1]?.planets.map(({ name }) => name) ?? [], "Sun")).toBe(
         true,
       );
+    }),
+  );
+
+  it.effect("keeps point sign lords distinct from the house cusp sign lord", () =>
+    Effect.gen(function* () {
+      const [chart] = yield* Chart.project(
+        fixtures.placementsFromLongitudes({ Ketu: 211.003451 }, { lagnaLongitude: 207.94356 }),
+      );
+      const ketu = Record.values(chart.houses)
+        .flatMap(({ planets }) => planets)
+        .find(({ name }) => name === "Ketu");
+      const lagna = chart.houses[1]?.lagna;
+
+      expect(lagna?.longitude).toBe(207.94356);
+      expect(lagna?.sign.name).toBe("Libra");
+      expect(lagna?.sign.lord).toBe("Venus");
+      expect(ketu?.longitude).toBe(211.003451);
+      expect(ketu?.sign.name).toBe("Scorpio");
+      expect(ketu?.sign.lord).toBe("Mars");
+      expect(ketu?.sign.lord).not.toBe(lagna?.sign.lord);
     }),
   );
 

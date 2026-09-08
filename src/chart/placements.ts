@@ -1,7 +1,7 @@
-import { Effect } from "effect";
+import { Array, Effect, Option } from "effect";
 
 import type { HouseData, PlanetaryPosition } from "../ephemeris/model.js";
-import { normalizeLongitude } from "./divisional-mapping/calculate.js";
+import { normalizeLongitude } from "./divisional-mapping/index.js";
 import { ChartCalculationError, MissingPlacementError } from "./error.js";
 import { nakshatraOf } from "./helper.js";
 import { Placements, SourceLagna, SourcePlanet } from "./model.js";
@@ -34,10 +34,13 @@ export const placementsFromEvidence = Effect.fn("Chart.placementsFromEvidence")(
       { concurrency: "unbounded" },
     );
 
-    const rahu = sourcePlanets.find((planet) => planet.name === "Rahu");
-    if (rahu === undefined) {
-      return yield* MissingPlacementError.make({ placement: "Rahu" });
-    }
+    const rahu = yield* Option.match(
+      Array.findFirst(sourcePlanets, (planet) => planet.name === "Rahu"),
+      {
+        onNone: () => MissingPlacementError.make({ placement: "Rahu" }),
+        onSome: Effect.succeed,
+      },
+    );
 
     const ketuLongitude = yield* normalizeLongitude(rahu.longitude + 180);
     const ascendant = yield* normalizeLongitude(evidence.houses.ascendant);

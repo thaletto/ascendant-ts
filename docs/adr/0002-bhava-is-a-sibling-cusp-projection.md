@@ -1,3 +1,3 @@
-# Bhava is a sibling cusp projection
+# Charts use one cusp-aware model
 
-A Chart calculation derives Placements, D1, requested divisional charts, and a configured Bhava chart together under one AstroParams methodology. D1 and divisional charts remain sign-based projections, while the house system affects only the sibling Bhava chart whose houses assign placements by cusp intervals; this preserves one canonical calculation without making Vargas depend on cusp geometry.
+A chart calculation derives placements, D1, and requested divisional charts under one AstroParams methodology. Every returned `Chart` contains cusp-aware houses, angles, and KP metadata; there is no separate house-chart type or compatibility field. Divisional planets and cusps are transformed through the same divisional mapping so house assignment, longitude, and lords remain internally consistent.
