@@ -1,6 +1,6 @@
 import { DateTime, Effect } from "effect";
 
-import type { CurrentDasha, VimshottariDasha } from "./model.js";
+import type { CurrentDasha, VimshottariDasha } from "../model.js";
 
 function contains(
   period: { readonly start: DateTime.Utc; readonly end: DateTime.Utc },

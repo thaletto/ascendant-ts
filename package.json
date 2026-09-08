@@ -29,6 +29,18 @@
       "types": "./dist/dasha/index.d.ts",
       "import": "./dist/dasha/index.js"
     },
+    "./dasha/chara": {
+      "types": "./dist/dasha/chara/index.d.ts",
+      "import": "./dist/dasha/chara/index.js"
+    },
+    "./dasha/sthira": {
+      "types": "./dist/dasha/sthira/index.d.ts",
+      "import": "./dist/dasha/sthira/index.js"
+    },
+    "./dasha/vimshottari": {
+      "types": "./dist/dasha/vimshottari/index.d.ts",
+      "import": "./dist/dasha/vimshottari/index.js"
+    },
     "./ephemeris": {
       "types": "./dist/ephemeris/index.d.ts",
       "import": "./dist/ephemeris/index.js"

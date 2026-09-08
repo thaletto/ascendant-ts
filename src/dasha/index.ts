@@ -1,7 +1,10 @@
 export * from "./error.js";
 export * from "./model.js";
-export { calculate } from "./calculate.js";
-export { calculateChara } from "./calculate-chara.js";
-export { calculateSthira } from "./calculate-sthira.js";
-export { at } from "./query.js";
+export * as Chara from "./chara/index.js";
+export * as Sthira from "./sthira/index.js";
+export * as Vimshottari from "./vimshottari/index.js";
+export { calculate } from "./vimshottari/calculate.js";
+export { calculateChara } from "./chara/calculate.js";
+export { calculateSthira } from "./sthira/calculate.js";
+export { at } from "./vimshottari/query.js";
 export { atRashi } from "./rashi-query.js";

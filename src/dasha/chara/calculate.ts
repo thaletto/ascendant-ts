@@ -1,14 +1,14 @@
 import { Effect } from "effect";
 
-import { RASHIS, SIGN_LORDS } from "../chart/internal/constants.js";
-import { signAt, signIndexOf } from "../chart/internal/position.js";
-import type { Moment, Placements, Planets, Rashis } from "../chart/model.js";
-import { compareExactDegrees, exactDegreeOf } from "../jaimini/chara-karakas/helper.js";
-import { methods } from "../provenance.js";
-import { DashaEvidenceError } from "./error.js";
-import { validateUniquePlanetPlacements } from "./evidence.js";
-import { CharaDasha } from "./model.js";
-import { type Direction, RashiInternal, rashiIndex } from "./rashi-internal.js";
+import { RASHIS, SIGN_LORDS } from "../../chart/internal/constants.js";
+import { signAt, signIndexOf } from "../../chart/internal/position.js";
+import type { Moment, Placements, Planets, Rashis } from "../../chart/model.js";
+import { compareExactDegrees, exactDegreeOf } from "../../jaimini/chara-karakas/helper.js";
+import { methods } from "../../provenance.js";
+import { DashaEvidenceError } from "../error.js";
+import { validateUniquePlanetPlacements } from "../evidence.js";
+import { CharaDasha } from "../model.js";
+import { type Direction, RashiInternal, rashiIndex } from "../rashi-internal.js";
 
 const SAMA_PADA = new Set<Rashis>(["Aries", "Taurus", "Gemini", "Libra", "Scorpio", "Sagittarius"]);
 

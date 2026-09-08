@@ -1,9 +1,9 @@
 import { Effect } from "effect";
 
-import type { Moment, Placements, Planets } from "../chart/model.js";
-import { Calendar } from "./calendar.js";
-import { DashaCalculationError } from "./error.js";
-import { AntarDasha, MahaDasha } from "./model.js";
+import type { Moment, Placements, Planets } from "../../chart/model.js";
+import { Calendar } from "../calendar.js";
+import { DashaCalculationError } from "../error.js";
+import { AntarDasha, MahaDasha } from "../model.js";
 
 const VIMSHOTTARI_PLANETS = [
   "Ketu",
