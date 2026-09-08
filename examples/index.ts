@@ -25,7 +25,7 @@ const ENVIRONMENT_INPUT_ERROR = [
   "Could not load a complete moment from the environment.",
   "Set MOMENT_DATE (an ISO 8601 date and time), LATITUDE (-90 to 90), and LONGITUDE (-180 to 180).",
   "Optionally set AYANAMSA and HOUSE_SYSTEM; they default to Lahiri and WholeSign.",
-  "Values are read in this order: process environment, .env.local, .env, then .env.test.",
+  "Values are read in this order: process environment, .env.local, .env, then config.json.",
   "Continue by entering the moment manually.",
 ].join("\n");
 const PRECOMPUTED_LOCATIONS = [
@@ -181,18 +181,43 @@ const addDotEnvProvider = Effect.fn("Examples.addDotEnvProvider")(function* (
   );
 });
 
+const addJsonConfigProvider = Effect.fn("Examples.addJsonConfigProvider")(function* (
+  provider: ConfigProvider.ConfigProvider,
+  path: string,
+  exists: boolean,
+) {
+  return yield* Match.value(exists).pipe(
+    Match.when(true, () =>
+      Effect.gen(function* () {
+        const fileSystem = yield* FileSystem.FileSystem;
+        const content = yield* fileSystem.readFileString(path);
+        const value = yield* Effect.try({
+          try: () => JSON.parse(content),
+          catch: (error) => new Error(`Could not parse ${path}: ${String(error)}`),
+        });
+        if (typeof value !== "object" || value === null || Array.isArray(value)) {
+          return yield* Effect.fail(new Error(`${path} must contain a JSON object`));
+        }
+        return ConfigProvider.orElse(ConfigProvider.fromUnknown(value), provider);
+      }),
+    ),
+    Match.when(false, () => Effect.succeed(provider)),
+    Match.exhaustive,
+  );
+});
+
 const environmentConfigProvider = Effect.fn("Examples.environmentConfigProvider")(function* () {
   const fileSystem = yield* FileSystem.FileSystem;
   const hasDotEnv = yield* fileSystem.exists(".env");
   const hasDotEnvLocal = yield* fileSystem.exists(".env.local");
-  const hasDotEnvTest = yield* fileSystem.exists(".env.test");
+  const hasConfigJson = yield* fileSystem.exists("config.json");
 
-  const withDotEnvTest = yield* addDotEnvProvider(
+  const withConfigJson = yield* addJsonConfigProvider(
     ConfigProvider.fromUnknown({}),
-    ".env.test",
-    hasDotEnvTest,
+    "config.json",
+    hasConfigJson,
   );
-  const withDotEnv = yield* addDotEnvProvider(withDotEnvTest, ".env", hasDotEnv);
+  const withDotEnv = yield* addDotEnvProvider(withConfigJson, ".env", hasDotEnv);
   const withDotEnvLocal = yield* addDotEnvProvider(withDotEnv, ".env.local", hasDotEnvLocal);
 
   return ConfigProvider.orElse(ConfigProvider.fromEnv(), withDotEnvLocal);
@@ -244,7 +269,7 @@ const selectInput = Effect.fn("Examples.selectInput")(function* () {
     choices: [
       {
         title: "Read from environment",
-        description: "Use process variables, .env.local, .env, or .env.test",
+        description: "Use process variables, .env.local, .env, or config.json",
         value: "environment",
       },
       {
