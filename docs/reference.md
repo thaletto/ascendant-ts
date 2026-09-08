@@ -23,7 +23,7 @@ Chara resolves Scorpio's Mars/Ketu and Aquarius's Saturn/Rahu co-lords by sign a
 
 ## Method provenance
 
-Every result that exposes provenance identifies its versioned `{ school, method, version }` record. `Provenance.methods` is the canonical registry of calculation steps and verification criteria for the implemented chart, Yoga, Jaimini, and sign-Dasha methods.
+Every result that exposes provenance identifies its versioned `{ school, method, version }` record. `Provenance.methods` is the canonical registry of calculation steps and verification criteria for the implemented chart, Jaimini, and sign-Dasha methods.
 
 ```typescript
 import { Provenance } from "astro-ascendant";
@@ -53,19 +53,18 @@ Supported divisions are `D1`, `D2`, `D3`, `D4`, `D7`, `D9`, `D10`, `D12`, `D16`,
 
 Use the package root for the main namespaces, or import a focused entry point:
 
-| Entry point                     | Contents                                                                                          |
-| ------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `astro-ascendant`               | `AstroParams`, `Chart`, `Dasha`, `Ephemeris`, `Provenance`, `SAV`, `Yoga`, and Jaimini namespaces |
-| `astro-ascendant/chart`         | Chart models, generation, projection, and errors                                                  |
-| `astro-ascendant/dasha`         | Vimshottari, Chara, and Sthira Dasha calculations and queries                                     |
-| `astro-ascendant/provenance`    | Auditable calculation-method registry                                                             |
-| `astro-ascendant/sav`           | Ashtakavarga calculation and models                                                               |
-| `astro-ascendant/yoga`          | Yoga catalog, evaluation, and evidence formatting                                                 |
-| `astro-ascendant/swisseph`      | Swiss Ephemeris adapter                                                                           |
-| `astro-ascendant/astro-params`  | Calculation parameter models and layers                                                           |
-| `astro-ascendant/argala`        | Jaimini Argala calculation                                                                        |
-| `astro-ascendant/arudha-pada`   | Jaimini Arudha Pada calculation                                                                   |
-| `astro-ascendant/chara-karakas` | Jaimini Chara Karaka calculation                                                                  |
-| `astro-ascendant/karakamsha`    | Jaimini Karakamsha calculation                                                                    |
-| `astro-ascendant/rashi-drishti` | Jaimini Rashi Drishti calculation                                                                 |
-| `astro-ascendant/upapada`       | Jaimini Upapada calculation                                                                       |
+| Entry point                     | Contents                                                                                  |
+| ------------------------------- | ----------------------------------------------------------------------------------------- |
+| `astro-ascendant`               | `AstroParams`, `Chart`, `Dasha`, `Ephemeris`, `Provenance`, `SAV`, and Jaimini namespaces |
+| `astro-ascendant/chart`         | Chart models, generation, projection, and errors                                          |
+| `astro-ascendant/dasha`         | Vimshottari, Chara, and Sthira Dasha calculations and queries                             |
+| `astro-ascendant/provenance`    | Auditable calculation-method registry                                                     |
+| `astro-ascendant/sav`           | Ashtakavarga calculation and models                                                       |
+| `astro-ascendant/swisseph`      | Swiss Ephemeris adapter                                                                   |
+| `astro-ascendant/astro-params`  | Calculation parameter models and layers                                                   |
+| `astro-ascendant/argala`        | Jaimini Argala calculation                                                                |
+| `astro-ascendant/arudha-pada`   | Jaimini Arudha Pada calculation                                                           |
+| `astro-ascendant/chara-karakas` | Jaimini Chara Karaka calculation                                                          |
+| `astro-ascendant/karakamsha`    | Jaimini Karakamsha calculation                                                            |
+| `astro-ascendant/rashi-drishti` | Jaimini Rashi Drishti calculation                                                         |
+| `astro-ascendant/upapada`       | Jaimini Upapada calculation                                                               |
