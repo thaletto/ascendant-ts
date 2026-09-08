@@ -21,6 +21,7 @@ import { savExample } from "./sav.ts";
 
 const DATE_PATTERN = /^\d{2}\/\d{2}\/\d{4}$/;
 const TIME_PATTERN = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
+const EXAMPLES_DIRECTORY = import.meta.dir;
 const ENVIRONMENT_INPUT_ERROR = [
   "Could not load a complete moment from the environment.",
   "Set MOMENT_DATE (an ISO 8601 date and time), LATITUDE (-90 to 90), and LONGITUDE (-180 to 180).",
@@ -208,17 +209,20 @@ const addJsonConfigProvider = Effect.fn("Examples.addJsonConfigProvider")(functi
 
 const environmentConfigProvider = Effect.fn("Examples.environmentConfigProvider")(function* () {
   const fileSystem = yield* FileSystem.FileSystem;
-  const hasDotEnv = yield* fileSystem.exists(".env");
-  const hasDotEnvLocal = yield* fileSystem.exists(".env.local");
-  const hasConfigJson = yield* fileSystem.exists("config.json");
+  const dotEnvPath = `${EXAMPLES_DIRECTORY}/.env`;
+  const dotEnvLocalPath = `${EXAMPLES_DIRECTORY}/.env.local`;
+  const configJsonPath = `${EXAMPLES_DIRECTORY}/config.json`;
+  const hasDotEnv = yield* fileSystem.exists(dotEnvPath);
+  const hasDotEnvLocal = yield* fileSystem.exists(dotEnvLocalPath);
+  const hasConfigJson = yield* fileSystem.exists(configJsonPath);
 
   const withConfigJson = yield* addJsonConfigProvider(
     ConfigProvider.fromUnknown({}),
-    "config.json",
+    configJsonPath,
     hasConfigJson,
   );
-  const withDotEnv = yield* addDotEnvProvider(withConfigJson, ".env", hasDotEnv);
-  const withDotEnvLocal = yield* addDotEnvProvider(withDotEnv, ".env.local", hasDotEnvLocal);
+  const withDotEnv = yield* addDotEnvProvider(withConfigJson, dotEnvPath, hasDotEnv);
+  const withDotEnvLocal = yield* addDotEnvProvider(withDotEnv, dotEnvLocalPath, hasDotEnvLocal);
 
   return ConfigProvider.orElse(ConfigProvider.fromEnv(), withDotEnvLocal);
 });
