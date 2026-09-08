@@ -43,13 +43,13 @@ console.log(calculation.charts[0]); // D1
 console.log(calculation.charts[1]); // D9
 ```
 
-`calculation.placements` contains the shared sidereal positions. `calculation.charts` contains D1 first, followed by the requested divisions in numeric order. Optional birth `sex` is copied into each chart. `calculation.bhava` contains the cusp-defined house projection.
+`calculation.placements` contains the shared sidereal positions. `calculation.charts` contains D1 first, followed by the requested divisions in numeric order. Optional birth `sex` is copied into each chart. Every chart uses cusp-defined houses and includes KP house significations, four-level planet significations, four-level house significators, and the five ordered ruling planets.
 
 ## Calculations
 
 The package exposes named operations for each calculation surface:
 
-- **Charts**: D1 and 15 divisional charts, plus a configured Bhava chart
+- **Charts**: D1 and 15 cusp-aware divisional charts
 - **Dasha**: Vimshottari planetary periods plus Jaimini Chara and Sthira sign periods with date queries
 - **Ashtakavarga**: Bhinnashtakavarga, Sarvashtakavarga, reduced BAV, and Shodhya Pinda
 - **Jaimini**: Chara Karakas, Rashi Drishti, Karakamsha, Arudha Pada, Upapada, and Argala

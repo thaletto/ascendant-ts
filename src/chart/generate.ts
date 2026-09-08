@@ -3,11 +3,12 @@ import { Effect } from "effect";
 import { AstroParams } from "../astro-params/service.js";
 import type { CelestialBody } from "../ephemeris/model.js";
 import { Ephemeris } from "../ephemeris/service.js";
-import { bhavaFromHouseData } from "./bhava/index.js";
+import { chartFromHouseData } from "./calculate.js";
 import { project } from "./charts.js";
 import { ChartCalculationError, LocatedMomentValidationError } from "./error.js";
 import {
   ChartCalculation,
+  Chart,
   type ChartParams,
   Division,
   LocatedMoment,
@@ -86,8 +87,8 @@ const calculatePlacementEvidence = Effect.fn("astro-ascendant/chart/calculatePla
 /**
  * Produces one internally consistent chart calculation for a located moment.
  * It validates coordinates, calculates sidereal placement evidence once, derives
- * D1 and requested divisions from those placements, and builds the configured
- * cusp-based Bhava chart from the same ephemeris house data.
+ * D1 and requested divisions from those placements, and builds cusp-based
+ * charts for every generated division from the same ephemeris house data.
  */
 export const generate = Effect.fn("astro-ascendant/chart/generate")(function* (
   input: ChartParams,
@@ -98,12 +99,22 @@ export const generate = Effect.fn("astro-ascendant/chart/generate")(function* (
   const evidence = yield* calculatePlacementEvidence(input);
   const placements = yield* placementsFromEvidence(evidence);
   const charts = yield* project(placements, divisions, input.sex);
-  const bhava = yield* bhavaFromHouseData(evidence.houses, charts[0]);
+  const calculatedCharts = yield* Effect.all(
+    charts.map((chart) => chartFromHouseData(evidence.houses, chart, input.moment.date)),
+    { concurrency: "unbounded" },
+  );
+  if (calculatedCharts[0] === undefined) {
+    return yield* ChartCalculationError.make({
+      stage: "mapping",
+      message: "Could not calculate charts",
+      cause: charts,
+    });
+  }
+  const canonicalCharts = calculatedCharts as [Chart, ...Chart[]];
 
   return ChartCalculation.make({
     placements,
-    charts,
-    bhava,
+    charts: canonicalCharts,
     astroParams,
   });
 });
