@@ -30,13 +30,6 @@ export interface ChartProjectionProvenance extends Schema.Schema.Type<
   typeof ChartProjectionProvenance
 > {}
 
-export const YogaProvenance = Schema.Struct({
-  school: Schema.Literal("Parashari"),
-  method: Schema.Literal("ascendant-yoga"),
-  version: Schema.Literal("v2"),
-});
-export interface YogaProvenance extends Schema.Schema.Type<typeof YogaProvenance> {}
-
 export const JaiminiArgalaProvenance = Schema.Struct({
   school: Schema.Literal("Jaimini"),
   method: Schema.Literal("structural-positions"),
@@ -117,26 +110,6 @@ export const methods = {
       { id: "build-whole-sign-houses", description: "Build twelve houses from the mapped Lagna." },
     ],
     verification: ["D1 is an identity projection.", "Requested divisions are unique and ordered."],
-  },
-  yoga: {
-    provenance: { school: "Parashari", method: "ascendant-yoga", version: "v2" },
-    steps: [
-      {
-        id: "select-rules",
-        description: "Select the requested yoga definitions in catalogue order.",
-      },
-      {
-        id: "evaluate-evidence",
-        description:
-          "Evaluate grouped formations against chart evidence, retaining unresolved predicates.",
-      },
-    ],
-    verification: [
-      "Every result includes matched evidence.",
-      "Selected results preserve caller order.",
-      "Equivalent source descriptions share a result with alternative formation evidence.",
-      "Missing context and undefined source judgements remain unresolved, never false absences.",
-    ],
   },
   jaiminiArgala: {
     provenance: { school: "Jaimini", method: "structural-positions", version: 1 },

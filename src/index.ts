@@ -10,4 +10,3 @@ export * as Provenance from "./provenance.js";
 export * as RashiDrishti from "./jaimini/rashi-drishti/index.js";
 export * as SAV from "./sav/index.js";
 export * as Upapada from "./jaimini/upapada/index.js";
-export * as Yoga from "./yoga/index.js";
