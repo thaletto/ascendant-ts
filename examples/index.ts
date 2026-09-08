@@ -18,7 +18,6 @@ import { dashaExample } from "./dasha.ts";
 import { jaiminiExample } from "./jaimini.ts";
 import { runtimeLayer } from "./runtime.ts";
 import { savExample } from "./sav.ts";
-import { yogaExample } from "./yoga.ts";
 
 const DATE_PATTERN = /^\d{2}\/\d{2}\/\d{4}$/;
 const TIME_PATTERN = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
@@ -272,7 +271,7 @@ const selectInput = Effect.fn("Examples.selectInput")(function* () {
 
 const runSelectedExample = Effect.fn("Examples.runSelectedExample")(function* () {
   const input = yield* selectInput();
-  const example = yield* Prompt.select<"chart" | "dasha" | "jaimini" | "sav" | "yoga">({
+  const example = yield* Prompt.select<"chart" | "dasha" | "jaimini" | "sav">({
     message: "Choose an example to run",
     choices: [
       {
@@ -295,11 +294,6 @@ const runSelectedExample = Effect.fn("Examples.runSelectedExample")(function* ()
         description: "Calculate Bhinnashtakavarga and Sarvashtakavarga",
         value: "sav",
       },
-      {
-        title: "Yoga",
-        description: "Evaluate the Yoga catalog",
-        value: "yoga",
-      },
     ],
   });
 
@@ -308,7 +302,6 @@ const runSelectedExample = Effect.fn("Examples.runSelectedExample")(function* ()
     Match.when("dasha", () => dashaExample(input)),
     Match.when("jaimini", () => jaiminiExample(input)),
     Match.when("sav", () => savExample(input)),
-    Match.when("yoga", () => yogaExample(input)),
     Match.exhaustive,
   );
   yield* program.pipe(Effect.provide(AstroParams.layer(input.astroParams)));
