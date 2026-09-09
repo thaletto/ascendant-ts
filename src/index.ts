@@ -4,7 +4,7 @@ export * as AstroParams from "./astro-params/index.js";
 export * as Chart from "./chart/index.js";
 export * as CharaKarakas from "./jaimini/chara-karakas/index.js";
 export * as Dasha from "./dasha/index.js";
-export * as Ephemeris from "./ephemeris/index.js";
+export * as Swisseph from "./swisseph/index.js";
 export * as Karakamsha from "./jaimini/karakamsha/index.js";
 export * as Provenance from "./provenance.js";
 export * as RashiDrishti from "./jaimini/rashi-drishti/index.js";
