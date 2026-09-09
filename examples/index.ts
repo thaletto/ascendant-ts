@@ -336,9 +336,6 @@ const runSelectedExample = Effect.fn("Examples.runSelectedExample")(function* ()
   yield* program.pipe(Effect.provide(AstroParams.layer(input.astroParams)));
 });
 
-const examples = runSelectedExample().pipe(
-  Effect.provide(runtimeLayer),
-  Effect.catchTag("QuitError", () => Effect.void),
-);
+const examples = runSelectedExample().pipe(Effect.provide(runtimeLayer));
 
 BunRuntime.runMain(examples);
