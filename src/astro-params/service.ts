@@ -15,8 +15,8 @@ export function layer(options: Options) {
 }
 
 const defaultLayer = layer({
-  ayanamsa: "Lahiri",
-  houseSystem: "WholeSign",
+  ayanamsa: "Krishnamurti",
+  houseSystem: "Placidus",
 });
 
 export { Service as AstroParams, defaultLayer as DefaultAstroParams };
