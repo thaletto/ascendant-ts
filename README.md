@@ -1,5 +1,9 @@
 # astro-ascendant
 
+<p align="center">
+  <img src="assets/wordmark.svg" alt="Ascendant" width="360" />
+</p>
+
 [![npm version](https://img.shields.io/npm/v/astro-ascendant)](https://www.npmjs.com/package/astro-ascendant)
 [![License](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue.svg)](LICENSE)
 
