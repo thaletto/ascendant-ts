@@ -11,6 +11,9 @@ install: ## Install dependencies
 run: ## Select and run an example
 	bun run examples/index.ts
 
+benchmark: ## Run the benchmark suite
+	bun run benchmarks/index.ts
+
 build: ## Build the npm package into dist/
 	bun run build
 

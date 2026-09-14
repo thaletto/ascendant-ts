@@ -2,7 +2,7 @@ import { Effect } from "effect";
 
 import { Chart } from "../src/index.ts";
 import { printChartCalculation } from "./chart-calculation-table.ts";
-import type { ExampleInput } from "./input.ts";
+import type { ExampleInput } from "./index.ts";
 
 export const chartExample = Effect.fn("Examples.chart")(function* ({
   moment,
