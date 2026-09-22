@@ -1,6 +1,6 @@
 import { DateTime, Effect } from "effect";
 
-import { type Ayanamsa } from "../astro-params/model.js";
+import { Ayanamsa } from "../astro-params/model.js";
 import { Rashis } from "../chart/model.js";
 import { JulianDay, type CelestialBody } from "../ephemeris/model.js";
 import { Ephemeris } from "../ephemeris/service.js";
@@ -81,7 +81,7 @@ export interface RawHit {
   readonly longitude: number;
   readonly speed: number;
   readonly kind: TransitKind;
-  readonly sign: typeof Rashis.Type;
+  readonly sign: Rashis;
 }
 
 export interface SearchOutcome {
@@ -113,7 +113,7 @@ function signIndexOf(longitude: number): number {
   return Math.floor(normalize360(longitude) / 30) % 12;
 }
 
-function signAt(index: number): typeof Rashis.Type {
+function signAt(index: number): Rashis {
   return Rashis.literals[((index % 12) + 12) % 12]!;
 }
 
@@ -122,7 +122,7 @@ function enteredSign(
   boundary: number,
   direction: TransitDirection,
   longitudeRising: boolean,
-): typeof Rashis.Type {
+): Rashis {
   const index = Math.round(normalize360(boundary) / 30) % 12;
   const rising = direction === "forward" ? longitudeRising : !longitudeRising;
   return rising ? signAt(index) : signAt(index - 1);
@@ -209,7 +209,7 @@ const refineStep = Effect.fn("Transit.refineStep")(function* (
 ) {
   const hits: Array<RawHit> = [];
   const precision = options.precisionMinutes ?? 1;
-  const push = (sample: LongitudeSample, kind: TransitKind, sign: typeof Rashis.Type) => {
+  const push = (sample: LongitudeSample, kind: TransitKind, sign: Rashis) => {
     const previous = hits[hits.length - 1];
     if (
       previous !== undefined &&

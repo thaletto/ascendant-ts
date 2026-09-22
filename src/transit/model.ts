@@ -35,16 +35,16 @@ export class TransitEvent extends Schema.Class<TransitEvent>("TransitEvent")({
 }) {}
 
 export interface TransitRequest {
-  readonly planet: typeof Planets.Type;
+  readonly planet: Planets;
   readonly from: LocatedMoment;
   readonly count: number;
-  readonly direction: typeof TransitDirection.Type;
-  readonly kinds: ReadonlyArray<typeof TransitKind.Type>;
-  readonly targetLongitude?: typeof Longitude.Type;
-  readonly house?: typeof Houses.Type;
+  readonly direction: TransitDirection;
+  readonly kinds: ReadonlyArray<TransitKind>;
+  readonly targetLongitude?: Longitude;
+  readonly house?: Houses;
   readonly maxYears?: number;
   readonly precisionMinutes?: number;
-  readonly includeCharts?: ReadonlyArray<typeof Division.Type>;
+  readonly includeCharts?: ReadonlyArray<Division>;
 }
 
 export { TransitSearchProvenance };
