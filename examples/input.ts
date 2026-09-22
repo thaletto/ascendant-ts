@@ -304,8 +304,17 @@ export const selectInput = Effect.fn("Examples.selectInput")(function* () {
   );
 });
 
+const transitInput = Effect.fn("Examples.transitInput")(function* () {
+  const date = yield* DateTime.now;
+  const coordinates = yield* selectLocation();
+  return {
+    moment: Chart.Moment.make({ date }),
+    ...coordinates,
+    astroParams: DEFAULT_ASTRO_PARAMS,
+  };
+});
+
 export const runSelectedExample = Effect.fn("Examples.runSelectedExample")(function* () {
-  const input = yield* selectInput();
   const example = yield* Prompt.select<"chart" | "dasha" | "jaimini" | "sav" | "transit">({
     message: "Choose an example to run",
     choices: [
@@ -336,6 +345,11 @@ export const runSelectedExample = Effect.fn("Examples.runSelectedExample")(funct
       },
     ],
   });
+
+  const input = yield* Match.value(example).pipe(
+    Match.when("transit", () => transitInput()),
+    Match.orElse(() => selectInput()),
+  );
 
   const program = Match.value(example).pipe(
     Match.when("chart", () => chartExample(input)),
