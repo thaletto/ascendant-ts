@@ -9,14 +9,12 @@ import type { Result } from "./model.js";
  * Derives the three Jaimini Rashi Drishti targets for one reference sign using
  * movable/fixed/dual modality rules, not planetary degree aspects or orbs.
  */
-export const calculate = Effect.fn("RashiDrishti.calculate")((reference: Rashis) =>
-  Effect.sync(() => {
-    const targets = targetsOf(reference);
+export const calculate = Effect.fn("RashiDrishti.calculate")(function* (reference: Rashis) {
+  const targets = yield* targetsOf(reference);
 
-    return {
-      provenance: methods.jaiminiRashiDrishti.provenance,
-      reference,
-      targets,
-    } satisfies Result;
-  }),
-);
+  return {
+    provenance: methods.jaiminiRashiDrishti.provenance,
+    reference,
+    targets,
+  } satisfies Result;
+});

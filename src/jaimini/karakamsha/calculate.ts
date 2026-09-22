@@ -39,15 +39,17 @@ export const calculate = Effect.fn("Karakamsha.calculate")(function* (placements
         );
       }
       return getDivisionalTarget(source.longitude, 9).pipe(
-        Effect.map((target) => ({
-          planet: holder.planet,
-          sign: signOf(target.signIndex),
-        })),
         Effect.mapError((cause) =>
           CalculationError.make({
             message: `Could not calculate the D9 Sign for ${holder.planet}`,
             cause,
           }),
+        ),
+        Effect.flatMap((target) =>
+          Effect.map(signOf(target.signIndex), (sign) => ({
+            planet: holder.planet,
+            sign,
+          })),
         ),
       );
     }),
@@ -55,7 +57,12 @@ export const calculate = Effect.fn("Karakamsha.calculate")(function* (placements
   );
 
   const first = karakamshaPlacements[0];
-  if (first === undefined) throw new Error("Karakamsha requires at least one Atmakaraka");
+  if (first === undefined) {
+    return yield* CalculationError.make({
+      message: "Karakamsha requires at least one Atmakaraka",
+      cause: charaKarakas.assignments,
+    });
+  }
 
   return {
     provenance: methods.jaiminiKarakamsha.provenance,

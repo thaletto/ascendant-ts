@@ -1,8 +1,9 @@
-import { HashSet } from "effect";
+import { Effect, HashSet } from "effect";
 
 import { RASHIS } from "../../chart/internal/constants.js";
 import { signAt } from "../../chart/internal/position.js";
 import type { Rashis } from "../../chart/model.js";
+import { CalculationError } from "./model.js";
 
 const MOVABLE = HashSet.fromIterable([
   "Aries",
@@ -28,7 +29,9 @@ const DUAL = HashSet.fromIterable([
  * Drishti: movable signs aspect non-adjacent fixed signs, fixed signs aspect
  * non-adjacent movable signs, and dual signs aspect the other dual signs.
  */
-export function targetsOf(reference: Rashis): readonly [Rashis, Rashis, Rashis] {
+export const targetsOf = Effect.fn("RashiDrishti.targetsOf")(function* (
+  reference: Rashis,
+): Effect.fn.Return<readonly [Rashis, Rashis, Rashis], CalculationError> {
   const referenceIndex = RASHIS.indexOf(reference);
   const targets = RASHIS.filter((candidate) => {
     if (HashSet.has(MOVABLE, reference)) {
@@ -44,8 +47,11 @@ export function targetsOf(reference: Rashis): readonly [Rashis, Rashis, Rashis] 
   const second = targets[1];
   const third = targets[2];
   if (first === undefined || second === undefined || third === undefined) {
-    throw new Error(`Rashi Drishti did not produce three targets for ${reference}`);
+    return yield* CalculationError.make({
+      message: `Rashi Drishti did not produce three targets for ${reference}`,
+      cause: reference,
+    });
   }
 
   return [first, second, third];
-}
+});

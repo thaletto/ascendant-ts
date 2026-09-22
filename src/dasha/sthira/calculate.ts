@@ -9,7 +9,7 @@ import * as CharaKarakas from "../../jaimini/chara-karakas/index.js";
 import type { ClassicalPlanets, ExactDegree, Role } from "../../jaimini/chara-karakas/model.js";
 import { targetsOf } from "../../jaimini/rashi-drishti/helper.js";
 import { methods } from "../../provenance.js";
-import { DashaEvidenceError } from "../error.js";
+import { DashaCalculationError, DashaEvidenceError } from "../error.js";
 import { validateUniquePlanetPlacements } from "../evidence.js";
 import type { BrahmaCandidateScore, EligibleBrahmaPlanet, RashiBala } from "../model.js";
 import { SthiraDasha } from "../model.js";
@@ -105,7 +105,8 @@ const rashiBalaOf = Effect.fn("Dasha.rashiBalaOf")(function* (
   for (const planet of [lord, "Jupiter", "Mercury"] as const) {
     if (aspectingPlanets.includes(planet)) continue;
     const placement = yield* placementOf(placements, planet, "Rashi Bala drishti");
-    if (targetsOf(signAt(signIndexOf(placement.longitude))).includes(sign)) {
+    const aspecting = yield* targetsOf(signAt(signIndexOf(placement.longitude)));
+    if (aspecting.includes(sign)) {
       aspectingPlanets.push(planet);
     }
   }
@@ -195,7 +196,12 @@ export const calculateSthira = Effect.fn("astro-ascendant/dasha/calculateSthira"
   for (const candidate of candidates) {
     const placement = yield* placementOf(placements, candidate, "Brahma Graha Bala");
     const [dignity] = inSignStatus(candidate, placement.longitude);
-    if (dignity === undefined) return yield* Effect.die(`Missing dignity for ${candidate}`);
+    if (dignity === undefined) {
+      return yield* DashaCalculationError.make({
+        message: `Missing dignity for ${candidate}`,
+        cause: candidate,
+      });
+    }
     const charaKarakaRoles = (
       Object.entries(karakas.assignments) as Array<[Role, readonly { readonly planet: Planets }[]]>
     )
@@ -228,7 +234,12 @@ export const calculateSthira = Effect.fn("astro-ascendant/dasha/calculateSthira"
       right.naturalStrength - left.naturalStrength,
   );
   const winner = scoredWithExactDegrees[0];
-  if (winner === undefined) return yield* Effect.die("Missing scored Brahma candidate");
+  if (winner === undefined) {
+    return yield* DashaCalculationError.make({
+      message: "Missing scored Brahma candidate",
+      cause: scoredWithExactDegrees,
+    });
+  }
   const candidateScores = scoredWithExactDegrees.map((score): BrahmaCandidateScore => ({
     planet: score.planet,
     sign: score.sign,

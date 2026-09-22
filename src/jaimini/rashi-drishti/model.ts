@@ -11,3 +11,11 @@ export const Result = Schema.Struct({
   targets: Schema.Tuple([Rashis, Rashis, Rashis]),
 });
 export interface Result extends Schema.Schema.Type<typeof Result> {}
+
+export class CalculationError extends Schema.TaggedError<CalculationError>()(
+  "RashiDrishtiCalculationError",
+  {
+    message: Schema.String,
+    cause: Schema.Defect(),
+  },
+) {}

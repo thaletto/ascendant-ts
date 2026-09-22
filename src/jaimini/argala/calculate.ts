@@ -6,7 +6,7 @@ import { Planets, Rashis, type Placements } from "../../chart/model.js";
 import { methods } from "../../provenance.js";
 import { relation } from "./helper.js";
 import type { Reference, Result } from "./model.js";
-import { EvidenceError } from "./model.js";
+import { CalculationError, EvidenceError } from "./model.js";
 
 /**
  * Calculates Jaimini Argala around a supplied sign or Ketu reference. It first
@@ -35,33 +35,41 @@ export const calculate = Effect.fn("astro-ascendant/jaimini/argala/calculate")(f
     byPlanet = HashMap.set(byPlanet, planet, match);
     const sign = signAt(signIndexOf(match.longitude));
     const signOccupants = HashMap.get(occupants, sign);
-    if (Option.isNone(signOccupants)) throw new Error(`Missing occupants for ${sign}`);
+    if (Option.isNone(signOccupants)) {
+      return yield* CalculationError.make({
+        message: `Missing occupants for ${sign}`,
+        cause: sign,
+      });
+    }
     occupants = HashMap.set(occupants, sign, [...signOccupants.value, planet]);
   }
 
   const reverse = reference.kind === "Ketu";
   const ketu = HashMap.get(byPlanet, "Ketu");
-  if (Option.isNone(ketu)) throw new Error("Missing validated Ketu placement");
+  if (Option.isNone(ketu)) {
+    return yield* EvidenceError.make({ placement: "Ketu", expected: 1, actual: 0 });
+  }
   const referenceSign =
     reference.kind === "Sign" ? reference.sign : signAt(signIndexOf(ketu.value.longitude));
   const referenceIndex = RASHIS.indexOf(referenceSign);
+
+  const supporting2 = yield* relation(referenceIndex, 2, occupants, reverse);
+  const supporting4 = yield* relation(referenceIndex, 4, occupants, reverse);
+  const supporting11 = yield* relation(referenceIndex, 11, occupants, reverse);
+  const obstructing12 = yield* relation(referenceIndex, 12, occupants, reverse);
+  const obstructing10 = yield* relation(referenceIndex, 10, occupants, reverse);
+  const obstructing3 = yield* relation(referenceIndex, 3, occupants, reverse);
+  const secondarySupporting = yield* relation(referenceIndex, 5, occupants, reverse);
+  const secondaryObstructing = yield* relation(referenceIndex, 9, occupants, reverse);
 
   return {
     provenance: methods.jaiminiArgala.provenance,
     reference,
     referenceSign,
     direction: reverse ? ("reverse" as const) : ("forward" as const),
-    supporting: [
-      relation(referenceIndex, 2, occupants, reverse),
-      relation(referenceIndex, 4, occupants, reverse),
-      relation(referenceIndex, 11, occupants, reverse),
-    ],
-    obstructing: [
-      relation(referenceIndex, 12, occupants, reverse),
-      relation(referenceIndex, 10, occupants, reverse),
-      relation(referenceIndex, 3, occupants, reverse),
-    ],
-    secondarySupporting: relation(referenceIndex, 5, occupants, reverse),
-    secondaryObstructing: relation(referenceIndex, 9, occupants, reverse),
+    supporting: [supporting2, supporting4, supporting11],
+    obstructing: [obstructing12, obstructing10, obstructing3],
+    secondarySupporting,
+    secondaryObstructing,
   } satisfies Result;
 });

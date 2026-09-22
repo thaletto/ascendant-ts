@@ -45,3 +45,11 @@ export class EvidenceError extends Schema.TaggedError<EvidenceError>()("ArgalaEv
   expected: Schema.Literal(1),
   actual: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
 }) {}
+
+export class CalculationError extends Schema.TaggedError<CalculationError>()(
+  "ArgalaCalculationError",
+  {
+    message: Schema.String,
+    cause: Schema.Defect(),
+  },
+) {}
