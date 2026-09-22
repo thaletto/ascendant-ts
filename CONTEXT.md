@@ -163,3 +163,15 @@ _Avoid_: House division, cusps method
 **Rahu / Ketu**:
 The lunar nodes, grahas that behave like planets in every way except sign ownership: they do not rule a sign.
 _Avoid_: Node, shadow planet, Draco
+
+**Transit event**:
+One exact moment at which a graha crosses a tracked longitude or stations, with its crossing direction and retrograde state.
+_Avoid_: Transit, gochara result, prediction
+
+**Transit search**:
+The time-ordered finding of the next or previous Transit events for one graha from a Located Moment. It resolves moments first; Charts are attached afterwards only when requested.
+_Avoid_: Transit calculation, ingress scan, live ephemeris query
+
+**Sign-ingress**:
+The Transit event at which a graha's sidereal longitude crosses a D1 Rashi boundary at a multiple of thirty degrees.
+_Avoid_: House entry, divisional ingress, transit as a whole

@@ -24,7 +24,7 @@ export interface MethodSpecification extends Schema.Schema.Type<typeof MethodSpe
 export const ChartProjectionProvenance = Schema.Struct({
   school: Schema.Literal("Ascendant"),
   method: Schema.Literal("ascendant-divisional-mapping"),
-  version: Schema.Literal("1"),
+  version: Schema.Literal(1),
 });
 export interface ChartProjectionProvenance extends Schema.Schema.Type<
   typeof ChartProjectionProvenance
@@ -98,13 +98,22 @@ export const SthiraDashaProvenance = Schema.Struct({
 });
 export interface SthiraDashaProvenance extends Schema.Schema.Type<typeof SthiraDashaProvenance> {}
 
+export const TransitSearchProvenance = Schema.Struct({
+  school: Schema.Literal("Ascendant"),
+  method: Schema.Literal("transit-sample-bisect"),
+  version: Schema.Literal(1),
+});
+export interface TransitSearchProvenance extends Schema.Schema.Type<
+  typeof TransitSearchProvenance
+> {}
+
 /**
  * The canonical registry of calculation methods. Results carry the matching
  * `provenance`; this registry supplies the auditable method steps and checks.
  */
 export const methods = {
   chartProjection: {
-    provenance: { school: "Ascendant", method: "ascendant-divisional-mapping", version: "1" },
+    provenance: { school: "Ascendant", method: "ascendant-divisional-mapping", version: 1 },
     steps: [
       { id: "map-longitudes", description: "Map Lagna and planets into the requested division." },
       { id: "build-whole-sign-houses", description: "Build twelve houses from the mapped Lagna." },
@@ -206,6 +215,23 @@ export const methods = {
     verification: [
       "Brahma scorecards expose all candidate scores.",
       "Exact-degree then natural-strength breaks score ties.",
+    ],
+  },
+  transitSearch: {
+    provenance: { school: "Ascendant", method: "transit-sample-bisect", version: 1 },
+    steps: [
+      {
+        id: "sample-coarse",
+        description: "Step per-planet coarse intervals from the located moment.",
+      },
+      {
+        id: "bisect-brackets",
+        description: "Bisect each bracketed crossing to one-minute precision.",
+      },
+    ],
+    verification: [
+      "Every zero-crossing counts in strict time order.",
+      "Exhausted searches fail typed instead of returning short lists.",
     ],
   },
 } as const satisfies Record<string, MethodSpecification>;

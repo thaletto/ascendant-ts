@@ -24,6 +24,7 @@ describe("Astrology method provenance", () => {
       "jaiminiRashiDrishti",
       "jaiminiUpapada",
       "sthiraDasha",
+      "transitSearch",
     ]);
 
     for (const specification of Object.values(Provenance.methods)) {

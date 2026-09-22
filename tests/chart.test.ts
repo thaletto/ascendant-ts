@@ -130,7 +130,7 @@ describe("Chart projections", () => {
         Equal.equals(chart.provenance, {
           school: "Ascendant",
           method: "ascendant-divisional-mapping",
-          version: "1",
+          version: 1,
         }),
       ).toBe(true);
       expect(chart.houses[1]?.lagna?.sign.name).toBe("Aries");

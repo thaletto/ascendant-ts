@@ -9,7 +9,7 @@
 
 Effect-first TypeScript library for sidereal Vedic astrology calculations.
 
-`astro-ascendant` calculates planetary Placements once for a Located Moment, then derives charts, Vimshottari, Chara, and Sthira Dasha timelines, Ashtakavarga, and Jaimini results from that shared calculation. It includes a Swiss Ephemeris adapter for Node.js and Bun, plus a runtime-neutral ephemeris interface for custom adapters.
+`astro-ascendant` calculates planetary Placements once for a Located Moment, then derives charts, Vimshottari, Chara, and Sthira Dasha timelines, Ashtakavarga, Jaimini results, and transit searches from that shared calculation. It includes a Swiss Ephemeris adapter for Node.js and Bun, plus a runtime-neutral ephemeris interface for custom adapters.
 
 ## Installation
 
@@ -23,7 +23,7 @@ The package includes the Swiss Ephemeris adapter dependency, uses ES modules, an
 
 ## Quick start
 
-This example generates a D1 and D9 chart for a birth moment in Bengaluru. `SwissephLayer` supplies the ephemeris implementation, while `DefaultAstroParams` selects Lahiri ayanamsa and Whole Sign houses.
+This example generates a D1 and D9 chart for a birth moment in Bengaluru. `SwissephLayer` supplies the ephemeris implementation, while `DefaultAstroParams` selects Krishnamurti ayanamsa and Placidus houses.
 
 ```typescript
 import { AstroParams, Chart } from "astro-ascendant";
@@ -57,6 +57,7 @@ The package exposes named operations for each calculation surface:
 - **Dasha**: Vimshottari planetary periods plus Jaimini Chara and Sthira sign periods with date queries
 - **Ashtakavarga**: Bhinnashtakavarga, Sarvashtakavarga, reduced BAV, and Shodhya Pinda
 - **Jaimini**: Chara Karakas, Rashi Drishti, Karakamsha, Arudha Pada, Upapada, and Argala
+- **Transits**: next/previous sign ingresses, longitude hits, house-cusp crossings, and retrograde stations per graha
 - **Methodologies**: 39 predefined ayanamsas and 13 house systems
 
 See the [calculation and API reference](docs/reference.md) for derivation workflows, provenance, configuration, supported divisions, and focused package exports. The published [API documentation](https://ascendant-docs.vercel.app) has the complete type surface.

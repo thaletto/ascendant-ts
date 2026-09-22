@@ -17,6 +17,7 @@ import { chartExample } from "./chart.ts";
 import { dashaExample } from "./dasha.ts";
 import { jaiminiExample } from "./jaimini.ts";
 import { savExample } from "./sav.ts";
+import { transitExample } from "./transit.ts";
 
 export interface ExampleInput {
   readonly moment: Moment;
@@ -305,7 +306,7 @@ export const selectInput = Effect.fn("Examples.selectInput")(function* () {
 
 export const runSelectedExample = Effect.fn("Examples.runSelectedExample")(function* () {
   const input = yield* selectInput();
-  const example = yield* Prompt.select<"chart" | "dasha" | "jaimini" | "sav">({
+  const example = yield* Prompt.select<"chart" | "dasha" | "jaimini" | "sav" | "transit">({
     message: "Choose an example to run",
     choices: [
       {
@@ -328,6 +329,11 @@ export const runSelectedExample = Effect.fn("Examples.runSelectedExample")(funct
         description: "Calculate Bhinnashtakavarga and Sarvashtakavarga",
         value: "sav",
       },
+      {
+        title: "Transit",
+        description: "Find the next or previous sign ingresses of a graha",
+        value: "transit",
+      },
     ],
   });
 
@@ -336,6 +342,7 @@ export const runSelectedExample = Effect.fn("Examples.runSelectedExample")(funct
     Match.when("dasha", () => dashaExample(input)),
     Match.when("jaimini", () => jaiminiExample(input)),
     Match.when("sav", () => savExample(input)),
+    Match.when("transit", () => transitExample(input)),
     Match.exhaustive,
   );
   yield* program.pipe(Effect.provide(AstroParams.layer(input.astroParams)));

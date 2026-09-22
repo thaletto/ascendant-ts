@@ -21,7 +21,9 @@ describe("AstroParams", () => {
       Effect.gen(function* () {
         const defaults = yield* AstroParams.AstroParams;
 
-        expect(Equal.equals(defaults, { ayanamsa: "Lahiri", houseSystem: "WholeSign" })).toBe(true);
+        expect(Equal.equals(defaults, { ayanamsa: "Krishnamurti", houseSystem: "Placidus" })).toBe(
+          true,
+        );
       }),
     );
   });
