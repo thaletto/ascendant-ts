@@ -1,5 +1,11 @@
 # astro-ascendant
 
+## 3.2.0
+
+### Minor Changes
+
+- f35447f: Add missing Swiss Ephemeris ayanamsas (IDs 39-46) and default to KrishnamurtiVP291
+
 ## 3.1.0
 
 ### Minor Changes
