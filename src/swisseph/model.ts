@@ -53,7 +53,7 @@ export const CELESTIAL_BODY: Record<CelestialBody, Swisseph.CelestialBody> = {
   Venus: Swisseph.Planet.Venus,
   Jupiter: Swisseph.Planet.Jupiter,
   Saturn: Swisseph.Planet.Saturn,
-  TrueNode: Swisseph.LunarPoint.TrueNode,
+  MeanNode: Swisseph.LunarPoint.MeanNode,
 };
 
 export const HOUSE_SYSTEM: Record<typeof HouseSystem.Type, Swisseph.HouseSystem> = {

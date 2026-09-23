@@ -24,7 +24,7 @@ const PLANET_BODY_MAP = [
   ["Venus", "Venus"],
   ["Jupiter", "Jupiter"],
   ["Saturn", "Saturn"],
-  ["Rahu", "TrueNode"],
+  ["Rahu", "MeanNode"],
 ] as const satisfies readonly (readonly [Planets, CelestialBody])[];
 
 const validateInput = Effect.fn("astro-ascendant/chart/validateInput")(function* (

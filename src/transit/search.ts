@@ -35,8 +35,8 @@ const PLANET_BODY: Record<Planets, CelestialBody> = {
   Jupiter: "Jupiter",
   Venus: "Venus",
   Saturn: "Saturn",
-  Rahu: "TrueNode",
-  Ketu: "TrueNode",
+  Rahu: "MeanNode",
+  Ketu: "MeanNode",
 };
 
 export const COARSE_STEP_DAYS: Record<Planets, number> = {
