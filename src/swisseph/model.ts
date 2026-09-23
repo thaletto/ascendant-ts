@@ -43,6 +43,15 @@ export const SIDEREAL_MODE: Record<typeof Ayanamsa.Type, Swisseph.SiderealMode> 
   DhruvaGalCenterMulaWilhelm: Swisseph.SiderealMode.DhruvaGalCenterMulaWilhelm,
   Aryabhata522: Swisseph.SiderealMode.Aryabhata522,
   BabylBritton: Swisseph.SiderealMode.BabylBritton,
+  // IDs 39-46: supported natively, missing from @swisseph/node TS enum
+  TrueSheoran: 39 as Swisseph.SiderealMode,
+  GalacticCenterCochrane: 40 as Swisseph.SiderealMode,
+  GalacticEquatorFiorenza: 41 as Swisseph.SiderealMode,
+  ValensMoon: 42 as Swisseph.SiderealMode,
+  Lahiri1940: 43 as Swisseph.SiderealMode,
+  LahiriVP285: 44 as Swisseph.SiderealMode,
+  KrishnamurtiVP291: 45 as Swisseph.SiderealMode,
+  LahiriICRC: 46 as Swisseph.SiderealMode,
 };
 
 export const CELESTIAL_BODY: Record<CelestialBody, Swisseph.CelestialBody> = {

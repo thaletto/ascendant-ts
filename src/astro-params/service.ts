@@ -15,7 +15,7 @@ export function layer(options: Options) {
 }
 
 const defaultLayer = layer({
-  ayanamsa: "Krishnamurti",
+  ayanamsa: "KrishnamurtiVP291",
   houseSystem: "Placidus",
 });
 

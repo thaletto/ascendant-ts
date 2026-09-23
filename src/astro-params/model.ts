@@ -1,5 +1,7 @@
 import { Schema } from "effect";
 
+// Ordered by Swiss Ephemeris SE_SIDM numeric ID (0-46).
+// Note: this is catalog order, not recency — e.g. J2000 (18) is modern but early in the list.
 export const Ayanamsa = Schema.Literals([
   "FaganBradley",
   "Lahiri",
@@ -40,6 +42,14 @@ export const Ayanamsa = Schema.Literals([
   "DhruvaGalCenterMulaWilhelm",
   "Aryabhata522",
   "BabylBritton",
+  "TrueSheoran",
+  "GalacticCenterCochrane",
+  "GalacticEquatorFiorenza",
+  "ValensMoon",
+  "Lahiri1940",
+  "LahiriVP285",
+  "KrishnamurtiVP291",
+  "LahiriICRC",
 ]);
 
 export const HouseSystem = Schema.Literals([
