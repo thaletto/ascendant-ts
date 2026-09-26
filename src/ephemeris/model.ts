@@ -16,6 +16,7 @@ export const CelestialBody = Schema.Literals([
   "Venus",
   "Jupiter",
   "Saturn",
+  "TrueNode",
   "MeanNode",
 ]);
 
