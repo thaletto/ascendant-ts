@@ -14,17 +14,15 @@ import {
 import { Ephemeris } from "../src/ephemeris/service.js";
 import * as Swisseph from "../src/swisseph/index.js";
 import * as Transit from "../src/transit/index.js";
+import { planetaryPosition, wholeSignHouses } from "./support/ephemeris.js";
+import { fixtures } from "./support/fixtures.js";
 
 const DAY_MS = 86_400_000;
 const FROM_ISO = "2026-01-01T00:00:00.000Z";
 const JD0 = Date.parse(FROM_ISO) / DAY_MS + Transit.JD_UNIX_EPOCH;
 
 function locatedMoment(): Chart.LocatedMoment {
-  return Chart.LocatedMoment.make({
-    moment: Chart.Moment.make({ date: DateTime.makeUnsafe(FROM_ISO) }),
-    latitude: 12.9716,
-    longitude: 77.5946,
-  });
+  return fixtures.locatedMoment(FROM_ISO);
 }
 
 interface MotionSegment {
@@ -66,15 +64,7 @@ function fakeEphemerisLayer(
     _ayanamsa: typeof Ayanamsa.Type,
   ): Effect.Effect<PlanetaryPosition, never> => {
     const { longitude, speed } = motionAt(base, JD0, segments, Number(julianDay));
-    return Effect.succeed({
-      longitude: Transit.normalize360(longitude),
-      latitude: 0,
-      distance: 1,
-      longitudeSpeed: speed,
-      latitudeSpeed: 0,
-      distanceSpeed: 0,
-      flags: 0,
-    });
+    return Effect.succeed(planetaryPosition(Transit.normalize360(longitude), speed));
   };
   const calculateHouses = (
     _julianDay: JulianDay,
@@ -82,19 +72,7 @@ function fakeEphemerisLayer(
     _longitude: number,
     houseSystem: typeof HouseSystem.Type,
     _ayanamsa: typeof Ayanamsa.Type,
-  ): Effect.Effect<HouseData, never> =>
-    Effect.succeed({
-      cusps: [...cusps],
-      ascendant: 0,
-      mc: 270,
-      armc: 270,
-      vertex: 90,
-      equatorialAscendant: 0,
-      coAscendant1: 0,
-      coAscendant2: 0,
-      polarAscendant: 0,
-      houseSystem,
-    });
+  ): Effect.Effect<HouseData, never> => Effect.succeed(wholeSignHouses(cusps, houseSystem));
   return Layer.succeed(
     Ephemeris,
     Ephemeris.of({ dateToJulianDay, calculatePosition, calculateHouses }),
