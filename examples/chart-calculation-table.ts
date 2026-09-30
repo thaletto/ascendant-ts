@@ -1,7 +1,7 @@
 import { Console, Effect, Record as EffectRecord } from "effect";
 
-import { nakshatraOf, subLordOf } from "../src/chart/helper.ts";
-import type { ChartCalculation, Chart, Placements } from "../src/chart/index.ts";
+import { starOf, subLordOf } from "../src/chart/helper.ts";
+import type { ChartCalculation, Chart } from "../src/chart/index.ts";
 
 type TableValue = string | number | boolean;
 type TableRow = Readonly<Record<string, TableValue>>;
@@ -14,39 +14,23 @@ function displayOptionalLongitude(longitude: number | undefined): TableValue {
   return longitude === undefined ? "—" : displayLongitude(longitude);
 }
 
-function placementRows(placements: Placements): readonly TableRow[] {
-  return [
-    {
-      Point: placements.lagna.name,
-      Longitude: displayLongitude(placements.lagna.longitude),
-      Nakshatra: placements.lagna.nakshatra.name,
-      Pada: placements.lagna.nakshatra.pada,
-      Retrograde: "—",
-    },
-    ...placements.planets.map((planet) => ({
-      Point: planet.name,
-      Longitude: displayLongitude(planet.longitude),
-      Nakshatra: planet.nakshatra.name,
-      Pada: planet.nakshatra.pada,
-      Retrograde: planet.is_retrograde,
-    })),
-  ];
-}
+const houseRows = Effect.fn("Examples.houseRows")(function* (chart: Chart) {
+  const rows: TableRow[] = [];
 
-function houseRows(chart: Chart): readonly TableRow[] {
-  return EffectRecord.toEntries(chart.houses).flatMap(([houseNumber, houseData]) => {
+  for (const [houseNumber, houseData] of EffectRecord.toEntries(chart.houses)) {
     const house = Number(houseNumber);
-    const rows: TableRow[] = [];
+    const cusp = displayOptionalLongitude(houseData.cusp);
+    const before = rows.length;
 
     if (houseData.lagna !== null) {
       const lagna = houseData.lagna;
       rows.push({
         House: house,
-        Cusp: displayOptionalLongitude(houseData.cusp),
+        Cusp: cusp,
         Point: lagna.name,
         "Sign Lord": lagna.sign.lord,
-        "Star Lord": nakshatraOf(lagna.longitude).lord,
-        "Sub Lord": subLordOf(lagna.longitude),
+        "Star Lord": (yield* starOf(lagna.longitude)).lord,
+        "Sub Lord": yield* subLordOf(lagna.longitude),
         Longitude: displayLongitude(lagna.longitude),
         Degree: displayLongitude(lagna.degree),
         Sign: lagna.sign.name,
@@ -55,60 +39,41 @@ function houseRows(chart: Chart): readonly TableRow[] {
       });
     }
 
-    rows.push(
-      ...houseData.planets.map((planet) => ({
+    for (const planet of houseData.planets) {
+      rows.push({
         House: house,
-        Cusp: displayOptionalLongitude(houseData.cusp),
+        Cusp: cusp,
         Point: planet.name,
         "Sign Lord": planet.sign.lord,
-        "Star Lord": nakshatraOf(planet.longitude).lord,
-        "Sub Lord": subLordOf(planet.longitude),
+        "Star Lord": (yield* starOf(planet.longitude)).lord,
+        "Sub Lord": yield* subLordOf(planet.longitude),
         Longitude: displayLongitude(planet.longitude),
         Degree: displayLongitude(planet.degree),
         Sign: planet.sign.name,
         Dignity: planet.in_sign.join(", ") || "—",
         Retrograde: planet.is_retrograde,
-      })),
-    );
+      });
+    }
 
-    return rows.length > 0
-      ? rows
-      : [
-          {
-            House: house,
-            Cusp: displayOptionalLongitude(houseData.cusp),
-            Point: "—",
-            "Sign Lord": houseData.signLord ?? "—",
-            "Star Lord": houseData.starLord ?? "—",
-            "Sub Lord": houseData.subLord ?? "—",
-            Longitude: "—",
-            Degree: "—",
-            Sign: "—",
-            Dignity: "—",
-            Retrograde: "—",
-          },
-        ];
-  });
-}
+    if (rows.length === before) {
+      rows.push({
+        House: house,
+        Cusp: cusp,
+        Point: "—",
+        "Sign Lord": houseData.signLord ?? "—",
+        "Star Lord": houseData.starLord ?? "—",
+        "Sub Lord": houseData.subLord ?? "—",
+        Longitude: "—",
+        Degree: "—",
+        Sign: "—",
+        Dignity: "—",
+        Retrograde: "—",
+      });
+    }
+  }
 
-function angleRows(chart: Chart): readonly TableRow[] {
-  const angles = chart.angles;
-  if (angles === undefined) return [];
-
-  return [
-    { Angle: "Ascendant", Longitude: displayLongitude(angles.ascendant) },
-    { Angle: "MC", Longitude: displayLongitude(angles.mc) },
-    { Angle: "ARMC", Longitude: displayLongitude(angles.armc) },
-    { Angle: "Vertex", Longitude: displayLongitude(angles.vertex) },
-    {
-      Angle: "Equatorial Ascendant",
-      Longitude: displayLongitude(angles.equatorialAscendant),
-    },
-    { Angle: "Co-Ascendant 1", Longitude: displayLongitude(angles.coAscendant1) },
-    { Angle: "Co-Ascendant 2", Longitude: displayLongitude(angles.coAscendant2) },
-    { Angle: "Polar Ascendant", Longitude: displayLongitude(angles.polarAscendant) },
-  ];
-}
+  return rows;
+});
 
 function significationRows(chart: Chart): readonly TableRow[] {
   return EffectRecord.toEntries(chart.houses).map(([houseNumber, houseData]) => ({
@@ -145,11 +110,16 @@ function houseSignificatorRows(chart: Chart): readonly TableRow[] {
   }));
 }
 
+export interface PrintChartOptions {
+  readonly includeSignificators?: boolean;
+  readonly includeRulingPlanets?: boolean;
+}
+
 export const printChartCalculation = Effect.fn("Examples.printChartCalculation")(function* (
   calculation: ChartCalculation,
+  options: PrintChartOptions = {},
 ) {
-  yield* Console.log("Placements");
-  yield* Console.table(placementRows(calculation.placements));
+  const { includeSignificators = true, includeRulingPlanets = true } = options;
 
   for (const chart of calculation.charts) {
     const division = `D${chart.division}`;
@@ -159,26 +129,27 @@ export const printChartCalculation = Effect.fn("Examples.printChartCalculation")
     yield* Console.log(
       `Chart ${division} (${calculation.astroParams.houseSystem}, ${calculation.astroParams.ayanamsa})`,
     );
-    yield* Console.table(houseRows(chart));
+    yield* Console.table(yield* houseRows(chart));
 
-    yield* Console.log("Chart Angles");
-    yield* Console.table(angleRows(chart));
+    if (includeSignificators) {
+      yield* Console.log("House Significations");
+      yield* Console.table(significationRows(chart));
 
-    yield* Console.log("House Significations");
-    yield* Console.table(significationRows(chart));
+      yield* Console.log("Planet Significations");
+      yield* Console.table(planetSignificationRows(chart));
 
-    yield* Console.log("Planet Significations");
-    yield* Console.table(planetSignificationRows(chart));
+      yield* Console.log("House Significators");
+      yield* Console.table(houseSignificatorRows(chart));
+    }
 
-    yield* Console.log("House Significators");
-    yield* Console.table(houseSignificatorRows(chart));
-
-    yield* Console.log("Ruling Planets");
-    yield* Console.table(
-      (chart.rulingPlanets ?? []).map((planet, index) => ({
-        Rank: index + 1,
-        Planet: planet,
-      })),
-    );
+    if (includeRulingPlanets) {
+      yield* Console.log("Ruling Planets");
+      yield* Console.table(
+        (chart.rulingPlanets ?? []).map((planet, index) => ({
+          Rank: index + 1,
+          Planet: planet,
+        })),
+      );
+    }
   }
 });
