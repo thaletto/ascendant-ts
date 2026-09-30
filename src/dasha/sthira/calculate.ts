@@ -1,119 +1,75 @@
-import { Effect } from "effect";
+import { Array as Arr, Effect, HashSet, pipe } from "effect";
 
 import { inSignStatus } from "../../chart/helper.js";
-import { SIGN_LORDS } from "../../chart/internal/constants.js";
-import { signAt, signIndexOf } from "../../chart/internal/position.js";
+import { RASHIS, SIGN_LORDS } from "../../chart/internal/constants.js";
+import { signAt } from "../../chart/internal/position.js";
 import type { Moment, Placements, Planets, Rashis } from "../../chart/model.js";
+import { calculate as calculateCharaKarakas } from "../../jaimini/chara-karakas/calculate.js";
 import { compareExactDegrees, exactDegreeOf } from "../../jaimini/chara-karakas/helper.js";
-import * as CharaKarakas from "../../jaimini/chara-karakas/index.js";
-import type { ClassicalPlanets, ExactDegree, Role } from "../../jaimini/chara-karakas/model.js";
+import {
+  ClassicalPlanets,
+  type ExactDegree,
+  type Role,
+} from "../../jaimini/chara-karakas/model.js";
 import { targetsOf } from "../../jaimini/rashi-drishti/helper.js";
-import { methods } from "../../provenance.js";
+import { sthiraDasha } from "../../provenance.js";
+import { Zodiac } from "../../utils/index.js";
+import { indexOfSign, signIndexOf } from "../../utils/position.js";
 import { DashaCalculationError, DashaEvidenceError } from "../error.js";
-import { validateUniquePlanetPlacements } from "../evidence.js";
-import type { BrahmaCandidateScore, EligibleBrahmaPlanet, RashiBala } from "../model.js";
+import { placementOf, validateRequiredPlacements } from "../evidence.js";
+import type {
+  BrahmaCandidateScore,
+  EligibleBrahmaPlanet,
+  RashiBala,
+  RashiMahaDasha,
+} from "../model.js";
 import { SthiraDasha } from "../model.js";
-import { RashiInternal, rashiIndex } from "../rashi-internal.js";
+import { RashiInternal } from "../rashi-internal.js";
+import {
+  CHARA_BALA,
+  DIGNITY_BALA,
+  ELIGIBLE_BRAHMA_PLANETS,
+  KARAKA_BALA,
+  KENDRADI_BALA,
+  NATURAL_STRENGTH,
+  SIGN_DURATION,
+} from "./constants.js";
 
-const ELIGIBLE_BRAHMA_PLANETS = new Set<Planets>([
-  "Sun",
-  "Moon",
-  "Mars",
-  "Mercury",
-  "Jupiter",
-  "Venus",
-]);
+type Karakas = Effect.Success<ReturnType<typeof calculateCharaKarakas>>;
+type Scored = BrahmaCandidateScore & { readonly exactDegree: ExactDegree };
 
-const DIGNITY_BALA = {
-  EXALTED: 60,
-  MOOLA_TRIKONA: 45,
-  OWN: 30,
-  FRIEND: 22.5,
-  NEUTRAL: 15,
-  ENEMY: 7.5,
-  DEBILITATED: 3.75,
-} as const;
-
-const KARAKA_BALA: Record<Role, number> = {
-  Atmakaraka: 60,
-  Amatyakaraka: 45,
-  Bhratrikaraka: 30,
-  Matrikaraka: 22.5,
-  Putrakaraka: 15,
-  Gnatikaraka: 7.5,
-  Darakaraka: 3.75,
-};
-
-const NATURAL_STRENGTH: Record<ClassicalPlanets, number> = {
-  Sun: 7,
-  Moon: 6,
-  Venus: 5,
-  Jupiter: 4,
-  Mercury: 3,
-  Mars: 2,
-  Saturn: 1,
-};
-
-const placementOf = Effect.fn("Dasha.brahmaPlacementOf")(function* (
-  placements: Placements,
-  planet: Planets,
-  context: string,
-) {
-  const matches = placements.planets.filter((placement) => placement.name === planet);
-  const match = matches[0];
-  if (matches.length !== 1 || match === undefined) {
-    return yield* DashaEvidenceError.make({
-      placement: planet,
-      expected: 1,
-      actual: matches.length,
-      context,
-    });
-  }
-  return match;
-});
-
+/** Brahma must be a luminary or a benefic/malefic classical planet — never Saturn, Rahu, or Ketu. */
 function isEligibleBrahma(planet: Planets): planet is EligibleBrahmaPlanet {
-  return ELIGIBLE_BRAHMA_PLANETS.has(planet);
+  return HashSet.has(ELIGIBLE_BRAHMA_PLANETS, planet as EligibleBrahmaPlanet);
 }
 
-function charaBalaOf(sign: Rashis): number {
-  const modality = rashiIndex(sign) % 3;
-  return modality === 0 ? 15 : modality === 1 ? 30 : 60;
-}
+/** Orders Brahma contenders by total bala, then exact degree, then natural strength — all descending. */
 
-function kendradiBalaOf(house: number): number {
-  const remainder = (house - 1) % 3;
-  return remainder === 0 ? 60 : remainder === 1 ? 30 : 15;
-}
+const byStrength = (left: Scored, right: Scored): number =>
+  right.total - left.total ||
+  compareExactDegrees(right.exactDegree, left.exactDegree) ||
+  right.naturalStrength - left.naturalStrength;
 
-function durationOf(sign: Rashis): 7 | 8 | 9 {
-  const modality = rashiIndex(sign) % 3;
-  return modality === 0 ? 7 : modality === 1 ? 8 : 9;
-}
-
-/**
- * Computes the B.V. Raman/Koch Rashi Bala used only to choose the Brahma
- * reference between Lagna and the seventh sign: modality, occupancy, and
- * Jaimini Rashi Drishti from the lord, Jupiter, and Mercury.
- */
-const rashiBalaOf = Effect.fn("Dasha.rashiBalaOf")(function* (
+/** Rashi strength as Chara Bala (movability) + Sthira Bala (occupancy) + Drishti Bala (aspect). */
+const rashiBalaOf = Effect.fn("astro-ascendant/dasha/sthira/rashiBalaOf")(function* (
   placements: Placements,
   sign: Rashis,
 ) {
-  const lord = SIGN_LORDS[sign];
-  const aspectingPlanets: Planets[] = [];
-  for (const planet of [lord, "Jupiter", "Mercury"] as const) {
-    if (aspectingPlanets.includes(planet)) continue;
-    const placement = yield* placementOf(placements, planet, "Rashi Bala drishti");
-    const aspecting = yield* targetsOf(signAt(signIndexOf(placement.longitude)));
-    if (aspecting.includes(sign)) {
-      aspectingPlanets.push(planet);
-    }
-  }
-  const planetCount = placements.planets.filter(
-    (placement) => signIndexOf(placement.longitude) === rashiIndex(sign),
-  ).length;
-  const charaBala = charaBalaOf(sign);
+  const signIdx = yield* indexOfSign(sign);
+  // Dedupe handles the case where the lord is Jupiter or Mercury
+  const aspectingPlanets = yield* Effect.filter(
+    Arr.dedupe([SIGN_LORDS[sign], "Jupiter", "Mercury"] as const),
+    (planet) =>
+      placementOf(placements, planet, "Rashi Bala drishti").pipe(
+        Effect.flatMap((found) => signAt(found.longitude)),
+        Effect.flatMap((planetSign) => targetsOf(planetSign)),
+        Effect.map((targets) => targets.includes(sign)),
+      ),
+  );
+  const planetCount = (yield* Effect.filter(placements.planets, ({ longitude }) =>
+    signIndexOf(longitude).pipe(Effect.map((index) => (index as number) === signIdx)),
+  )).length;
+  const charaBala = CHARA_BALA[sign];
   const sthiraBala = planetCount === 0 ? 0 : 45 + 15 * planetCount;
   const drishtiBala = aspectingPlanets.length * 60;
   return {
@@ -122,63 +78,61 @@ const rashiBalaOf = Effect.fn("Dasha.rashiBalaOf")(function* (
     sthiraBala,
     drishtiBala,
     planetCount,
-    aspectingPlanets,
+    aspectingPlanets: [...aspectingPlanets],
     total: charaBala + sthiraBala + drishtiBala,
   } satisfies RashiBala;
 });
 
-/**
- * Builds the deterministic Sthira Dasha and its reproducible Brahma scorecard.
- * It selects the stronger of Lagna and its seventh sign, scores eligible sixth,
- * eighth, and twelfth lords by dignity, Chara Karaka, and Kendradi Bala, then
- * resolves equal scores by exact degree and natural strength. Mahadashas begin
- * from Brahma's sign and use the fixed 7/8/9-year modality durations.
- */
-export const calculateSthira = Effect.fn("astro-ascendant/dasha/calculateSthira")(function* (
-  moment: Moment,
+/** Picks the stronger of the Lagna and 7th signs as the Brahma reference; Lagna wins ties. */
+const referenceOf = Effect.fn("astro-ascendant/dasha/sthira/referenceOf")(function* (
   placements: Placements,
 ) {
-  yield* validateUniquePlanetPlacements(placements, "Sthira Dasha strength");
-  const lagnaSignIndex = signIndexOf(placements.lagna.longitude);
-  const lagnaSign = signAt(lagnaSignIndex);
-  const seventhSign = signAt(lagnaSignIndex + 6);
-  const lagnaRashiBala = yield* rashiBalaOf(placements, lagnaSign);
-  const seventhRashiBala = yield* rashiBalaOf(placements, seventhSign);
-  const referenceSign = lagnaRashiBala.total >= seventhRashiBala.total ? lagnaSign : seventhSign;
+  const lagnaSign = yield* signAt(placements.lagna.longitude);
+  const seventhSign = Arr.getUnsafe(RASHIS, Zodiac.wrapIndex((yield* indexOfSign(lagnaSign)) + 6));
+  const [lagnaRashiBala, seventhRashiBala] = yield* Effect.all([
+    rashiBalaOf(placements, lagnaSign),
+    rashiBalaOf(placements, seventhSign),
+  ]);
+  return {
+    lagnaRashiBala,
+    seventhRashiBala,
+    referenceSign: lagnaRashiBala.total >= seventhRashiBala.total ? lagnaSign : seventhSign,
+  };
+});
 
-  const rawCandidates = [5, 7, 11].map(
-    (offset) => SIGN_LORDS[signAt(rashiIndex(referenceSign) + offset)],
+/** Lords of the 5th, 7th, and 11th from the reference sign, filtered to eligible Brahma planets and deduped. */
+const candidatesOf = Effect.fn("astro-ascendant/dasha/sthira/candidatesOf")(function* (
+  referenceSign: Rashis,
+) {
+  const start = yield* indexOfSign(referenceSign);
+  return pipe(
+    [5, 7, 11],
+    Arr.map((offset) => SIGN_LORDS[Arr.getUnsafe(RASHIS, Zodiac.wrapIndex(start + offset))]),
+    Arr.filter((candidate) => isEligibleBrahma(candidate)),
+    Arr.dedupe,
   );
-  const candidates = rawCandidates
-    .filter(isEligibleBrahma)
-    .filter((candidate, index, values) => values.indexOf(candidate) === index);
-  const firstCandidate = candidates[0];
-  if (firstCandidate === undefined) {
-    return yield* DashaEvidenceError.make({
-      placement: "Lagna",
-      expected: 1,
-      actual: 0,
-      context: "No eligible Brahma candidates remain after excluding Saturn, Rahu, and Ketu",
-    });
-  }
+});
 
-  const karakas = yield* CharaKarakas.calculate(placements).pipe(
-    Effect.mapError((error) => {
-      if (error._tag === "CharaKarakasEvidenceError") {
-        return DashaEvidenceError.make({
-          placement: error.placement,
-          expected: 1,
-          actual: error.actual,
-          context: "Brahma Chara Karaka Bala",
-        });
-      }
-      return DashaEvidenceError.make({
-        placement: "Lagna",
-        expected: 1,
-        actual: 0,
-        context: `Brahma Chara Karaka Bala: ${error.message}`,
-      });
-    }),
+/** Chara Karaka assignments plus the resolved Atmakaraka and its placement for Kendradi Bala. */
+const karakasOf = Effect.fn("astro-ascendant/dasha/sthira/karakasOf")(function* (
+  placements: Placements,
+) {
+  const karakas = yield* calculateCharaKarakas(placements).pipe(
+    Effect.mapError((error) =>
+      error._tag === "CharaKarakasEvidenceError"
+        ? DashaEvidenceError.make({
+            placement: error.placement,
+            expected: 1,
+            actual: error.actual,
+            context: "Brahma Chara Karaka Bala",
+          })
+        : DashaEvidenceError.make({
+            placement: "Lagna",
+            expected: 1,
+            actual: 0,
+            context: `Brahma Chara Karaka Bala: ${error.message}`,
+          }),
+    ),
   );
   const atmakaraka = karakas.assignments.Atmakaraka.reduce((strongest, holder) =>
     NATURAL_STRENGTH[holder.planet] > NATURAL_STRENGTH[strongest.planet] ? holder : strongest,
@@ -188,90 +142,131 @@ export const calculateSthira = Effect.fn("astro-ascendant/dasha/calculateSthira"
     atmakaraka.planet,
     "Brahma Kendradi Bala Atmakaraka",
   );
-  const atmakarakaSignIndex = signIndexOf(atmakarakaPlacement.longitude);
+  const atmakarakaSignIndex = yield* signIndexOf(atmakarakaPlacement.longitude);
+  const atmakarakaSign = yield* signAt(atmakarakaPlacement.longitude);
+  return { karakas, atmakaraka, atmakarakaSign, atmakarakaSignIndex };
+});
 
-  const scoredWithExactDegrees: Array<
-    BrahmaCandidateScore & { readonly exactDegree: ExactDegree }
-  > = [];
-  for (const candidate of candidates) {
-    const placement = yield* placementOf(placements, candidate, "Brahma Graha Bala");
-    const [dignity] = inSignStatus(candidate, placement.longitude);
-    if (dignity === undefined) {
-      return yield* DashaCalculationError.make({
-        message: `Missing dignity for ${candidate}`,
-        cause: candidate,
-      });
-    }
-    const charaKarakaRoles = (
-      Object.entries(karakas.assignments) as Array<[Role, readonly { readonly planet: Planets }[]]>
-    )
-      .filter(([, holders]) => holders.some((holder) => holder.planet === candidate))
-      .map(([role]) => role);
-    const charaKarakaBala = Math.max(...charaKarakaRoles.map((role) => KARAKA_BALA[role]));
-    const signIndex = signIndexOf(placement.longitude);
-    const kendradiHouseFromAtmakaraka = ((signIndex - atmakarakaSignIndex + 12) % 12) + 1;
-    const kendradiBala = kendradiBalaOf(kendradiHouseFromAtmakaraka);
-    const exactDegree = yield* exactDegreeOf(placement.longitude);
-    scoredWithExactDegrees.push({
-      planet: candidate,
-      sign: signAt(signIndex),
-      dignity,
-      dignityBala: DIGNITY_BALA[dignity],
-      charaKarakaRoles,
-      charaKarakaBala,
-      kendradiHouseFromAtmakaraka,
-      kendradiBala,
-      exactDegreeWithinSign: exactDegree.value,
-      naturalStrength: NATURAL_STRENGTH[candidate],
-      total: DIGNITY_BALA[dignity] + charaKarakaBala + kendradiBala,
-      exactDegree,
+/** Scores one Brahma contender on dignity, Chara Karaka, and Kendradi-from-Atmakaraka balas. */
+const scoreCandidate = Effect.fn("astro-ascendant/dasha/sthira/scoreCandidate")(function* (
+  candidate: EligibleBrahmaPlanet,
+  placements: Placements,
+  karakas: Karakas,
+  atmakarakaSignIndex: Zodiac.RashiIndex,
+) {
+  const placement = yield* placementOf(placements, candidate, "Brahma Graha Bala");
+  const [dignity] = inSignStatus(candidate, placement.longitude);
+  if (dignity === undefined) {
+    return yield* DashaCalculationError.make({
+      message: `Missing dignity for ${candidate}`,
+      cause: candidate,
     });
   }
-  scoredWithExactDegrees.sort(
-    (left, right) =>
-      right.total - left.total ||
-      compareExactDegrees(right.exactDegree, left.exactDegree) ||
-      right.naturalStrength - left.naturalStrength,
+  const charaKarakaRoles = pipe(
+    Object.entries(karakas.assignments) as Array<
+      [Role, ReadonlyArray<{ readonly planet: Planets }>]
+    >,
+    Arr.filter(([, holders]) => holders.some((holder) => holder.planet === candidate)),
+    Arr.map(([role]) => role),
   );
-  const winner = scoredWithExactDegrees[0];
+  const charaKarakaBala = Math.max(...charaKarakaRoles.map((role) => KARAKA_BALA[role]));
+  const signIndex = yield* signIndexOf(placement.longitude);
+  const kendradiHouseFromAtmakaraka = Zodiac.houseDistance(atmakarakaSignIndex, signIndex);
+  const kendradiBala = KENDRADI_BALA[kendradiHouseFromAtmakaraka];
+  const exactDegree = yield* exactDegreeOf(placement.longitude);
+  const sign = yield* signAt(placement.longitude);
+  return {
+    planet: candidate,
+    sign,
+    dignity,
+    dignityBala: DIGNITY_BALA[dignity],
+    charaKarakaRoles,
+    charaKarakaBala,
+    kendradiHouseFromAtmakaraka,
+    kendradiBala,
+    exactDegreeWithinSign: exactDegree.value,
+    naturalStrength: NATURAL_STRENGTH[candidate],
+    total: DIGNITY_BALA[dignity] + charaKarakaBala + kendradiBala,
+    exactDegree,
+  } satisfies Scored;
+});
+
+/** Scores every contender, ranks by strength, and returns the winner with its selection record. */
+const scoredOf = Effect.fn("astro-ascendant/dasha/sthira/scoredOf")(function* (
+  candidates: Array<EligibleBrahmaPlanet>,
+  placements: Placements,
+  karakas: Karakas,
+  atmakarakaSignIndex: Zodiac.RashiIndex,
+) {
+  if (candidates.length === 0) {
+    return yield* DashaEvidenceError.make({
+      placement: "Lagna",
+      expected: 1,
+      actual: 0,
+      context: "No eligible Brahma candidates remain after excluding Saturn, Rahu, and Ketu",
+    });
+  }
+  const [winner, ...rest] = pipe(
+    yield* Effect.forEach(candidates, (candidate) =>
+      scoreCandidate(candidate, placements, karakas, atmakarakaSignIndex),
+    ),
+    (scored) => [...scored].sort(byStrength),
+  );
   if (winner === undefined) {
     return yield* DashaCalculationError.make({
       message: "Missing scored Brahma candidate",
-      cause: scoredWithExactDegrees,
+      cause: candidates,
     });
   }
-  const candidateScores = scoredWithExactDegrees.map((score): BrahmaCandidateScore => ({
-    planet: score.planet,
-    sign: score.sign,
-    dignity: score.dignity,
-    dignityBala: score.dignityBala,
-    charaKarakaRoles: score.charaKarakaRoles,
-    charaKarakaBala: score.charaKarakaBala,
-    kendradiHouseFromAtmakaraka: score.kendradiHouseFromAtmakaraka,
-    kendradiBala: score.kendradiBala,
-    exactDegreeWithinSign: score.exactDegreeWithinSign,
-    naturalStrength: score.naturalStrength,
-    total: score.total,
-  }));
+  return {
+    winner,
+    candidateScores: pipe(
+      [winner, ...rest],
+      Arr.map(({ exactDegree: _dropped, ...score }): BrahmaCandidateScore => score),
+    ),
+  };
+});
 
-  const brahmaSignIndex = rashiIndex(winner.sign);
-  const sequence = RashiInternal.sequenceFrom(brahmaSignIndex, 1);
-  const mahadashas = [];
-  let mahadashaStart = moment.date;
-  for (const mahadasha of sequence) {
-    const period = RashiInternal.makeRashiMahaDasha(
-      mahadasha,
-      mahadashaStart,
-      durationOf(mahadasha),
-      RashiInternal.sequenceFrom(rashiIndex(mahadasha), 1),
-    );
-    mahadashas.push(period);
-    mahadashaStart = period.end;
-  }
+/** Builds the twelve Rashi Mahadashas from the Brahma sign onward, each lasting its sign duration. */
+const mahadashasFrom = Effect.fn("astro-ascendant/dasha/sthira/mahadashasFrom")(function* (
+  winnerSign: Rashis,
+  start: Moment["date"],
+) {
+  const startIndex = yield* indexOfSign(winnerSign);
+  return pipe(
+    Arr.range(0, RASHIS.length - 1),
+    Arr.map((offset) => Zodiac.wrapIndex(startIndex + offset)),
+    Arr.reduce({ start, periods: [] as Array<RashiMahaDasha> }, ({ start, periods }, index) => {
+      const mahadasha = Arr.getUnsafe(RASHIS, index);
+      const period = RashiInternal.makeRashiMahaDasha(
+        mahadasha,
+        start,
+        SIGN_DURATION[mahadasha],
+        RashiInternal.sequenceFrom(index, 1),
+      );
+      return { start: period.end, periods: [...periods, period] };
+    }),
+    ({ periods }) => periods,
+  );
+});
 
+/** Calculates the Sthira Dasha: selects Brahma by Graha strength and lays out its Rashi Mahadashas. */
+export const calculateSthira = Effect.fn("astro-ascendant/dasha/sthira/calculateSthira")(function* (
+  moment: Moment,
+  placements: Placements,
+) {
+  yield* validateRequiredPlacements(placements, ClassicalPlanets.literals, "Sthira Dasha strength");
+  const { lagnaRashiBala, seventhRashiBala, referenceSign } = yield* referenceOf(placements);
+  const { karakas, atmakaraka, atmakarakaSign, atmakarakaSignIndex } = yield* karakasOf(placements);
+  const { winner, candidateScores } = yield* scoredOf(
+    yield* candidatesOf(referenceSign),
+    placements,
+    karakas,
+    atmakarakaSignIndex,
+  );
   return SthiraDasha.make({
     system: "Sthira",
-    provenance: methods.sthiraDasha.provenance,
+    provenance: sthiraDasha.provenance,
     brahma: {
       planet: winner.planet,
       sign: winner.sign,
@@ -282,7 +277,7 @@ export const calculateSthira = Effect.fn("astro-ascendant/dasha/calculateSthira"
         referenceTieBreak: "lagna-on-equal-rashi-bala",
         atmakaraka: {
           planet: atmakaraka.planet,
-          sign: signAt(atmakarakaSignIndex),
+          sign: atmakarakaSign,
           resolution:
             karakas.assignments.Atmakaraka.length === 1
               ? "highest-exact-degree"
@@ -291,6 +286,6 @@ export const calculateSthira = Effect.fn("astro-ascendant/dasha/calculateSthira"
         candidates: [candidateScores[0]!, ...candidateScores.slice(1)],
       },
     },
-    mahadashas,
+    mahadashas: yield* mahadashasFrom(winner.sign, moment.date),
   });
 });
