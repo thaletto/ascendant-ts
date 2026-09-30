@@ -1,19 +1,12 @@
 import { Schema } from "effect";
 
+import { CLASSICAL_PLANETS } from "../../chart/internal/constants.js";
 import { Degree } from "../../chart/model.js";
 import { JaiminiCharaKarakasProvenance } from "../../provenance.js";
 
 export { JaiminiCharaKarakasProvenance as Provenance } from "../../provenance.js";
 
-export const ClassicalPlanets = Schema.Literals([
-  "Sun",
-  "Moon",
-  "Mars",
-  "Mercury",
-  "Jupiter",
-  "Venus",
-  "Saturn",
-] as const);
+export const ClassicalPlanets = Schema.Literals(CLASSICAL_PLANETS);
 export type ClassicalPlanets = typeof ClassicalPlanets.Type;
 
 export const Roles = Schema.Literals([
