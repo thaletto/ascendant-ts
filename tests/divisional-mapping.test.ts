@@ -1,8 +1,9 @@
 import { describe, expect, it } from "@effect/vitest";
 import { Array, Effect, Equal } from "effect";
 
-import { getDivisionalTarget, normalizeLongitude } from "../src/chart/divisional-mapping/index.js";
+import { getDivisionalTarget } from "../src/chart/divisional-mapping/index.js";
 import * as Chart from "../src/chart/index.js";
+import { normalizeLongitude } from "../src/utils/position.js";
 
 describe("divisional mapping", () => {
   it.effect("normalizes negative and wrapped longitudes", () =>
