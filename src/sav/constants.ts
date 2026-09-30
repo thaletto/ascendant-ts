@@ -1,14 +1,7 @@
+import { CLASSICAL_PLANETS } from "../chart/internal/constants.js";
 import { AshtakavargaEntities, AshtakavargaPlanets } from "./model.js";
 
-export const ASHTAKAVARGA_PLANET_ORDER = [
-  "Sun",
-  "Moon",
-  "Mars",
-  "Mercury",
-  "Jupiter",
-  "Venus",
-  "Saturn",
-] as const satisfies readonly AshtakavargaPlanets[];
+export const ASHTAKAVARGA_PLANET_ORDER: readonly AshtakavargaPlanets[] = CLASSICAL_PLANETS;
 
 export const ASHTAKAVARGA_ENTITY_ORDER = [
   ...ASHTAKAVARGA_PLANET_ORDER,
