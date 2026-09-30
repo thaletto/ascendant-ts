@@ -1,14 +1,12 @@
 import { Console, Effect } from "effect";
 
-import {
-  Argala,
-  ArudhaPada,
-  Chart,
-  CharaKarakas,
-  Karakamsha,
-  RashiDrishti,
-  Upapada,
-} from "../src/index.ts";
+import * as Chart from "../src/chart/index.js";
+import * as Argala from "../src/jaimini/argala/index.js";
+import * as ArudhaPada from "../src/jaimini/arudha-pada/index.js";
+import * as CharaKarakas from "../src/jaimini/chara-karakas/index.js";
+import * as Karakamsha from "../src/jaimini/karakamsha/index.js";
+import * as RashiDrishti from "../src/jaimini/rashi-drishti/index.js";
+import * as Upapada from "../src/jaimini/upapada/index.js";
 import type { ExampleInput } from "./input.ts";
 
 export const jaiminiExample = Effect.fn("Examples.jaimini")(function* ({
