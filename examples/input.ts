@@ -320,7 +320,7 @@ export const runSelectedExample = Effect.fn("Examples.runSelectedExample")(funct
     choices: [
       {
         title: "Chart",
-        description: "Generate and print the D1 and D9 charts",
+        description: "Generate D1/D9 (Lahiri + WholeSign) and KP D1 (KrishnamurtiVP291 + Placidus)",
         value: "chart",
       },
       {
