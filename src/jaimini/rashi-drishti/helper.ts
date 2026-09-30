@@ -1,47 +1,38 @@
-import { Effect, HashSet } from "effect";
+import { Array, Effect } from "effect";
 
 import { RASHIS } from "../../chart/internal/constants.js";
-import { signAt } from "../../chart/internal/position.js";
+import { isDualSign, isFixedSign, isMovableSign } from "../../chart/internal/position.js";
 import type { Rashis } from "../../chart/model.js";
+import { Zodiac } from "../../utils/index.js";
+import { signAtIndex, type SignIndexError } from "../../utils/position.js";
 import { CalculationError } from "./model.js";
 
-const MOVABLE = HashSet.fromIterable([
-  "Aries",
-  "Cancer",
-  "Libra",
-  "Capricorn",
-] as const satisfies readonly Rashis[]);
-const FIXED = HashSet.fromIterable([
-  "Taurus",
-  "Leo",
-  "Scorpio",
-  "Aquarius",
-] as const satisfies readonly Rashis[]);
-const DUAL = HashSet.fromIterable([
-  "Gemini",
-  "Virgo",
-  "Sagittarius",
-  "Pisces",
-] as const satisfies readonly Rashis[]);
-
-/**
- * Returns the exactly three signs aspected by a reference under Jaimini Rashi
- * Drishti: movable signs aspect non-adjacent fixed signs, fixed signs aspect
- * non-adjacent movable signs, and dual signs aspect the other dual signs.
- */
-export const targetsOf = Effect.fn("RashiDrishti.targetsOf")(function* (
+export const targetsOf = Effect.fn("astro-ascendant/jaimini/rashi-drishti/targetsOf")(function* (
   reference: Rashis,
-): Effect.fn.Return<readonly [Rashis, Rashis, Rashis], CalculationError> {
-  const referenceIndex = RASHIS.indexOf(reference);
-  const targets = RASHIS.filter((candidate) => {
-    if (HashSet.has(MOVABLE, reference)) {
-      return HashSet.has(FIXED, candidate) && candidate !== signAt(referenceIndex + 1);
+): Effect.fn.Return<readonly [Rashis, Rashis, Rashis], CalculationError | SignIndexError> {
+  const referenceIndex = Zodiac.rashiIndexOf(reference);
+  const targets: Array<Rashis> = [];
+  if (yield* isMovableSign(reference)) {
+    const excluded = Array.getUnsafe(RASHIS, yield* signAtIndex(referenceIndex + 1));
+    for (const candidate of RASHIS) {
+      if ((yield* isFixedSign(candidate)) && candidate !== excluded) {
+        targets.push(candidate);
+      }
     }
-    if (HashSet.has(FIXED, reference)) {
-      return HashSet.has(MOVABLE, candidate) && candidate !== signAt(referenceIndex - 1);
+  } else if (yield* isFixedSign(reference)) {
+    const excluded = Array.getUnsafe(RASHIS, yield* signAtIndex(referenceIndex - 1));
+    for (const candidate of RASHIS) {
+      if ((yield* isMovableSign(candidate)) && candidate !== excluded) {
+        targets.push(candidate);
+      }
     }
-    return HashSet.has(DUAL, candidate) && candidate !== reference;
-  });
+  } else {
+    for (const candidate of RASHIS) {
+      if ((yield* isDualSign(candidate)) && candidate !== reference) {
+        targets.push(candidate);
+      }
+    }
+  }
 
   const first = targets[0];
   const second = targets[1];
