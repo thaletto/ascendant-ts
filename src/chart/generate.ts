@@ -1,10 +1,10 @@
 import { Effect } from "effect";
 
 import { AstroParams } from "../astro-params/service.js";
-import type { CelestialBody } from "../ephemeris/model.js";
 import { Ephemeris } from "../ephemeris/service.js";
+import { planetBodyOf } from "../utils/position.js";
 import { chartFromHouseData } from "./calculate.js";
-import { project } from "./charts.js";
+import { mappedPositions, requestedDivisions } from "./charts.js";
 import { ChartCalculationError, LocatedMomentValidationError } from "./error.js";
 import {
   ChartCalculation,
@@ -12,20 +12,9 @@ import {
   type ChartParams,
   Division,
   LocatedMoment,
-  type Planets,
+  Planets,
 } from "./model.js";
 import { placementsFromEvidence, type PlacementEvidence } from "./placements.js";
-
-const PLANET_BODY_MAP = [
-  ["Sun", "Sun"],
-  ["Moon", "Moon"],
-  ["Mars", "Mars"],
-  ["Mercury", "Mercury"],
-  ["Venus", "Venus"],
-  ["Jupiter", "Jupiter"],
-  ["Saturn", "Saturn"],
-  ["Rahu", "MeanNode"],
-] as const satisfies readonly (readonly [Planets, CelestialBody])[];
 
 const validateInput = Effect.fn("astro-ascendant/chart/validateInput")(function* (
   input: LocatedMoment,
@@ -47,11 +36,6 @@ const validateInput = Effect.fn("astro-ascendant/chart/validateInput")(function*
   }
 });
 
-/**
- * Obtains the single ephemeris evidence set shared by all derived charts: house
- * cusps/angles and sidereal positions for the seven classical planets and Rahu.
- * Ketu is deliberately derived later as Rahu's exact opposition.
- */
 const calculatePlacementEvidence = Effect.fn("astro-ascendant/chart/calculatePlacementEvidence")(
   function* (input: LocatedMoment) {
     const astroParams = yield* AstroParams;
@@ -65,11 +49,19 @@ const calculatePlacementEvidence = Effect.fn("astro-ascendant/chart/calculatePla
       astroParams.ayanamsa,
     );
     const planetEntries = yield* Effect.all(
-      PLANET_BODY_MAP.map(([name, body]) =>
-        ephemeris
-          .calculatePosition(julianDay, body, astroParams.ayanamsa)
-          .pipe(Effect.map((position) => [name, position] as const)),
-      ),
+      Planets.literals
+        .filter((planet) => planet !== "Ketu")
+        .map((planet) =>
+          Effect.gen(function* () {
+            const body = yield* planetBodyOf(planet);
+            const position = yield* ephemeris.calculatePosition(
+              julianDay,
+              body,
+              astroParams.ayanamsa,
+            );
+            return [planet, position] as const;
+          }),
+        ),
       { concurrency: "unbounded" },
     );
 
@@ -84,12 +76,6 @@ const calculatePlacementEvidence = Effect.fn("astro-ascendant/chart/calculatePla
   ),
 );
 
-/**
- * Produces one internally consistent chart calculation for a located moment.
- * It validates coordinates, calculates sidereal placement evidence once, derives
- * D1 and requested divisions from those placements, and builds cusp-based
- * charts for every generated division from the same ephemeris house data.
- */
 export const generate = Effect.fn("astro-ascendant/chart/generate")(function* (
   input: ChartParams,
   divisions: readonly Division[] = [],
@@ -98,16 +84,29 @@ export const generate = Effect.fn("astro-ascendant/chart/generate")(function* (
   yield* validateInput(input);
   const evidence = yield* calculatePlacementEvidence(input);
   const placements = yield* placementsFromEvidence(evidence);
-  const charts = yield* project(placements, divisions, input.sex);
+  const requested = requestedDivisions(divisions);
   const calculatedCharts = yield* Effect.all(
-    charts.map((chart) => chartFromHouseData(evidence.houses, chart, input.moment.date)),
+    requested.map((division) =>
+      Effect.gen(function* () {
+        const positions = yield* mappedPositions(placements, division, input.sex).pipe(
+          Effect.mapError((cause) =>
+            ChartCalculationError.make({
+              stage: "mapping",
+              message: "Could not map one or more requested Divisions",
+              cause,
+            }),
+          ),
+        );
+        return yield* chartFromHouseData(evidence.houses, positions, input.moment.date);
+      }),
+    ),
     { concurrency: "unbounded" },
   );
   if (calculatedCharts[0] === undefined) {
     return yield* ChartCalculationError.make({
       stage: "mapping",
       message: "Could not calculate charts",
-      cause: charts,
+      cause: requested,
     });
   }
   const canonicalCharts = calculatedCharts as [Chart, ...Chart[]];
