@@ -1,10 +1,11 @@
+// IMPORTANT: Order of planet should follow order of week days starting from sunday
 export const CLASSICAL_PLANETS = [
   "Sun",
   "Moon",
   "Mars",
   "Mercury",
-  "Venus",
   "Jupiter",
+  "Venus",
   "Saturn",
 ] as const;
 
@@ -25,7 +26,7 @@ export const RASHIS = [
   "Pisces",
 ] as const;
 
-export const NAKSHATRAS = [
+export const STARS = [
   "Ashwini",
   "Bharani",
   "Krittika",
@@ -461,9 +462,9 @@ export const DIGNITY_RANGES = {
   ],
 } as const;
 
-export const NAKSHATRA_SPAN: number = 360 / NAKSHATRAS.length;
+export const STAR_SPAN: number = 360 / STARS.length;
 
-export const NAKSHATRA_LORD_CYCLE = [
+export const STAR_LORD_CYCLE = [
   "Ketu",
   "Venus",
   "Sun",
@@ -474,6 +475,8 @@ export const NAKSHATRA_LORD_CYCLE = [
   "Saturn",
   "Mercury",
 ] as const;
+
+export const VIMSHOTTARI_CYCLE_YEARS = 120;
 
 export const VIMSHOTTARI_YEARS = {
   Ketu: 7,
