@@ -1,5 +1,17 @@
 # astro-ascendant
 
+## 4.0.0
+
+### Major Changes
+
+- ca954cd: Rename Nakshatra vocabulary to Star: the `Nakshatra` model becomes `Star` (`Stars` literals), `SourcePlanet` and `SourceLagna` carry `star` instead of `nakshatra`, and `nakshatraOf` becomes `starOf`. One term everywhere — Star, not nakshatra
+
+### Patch Changes
+
+- 91ba0dd: Remove dead internal surface and consolidate duplicated tables: unexported single-use helpers, one shared Vimshottari cycle table, canonical planet lists, one SAV table builder, and shared sign-modality predicates
+- 1307c44: Fix Transit searches ignoring validated `maxYears` and `precisionMinutes`, enforce Ashtakavarga BAV total validation instead of silently passing, and map the `TrueNode` celestial body in the Swiss Ephemeris adapter
+- 7d287e3: Consolidate shared helpers into `src/utils`: one zodiac conversion hub with a branded `RashiIndex`, one exactly-once placement lookup, and the former `src/position` Effect boundary moved in. Removes duplicated rotation, distance, sign-lookup, and placement-validation helpers across dasha, Jaimini, SAV, chart, and transit. Standardizes `Effect.fn` trace names to `astro-ascendant/<module>/<fn>`, maps invalid longitudes to `DivisionalMappingError`, and fixes Upapada error propagation so unknown channels no longer leak
+
 ## 3.2.0
 
 ### Minor Changes
