@@ -14,6 +14,8 @@ const expectedExports = HashSet.make(
   "Provenance",
   "RashiDrishti",
   "SAV",
+  "Swisseph",
+  "Transit",
   "Upapada",
 );
 if (!Equal.equals(exports, expectedExports)) {
