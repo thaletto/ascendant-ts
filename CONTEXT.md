@@ -137,15 +137,15 @@ The parameters of the astrological computation: ayanamsa and house system. Separ
 _Avoid_: AstroConfig, settings, options, chart config
 
 **Planet**:
-A graha's mapped placement in a Chart: its longitude, Degree, sign, dignity, and inherited retrograde state. Its longitude and Degree belong to that Chart's Division; the source nakshatra and pada remain on the Placements from which the Chart was derived.
+A graha's mapped placement in a Chart: its longitude, Degree, sign, dignity, and inherited retrograde state. Its longitude and Degree belong to that Chart's Division; the source star and pada remain on the Placements from which the Chart was derived.
 _Avoid_: Body, celestial body, position
 
-**Nakshatra placement**:
-The nakshatra and pada determined by a graha's source sidereal longitude. It belongs to Placements and is not recalculated from a divisional Chart's mapped longitude.
-_Avoid_: Divisional nakshatra, Sign nakshatra
+**Star placement**:
+The star and pada determined by a graha's source sidereal longitude. It belongs to Placements and is not recalculated from a divisional Chart's mapped longitude.
+_Avoid_: Divisional star, Sign star
 
 **Sign**:
-One of the twelve zodiac signs a graha can occupy: its name and lord. A sign spans several nakshatras, so it does not carry a nakshatra itself.
+One of the twelve zodiac signs a graha can occupy: its name and lord. A sign spans several stars, so it does not carry a star itself.
 _Avoid_: Rashi, zodiac, star sign
 
 **Relationship direction**:
