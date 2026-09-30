@@ -1,49 +1,32 @@
-import { Effect, pipe } from "effect";
+import { Effect } from "effect";
 
-import { type Division, Longitude } from "../model.js";
+import { normalizeLongitude } from "../../utils/position.js";
+import type { Division } from "../model.js";
+import { Degree, Longitude } from "../model.js";
 import { DivisionalMappingError } from "./error.js";
-import {
-  divisionalTargetOf,
-  identityTargetOf,
-  sourcePositionOf,
-  subdivisionOf,
-  targetSignOf,
-} from "./helper.js";
+import { sourcePositionOf, subdivisionOf, targetSignOf } from "./helper.js";
+import type { DivisionalTarget } from "./model.js";
 
-/** Normalizes an arbitrary longitude into the half-open sidereal zodiac. */
-export const normalizeLongitude = Effect.fn("Chart.DivisionalMapping.normalizeLongitude")(
-  function* (longitude: number) {
-    if (!Number.isFinite(longitude)) {
-      return yield* DivisionalMappingError.make({
-        message: "Longitude must be finite",
-        cause: longitude,
-      });
-    }
+export const getDivisionalTarget = Effect.fn(
+  "astro-ascendant/chart/divisional-mapping/getDivisionalTarget",
+)(function* (longitude: number, division: Division) {
+  const normalizedLongitude = yield* normalizeLongitude(longitude).pipe(
+    Effect.mapError((cause) =>
+      DivisionalMappingError.make({ message: "Invalid longitude for divisional mapping", cause }),
+    ),
+  );
+  const source = yield* sourcePositionOf(normalizedLongitude);
 
-    return pipe(
-      longitude % 360,
-      (remainder) => (remainder < 0 ? remainder + 360 : remainder),
-      (normalized) => Longitude.make(normalized),
-    );
-  },
-);
+  if (division === 1) {
+    return source;
+  }
 
-/**
- * Maps a D1 longitude into a supported divisional chart. D1 preserves the
- * normalized source position; other divisions select a source-sign subdivision
- * and apply that division's classical target-sign rule.
- */
-export const getDivisionalTarget = Effect.fn("Chart.DivisionalMapping.getDivisionalTarget")(
-  function* (longitude: number, division: Division) {
-    const source = yield* normalizeLongitude(longitude).pipe(Effect.map(sourcePositionOf));
+  const subdivision = subdivisionOf(source.degree, division);
+  const signIndex = targetSignOf(source, subdivision, division);
 
-    if (division === 1) {
-      return pipe(source, identityTargetOf);
-    }
-
-    const subdivision = subdivisionOf(source.degree, division);
-    const signIndex = targetSignOf(source, subdivision, division);
-
-    return pipe({ signIndex, degree: subdivision.degree }, divisionalTargetOf);
-  },
-);
+  return {
+    signIndex,
+    degree: Degree.make(subdivision.degree),
+    longitude: Longitude.make(signIndex * 30 + subdivision.degree),
+  } satisfies DivisionalTarget;
+});
