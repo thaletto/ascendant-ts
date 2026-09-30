@@ -1,9 +1,9 @@
 import { Array, Effect, Option } from "effect";
 
 import type { HouseData, PlanetaryPosition } from "../ephemeris/model.js";
-import { normalizeLongitude } from "./divisional-mapping/index.js";
+import { ketuFromRahu, normalizeLongitude } from "../utils/position.js";
 import { ChartCalculationError, MissingPlacementError } from "./error.js";
-import { nakshatraOf } from "./helper.js";
+import { starOf } from "./helper.js";
 import { Placements, SourceLagna, SourcePlanet } from "./model.js";
 
 export interface PlacementEvidence {
@@ -11,56 +11,52 @@ export interface PlacementEvidence {
   readonly planetEntries: readonly (readonly [SourcePlanet["name"], PlanetaryPosition])[];
 }
 
-/**
- * Converts ephemeris evidence into the canonical sidereal Placements source.
- * Longitudes are normalized to `[0, 360)`, each source nakshatra is derived
- * from that longitude, and Ketu is added exactly 180 degrees from Rahu.
- */
-export const placementsFromEvidence = Effect.fn("Chart.placementsFromEvidence")(
+export const placementsFromEvidence = Effect.fn("astro-ascendant/chart/placementsFromEvidence")(
   function* (evidence: PlacementEvidence) {
-    const sourcePlanets = yield* Effect.all(
-      evidence.planetEntries.map(([name, position]) =>
-        normalizeLongitude(position.longitude).pipe(
-          Effect.map((longitude) =>
-            SourcePlanet.make({
-              name,
-              longitude,
-              is_retrograde: position.longitudeSpeed < 0,
-              nakshatra: nakshatraOf(longitude),
-            }),
-          ),
-        ),
-      ),
-      { concurrency: "unbounded" },
-    );
+    const sourcePlanets: SourcePlanet[] = [];
 
-    const rahu = yield* Option.match(
-      Array.findFirst(sourcePlanets, (planet) => planet.name === "Rahu"),
-      {
-        onNone: () => MissingPlacementError.make({ placement: "Rahu" }),
-        onSome: Effect.succeed,
-      },
-    );
+    for (const [name, position] of evidence.planetEntries) {
+      const longitude = yield* normalizeLongitude(position.longitude);
+      const star = yield* starOf(longitude);
 
-    const ketuLongitude = yield* normalizeLongitude(rahu.longitude + 180);
+      sourcePlanets.push(
+        SourcePlanet.make({
+          name,
+          longitude,
+          is_retrograde: position.longitudeSpeed < 0,
+          star,
+        }),
+      );
+    }
+
+    const rahuOption = Array.findFirst(sourcePlanets, (planet) => planet.name === "Rahu");
+
+    if (Option.isNone(rahuOption)) {
+      return yield* MissingPlacementError.make({ placement: "Rahu" });
+    }
+
+    const rahu = rahuOption.value;
+
+    const ketuLongitude = yield* ketuFromRahu(rahu.longitude);
+    const ketuStar = yield* starOf(ketuLongitude);
     const ascendant = yield* normalizeLongitude(evidence.houses.ascendant);
-    const planets = [
-      ...sourcePlanets,
-      SourcePlanet.make({
-        name: "Ketu",
-        longitude: ketuLongitude,
-        is_retrograde: rahu.is_retrograde,
-        nakshatra: nakshatraOf(ketuLongitude),
-      }),
-    ];
+    const ascendantStar = yield* starOf(ascendant);
 
     return Placements.make({
       lagna: SourceLagna.make({
         name: "Lagna",
         longitude: ascendant,
-        nakshatra: nakshatraOf(ascendant),
+        star: ascendantStar,
       }),
-      planets,
+      planets: [
+        ...sourcePlanets,
+        SourcePlanet.make({
+          name: "Ketu",
+          longitude: ketuLongitude,
+          is_retrograde: rahu.is_retrograde,
+          star: ketuStar,
+        }),
+      ],
     });
   },
   Effect.mapError((cause) =>
