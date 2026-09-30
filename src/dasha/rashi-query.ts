@@ -1,17 +1,9 @@
 import { DateTime, Effect } from "effect";
 
 import type { CurrentRashiDasha, RashiDasha } from "./model.js";
+import { contains } from "./query.js";
 
-function contains(
-  period: { readonly start: DateTime.Utc; readonly end: DateTime.Utc },
-  instant: DateTime.Utc,
-): boolean {
-  return (
-    period.start.epochMilliseconds <= instant.epochMilliseconds &&
-    instant.epochMilliseconds < period.end.epochMilliseconds
-  );
-}
-
+/** Finds the Rashi Mahadasha and Antardasha active at an instant (now by default); null when outside the timeline. */
 export const atRashi = Effect.fn("astro-ascendant/dasha/atRashi")(function* (
   timeline: RashiDasha,
   when?: DateTime.Utc,
