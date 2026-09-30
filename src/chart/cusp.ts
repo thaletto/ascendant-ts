@@ -1,49 +1,40 @@
-import { Array, Function, Option } from "effect";
+import { Array, Effect, Function, Option } from "effect";
 
-import type { Planet } from "./model.js";
+import { normalizeLongitude } from "../utils/position.js";
+import type { Longitude, Planet } from "./model.js";
 
-export function normalizeAngle(angle: number): number {
-  return ((angle % 360) + 360) % 360;
-}
+export const forwardDistance = Effect.fn(function* (from: Longitude, to: Longitude) {
+  return yield* normalizeLongitude(to - from);
+});
 
-export const forwardDistance = Function.dual<
-  (to: number) => (from: number) => number,
-  (from: number, to: number) => number
->(2, (from, to) => normalizeAngle(to - from));
+export const angularDistance: {
+  (second: number): (first: number) => number;
+  (first: number, second: number): number;
+} = Function.dual(2, (first: number, second: number): number => {
+  const distance = Math.abs(first - second) % 360;
+  return Math.min(distance, 360 - distance);
+});
 
-export const houseFor = Function.dual<
-  (cusps: readonly number[], spans: readonly number[]) => (longitude: number) => number,
-  (longitude: number, cusps: readonly number[], spans: readonly number[]) => number
->(3, (longitude, cusps, spans) =>
-  cusps.findIndex((cusp, index) => {
-    const span = spans[index];
-    return span !== undefined && forwardDistance(cusp, longitude) < span;
-  }),
-);
+export const distributePlanets = Effect.fn("astro-ascendant/chart/distributePlanets")(function* (
+  planets: readonly Planet[],
+  cusps: readonly Longitude[],
+  spans: readonly number[],
+) {
+  const houses = Array.map(Array.zip(cusps, spans), ([cusp, span], index) => ({
+    index,
+    cusp,
+    span,
+  }));
 
-export const distributePlanets = Function.dual<
-  (
-    cusps: readonly number[],
-    spans: readonly number[],
-  ) => (planets: readonly Planet[]) => readonly (readonly Planet[])[],
-  (
-    planets: readonly Planet[],
-    cusps: readonly number[],
-    spans: readonly number[],
-  ) => readonly (readonly Planet[])[]
->(3, (planets, cusps, spans) =>
-  planets.reduce(
-    (planetsByHouse, planet) => {
-      const houseIndex = houseFor(planet.longitude, cusps, spans);
-      return Option.match(Array.get(houseIndex)(planetsByHouse), {
-        onNone: () => planetsByHouse,
-        onSome: (housePlanets) =>
-          Option.getOrElse(
-            Array.modify(planetsByHouse, houseIndex, () => [...housePlanets, planet]),
-            () => planetsByHouse,
-          ),
-      });
-    },
-    Array.replicate(12)([] as readonly Planet[]),
-  ),
-);
+  const placements = yield* Effect.forEach(planets, (planet) =>
+    Effect.findFirst(houses, ({ cusp, span }) =>
+      forwardDistance(cusp, planet.longitude).pipe(Effect.map((distance) => distance < span)),
+    ).pipe(Effect.map(Option.map(({ index }) => [index, planet] as const))),
+  );
+
+  const placed = Array.getSomes(placements);
+
+  return Array.makeBy(12, (house) =>
+    placed.filter(([index]) => index === house).map(([, planet]) => planet),
+  );
+});
