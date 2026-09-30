@@ -1,15 +1,17 @@
-import { Array, Function } from "effect";
+import { Array, Effect, Function } from "effect";
 
+import { EPS_PART, signIndexOf } from "../../utils/position.js";
 import { Degree, type Division, Longitude } from "../model.js";
-import type { DivisionalTarget, SourcePosition, Subdivision } from "./model.js";
+import type { SourcePosition, Subdivision } from "./model.js";
 
-export function sourcePositionOf(longitude: Longitude): SourcePosition {
+export const sourcePositionOf = Effect.fn(function* (longitude: Longitude) {
+  const signIndex = yield* signIndexOf(longitude);
   return {
     longitude,
-    signIndex: Math.floor(longitude / 30),
-    degree: longitude % 30,
+    signIndex,
+    degree: Degree.make(longitude % 30),
   };
-}
+});
 
 /**
  * Locates a degree within one of a division's equal subdivisions. Exact internal
@@ -25,7 +27,9 @@ export const subdivisionOf = Function.dual<
   const nearestPart = Math.round(scaledPart);
 
   const partPosition =
-    nearestPart < division && Math.abs(scaledPart - nearestPart) < 1e-12 ? nearestPart : scaledPart;
+    nearestPart < division && Math.abs(scaledPart - nearestPart) < EPS_PART
+      ? nearestPart
+      : scaledPart;
 
   const partIndex = Math.min(division - 1, Math.floor(partPosition));
 
@@ -35,11 +39,6 @@ export const subdivisionOf = Function.dual<
   };
 });
 
-/**
- * Applies the supported classical target-sign rule for a source subdivision.
- * Each division has its own starting-sign convention; D30 instead uses its
- * unequal classical degree bands.
- */
 export const targetSignOf = Function.dual<
   (subdivision: Subdivision, division: Exclude<Division, 1>) => (source: SourcePosition) => number,
   (source: SourcePosition, subdivision: Subdivision, division: Exclude<Division, 1>) => number
@@ -124,25 +123,3 @@ export const targetSignOf = Function.dual<
       return (sourceSignIndex + partIndex) % 12;
   }
 });
-
-export function divisionalTargetOf({
-  signIndex,
-  degree,
-}: {
-  readonly signIndex: number;
-  readonly degree: number;
-}): DivisionalTarget {
-  return {
-    signIndex,
-    degree: Degree.make(degree),
-    longitude: Longitude.make(signIndex * 30 + degree),
-  };
-}
-
-export function identityTargetOf(source: SourcePosition): DivisionalTarget {
-  return {
-    signIndex: source.signIndex,
-    degree: Degree.make(source.degree),
-    longitude: source.longitude,
-  };
-}
