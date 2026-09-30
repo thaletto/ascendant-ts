@@ -1,28 +1,15 @@
 import { DateTime } from "effect";
 
-import { RASHIS } from "../chart/internal/constants.js";
-import { signAt } from "../chart/internal/position.js";
 import type { Rashis } from "../chart/model.js";
+import { Zodiac } from "../utils/index.js";
 import { Calendar } from "./calendar.js";
 import { RashiAntarDasha, RashiMahaDasha } from "./model.js";
 
 export type Direction = 1 | -1;
 
-export function rashiIndex(sign: Rashis): number {
-  return RASHIS.indexOf(sign);
-}
+const sequenceFrom = Zodiac.sequenceFrom;
 
-function sequenceFrom(startIndex: number, direction: Direction): readonly Rashis[] {
-  return Array.from({ length: RASHIS.length }, (_, index) =>
-    signAt(startIndex + index * direction),
-  );
-}
-
-/**
- * Creates one sign Mahadasha with twelve contiguous equal-month antardashas.
- * The final child is clamped to the calendar-shifted parent end so rounding in
- * fractional calendar years cannot leave a gap or overrun the parent interval.
- */
+/** The final child clamps to the parent end; fractional years must not gap or overrun. */
 function makeRashiMahaDasha(
   mahadasha: Rashis,
   start: DateTime.Utc,
