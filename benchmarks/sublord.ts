@@ -1,17 +1,20 @@
 import { Array, Console, Effect, Option, Record } from "effect";
 
 import type { ExampleInput } from "../examples/input.ts";
+import * as AstroParams from "../src/astro-params/index.ts";
+import { angularDistance } from "../src/chart/cusp.ts";
 import { subLordOf } from "../src/chart/helper.ts";
-import { AstroParams, Chart } from "../src/index.ts";
+import * as Chart from "../src/chart/index.ts";
 
-const HOUSES = Chart.Houses.literals;
-const BASELINE_AYANAMSA = "Krishnamurti" satisfies typeof AstroParams.Ayanamsa.Type;
-const BASELINE_HOUSE_SYSTEM = "Placidus" satisfies typeof AstroParams.HouseSystem.Type;
+export const HOUSES = Chart.Houses.literals;
+export const BASELINE_AYANAMSA = "KrishnamurtiVP291" satisfies typeof AstroParams.Ayanamsa.Type;
+export const BASELINE_HOUSE_SYSTEM = "Placidus" satisfies typeof AstroParams.HouseSystem.Type;
 
 const AYANAMSA_HOUSE_SYSTEMS = [
   ["Lahiri", ["WholeSign", "Equal", "Placidus"]],
   ["Raman", ["WholeSign", "Equal", "Placidus"]],
   ["Krishnamurti", ["Placidus", "Regiomontanus", "Campanus", "Equal"]],
+  ["KrishnamurtiVP291", ["Placidus", "Regiomontanus", "Campanus", "Equal"]],
   ["JNBhasin", ["WholeSign", "Equal", "Placidus"]],
   ["TrueCitra", ["WholeSign", "Equal", "Placidus"]],
   ["TrueRevati", ["WholeSign", "Equal", "Placidus"]],
@@ -20,12 +23,12 @@ const AYANAMSA_HOUSE_SYSTEMS = [
   readonly [typeof AstroParams.Ayanamsa.Type, readonly (typeof AstroParams.HouseSystem.Type)[]]
 >;
 
-type Combination = {
+export type Combination = {
   readonly ayanamsa: typeof AstroParams.Ayanamsa.Type;
   readonly houseSystem: typeof AstroParams.HouseSystem.Type;
 };
 
-type HouseLords = {
+export type HouseLords = {
   readonly house: Chart.Houses;
   readonly cusp: number;
   readonly signLord: Chart.PlanetsLagna | undefined;
@@ -33,19 +36,19 @@ type HouseLords = {
   readonly subLord: Chart.PlanetsLagna | undefined;
 };
 
-type PointSublord = {
+export type PointSublord = {
   readonly name: string;
   readonly longitude: number;
   readonly subLord: Chart.Planets;
 };
 
-type CombinationSnapshot = {
+export type CombinationSnapshot = {
   readonly combination: Combination;
   readonly houses: readonly HouseLords[];
   readonly points: readonly PointSublord[];
 };
 
-type HouseDeviation = {
+export type HouseDeviation = {
   readonly combination: Combination;
   readonly house: Chart.Houses;
   readonly baselineSubLord: Chart.PlanetsLagna | undefined;
@@ -53,33 +56,28 @@ type HouseDeviation = {
   readonly cuspDelta: number;
 };
 
-function combinations(): readonly Combination[] {
+export function combinations(): readonly Combination[] {
   return AYANAMSA_HOUSE_SYSTEMS.flatMap(([ayanamsa, houseSystems]) =>
     houseSystems.map((houseSystem) => ({ ayanamsa, houseSystem })),
   );
 }
 
-function combinationLabel(combination: Combination): string {
+export function combinationLabel(combination: Combination): string {
   return `${combination.ayanamsa} / ${combination.houseSystem}`;
 }
 
-function isBaseline(combination: Combination): boolean {
+export function isBaseline(combination: Combination): boolean {
   return (
     combination.ayanamsa === BASELINE_AYANAMSA && combination.houseSystem === BASELINE_HOUSE_SYSTEM
   );
 }
 
-function circularDistance(first: number, second: number): number {
-  const distance = Math.abs(first - second) % 360;
-  return Math.min(distance, 360 - distance);
-}
-
-function mean(values: readonly number[]): number {
+export function mean(values: readonly number[]): number {
   if (values.length === 0) return 0;
   return values.reduce((total, value) => total + value, 0) / values.length;
 }
 
-function houseLordsOf(chart: Chart.Chart): readonly HouseLords[] {
+export function houseLordsOf(chart: Chart.Chart): readonly HouseLords[] {
   return HOUSES.map((house) => {
     const data = chart.houses[house];
     return {
@@ -92,37 +90,14 @@ function houseLordsOf(chart: Chart.Chart): readonly HouseLords[] {
   });
 }
 
-function pointSublordsOf(placements: Chart.Placements): readonly PointSublord[] {
-  return [
-    {
-      name: placements.lagna.name,
-      longitude: placements.lagna.longitude,
-      subLord: subLordOf(placements.lagna.longitude),
-    },
-    ...placements.planets.map((planet) => ({
-      name: planet.name,
-      longitude: planet.longitude,
-      subLord: subLordOf(planet.longitude),
-    })),
-  ];
-}
-
-function snapshotOf(
-  combination: Combination,
-  calculation: Chart.ChartCalculation,
-): CombinationSnapshot {
-  return {
-    combination,
-    houses: houseLordsOf(calculation.charts[0]),
-    points: pointSublordsOf(calculation.placements),
-  };
-}
-
-function houseByNumber(houses: readonly HouseLords[], house: Chart.Houses): HouseLords | undefined {
+export function houseByNumber(
+  houses: readonly HouseLords[],
+  house: Chart.Houses,
+): HouseLords | undefined {
   return houses.find((item) => item.house === house);
 }
 
-function countMatches(
+export function countMatches(
   baseline: readonly HouseLords[],
   candidate: readonly HouseLords[],
   field: "signLord" | "starLord" | "subLord",
@@ -134,7 +109,7 @@ function countMatches(
   }).length;
 }
 
-function houseDeviations(
+export function houseDeviations(
   baseline: CombinationSnapshot,
   candidate: CombinationSnapshot,
 ): readonly HouseDeviation[] {
@@ -150,13 +125,13 @@ function houseDeviations(
         house,
         baselineSubLord: left.subLord,
         subLord: right.subLord,
-        cuspDelta: circularDistance(left.cusp, right.cusp),
+        cuspDelta: angularDistance(left.cusp, right.cusp),
       },
     ];
   });
 }
 
-function cuspDeltas(
+export function cuspDeltas(
   baseline: readonly HouseLords[],
   candidate: readonly HouseLords[],
 ): readonly number[] {
@@ -165,15 +140,42 @@ function cuspDeltas(
     const right = houseByNumber(candidate, house);
     return left === undefined || right === undefined
       ? []
-      : [circularDistance(left.cusp, right.cusp)];
+      : [angularDistance(left.cusp, right.cusp)];
   });
 }
 
-function displayDegrees(value: number): number {
+export function displayDegrees(value: number): number {
   return Number(value.toFixed(4));
 }
 
-const snapshotFor = Effect.fn("Benchmarks.sublordBenchmark.snapshotFor")(function* (
+export const pointSublordsOf = Effect.fn("Benchmarks.sublordBenchmark.pointSublordsOf")(function* (
+  placements: Chart.Placements,
+) {
+  const entries = [
+    { name: placements.lagna.name, longitude: placements.lagna.longitude },
+    ...placements.planets.map((planet) => ({ name: planet.name, longitude: planet.longitude })),
+  ];
+  return yield* Effect.forEach(entries, (entry) =>
+    Effect.map(subLordOf(entry.longitude), (subLord) => ({
+      name: entry.name,
+      longitude: entry.longitude,
+      subLord,
+    })),
+  );
+});
+
+export const snapshotOf = Effect.fn("Benchmarks.sublordBenchmark.snapshotOf")(function* (
+  combination: Combination,
+  calculation: Chart.ChartCalculation,
+) {
+  return {
+    combination,
+    houses: houseLordsOf(calculation.charts[0]),
+    points: yield* pointSublordsOf(calculation.placements),
+  };
+});
+
+export const snapshotFor = Effect.fn("Benchmarks.sublordBenchmark.snapshotFor")(function* (
   input: ExampleInput,
   combination: Combination,
 ) {
@@ -184,7 +186,7 @@ const snapshotFor = Effect.fn("Benchmarks.sublordBenchmark.snapshotFor")(functio
       longitude: input.longitude,
     }),
   ).pipe(Effect.provide(AstroParams.layer(AstroParams.Options.make(combination))));
-  return snapshotOf(combination, calculation);
+  return yield* snapshotOf(combination, calculation);
 });
 
 export const sublordBenchmark = Effect.fn("Benchmarks.sublordBenchmark")(function* (
