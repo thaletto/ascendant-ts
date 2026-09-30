@@ -2,13 +2,7 @@ import { Schema } from "effect";
 
 import { Options as AstroParamsOptions } from "../astro-params/model.js";
 import { ChartProjectionProvenance } from "../provenance.js";
-import {
-  PLANETS,
-  CLASSICAL_PLANETS,
-  RASHIS,
-  NAKSHATRAS,
-  PLANET_DIGNITY,
-} from "./internal/constants.js";
+import { PLANETS, CLASSICAL_PLANETS, RASHIS, STARS, PLANET_DIGNITY } from "./internal/constants.js";
 
 export const Planets = Schema.Literals(PLANETS);
 export type Planets = typeof Planets.Type;
@@ -28,8 +22,8 @@ export type Houses = typeof Houses.Type;
 export const RashiLords = Schema.Literals(CLASSICAL_PLANETS);
 export type RashiLords = typeof RashiLords.Type;
 
-export const Nakshatras = Schema.Literals(NAKSHATRAS);
-export type Nakshatras = typeof Nakshatras.Type;
+export const Stars = Schema.Literals(STARS);
+export type Stars = typeof Stars.Type;
 
 export const Pada = Schema.Literals([1, 2, 3, 4] as const);
 export type Pada = typeof Pada.Type;
@@ -57,8 +51,8 @@ export const Degree = Schema.Finite.check(
 ).pipe(Schema.brand("Degree"));
 export type Degree = typeof Degree.Type;
 
-export class Nakshatra extends Schema.Class<Nakshatra>("Nakshatra")({
-  name: Nakshatras,
+export class Star extends Schema.Class<Star>("Star")({
+  name: Stars,
   lord: Planets,
   pada: Pada,
 }) {}
@@ -86,11 +80,11 @@ export class Lagna extends Schema.Class<Lagna>("Lagna")({
 
 export class House extends Schema.Class<House>("House")({
   sign: Rashis,
-  cusp: Schema.optionalKey(Longitude),
-  signLord: Schema.optionalKey(PlanetsLagna),
-  starLord: Schema.optionalKey(PlanetsLagna),
-  subLord: Schema.optionalKey(PlanetsLagna),
-  significations: Schema.optionalKey(Schema.Array(Schema.String)),
+  cusp: Longitude,
+  signLord: PlanetsLagna,
+  starLord: PlanetsLagna,
+  subLord: PlanetsLagna,
+  significations: Schema.Array(Schema.String),
   planets: Schema.Array(Planet),
   lagna: Schema.NullOr(Lagna),
 }) {}
@@ -101,13 +95,13 @@ export class SourcePlanet extends Schema.Class<SourcePlanet>("SourcePlanet")({
   name: Planets,
   longitude: Longitude,
   is_retrograde: Schema.Boolean,
-  nakshatra: Nakshatra,
+  star: Star,
 }) {}
 
 export class SourceLagna extends Schema.Class<SourceLagna>("SourceLagna")({
   name: LagnaName,
   longitude: Longitude,
-  nakshatra: Nakshatra,
+  star: Star,
 }) {}
 
 export class Placements extends Schema.Class<Placements>("Placements")({
@@ -196,7 +190,6 @@ export class LocatedMoment extends Schema.Class<LocatedMoment>("LocatedMoment")(
   longitude: Schema.Finite,
 }) {}
 
-/** Birth input; sex is optional and has no inferred default. */
 export const ChartParams = Schema.Struct({
   ...LocatedMoment.fields,
   sex: Chart.fields.sex,
