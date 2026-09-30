@@ -1,23 +1,17 @@
 import { Effect, HashMap } from "effect";
 
 import { Placements } from "../../chart/model.js";
-import { methods } from "../../provenance.js";
+import { jaiminiCharaKarakas } from "../../provenance.js";
 import {
   CLASSICAL_PLANET_ORDER,
   ROLE_ORDER,
   exactDegreeOf,
   compareExactDegrees,
-  hasSameDegree,
   assignmentAt,
 } from "./helper.js";
 import type { Result, Holder, Role, RankedHolder } from "./model.js";
 import { EvidenceError, ParseError } from "./model.js";
 
-/**
- * Assigns the seven Chara Karaka roles by descending exact D1 degree of the
- * classical planets. Planets tied at the same exact within-sign degree jointly
- * hold every role covered by their shared rank rather than using an arbitrary tie-break.
- */
 export const calculate = Effect.fn("astro-ascendant/jaimini/chara-karakas/calculate")(function* (
   placements: Placements,
 ) {
@@ -53,7 +47,11 @@ export const calculate = Effect.fn("astro-ascendant/jaimini/chara-karakas/calcul
     let nextRank = rank + 1;
     while (true) {
       const candidate = holders[nextRank];
-      if (candidate === undefined || !hasSameDegree(candidate, first)) break;
+      if (
+        candidate === undefined ||
+        compareExactDegrees(candidate.exactDegree, first.exactDegree) !== 0
+      )
+        break;
       nextRank += 1;
     }
     const tiedRanks = holders.slice(rank, nextRank);
@@ -92,7 +90,7 @@ export const calculate = Effect.fn("astro-ascendant/jaimini/chara-karakas/calcul
   const Darakaraka = yield* assignmentAt(byRole, "Darakaraka");
 
   return {
-    provenance: methods.jaiminiCharaKarakas.provenance,
+    provenance: jaiminiCharaKarakas.provenance,
     assignments: {
       Atmakaraka,
       Amatyakaraka,
