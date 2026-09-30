@@ -1,18 +1,9 @@
 import { DateTime, Effect } from "effect";
 
 import type { CurrentDasha, VimshottariDasha } from "../model.js";
+import { contains } from "../query.js";
 
-function contains(
-  period: { readonly start: DateTime.Utc; readonly end: DateTime.Utc },
-  instant: DateTime.Utc,
-): boolean {
-  return (
-    period.start.epochMilliseconds <= instant.epochMilliseconds &&
-    instant.epochMilliseconds < period.end.epochMilliseconds
-  );
-}
-
-export const at = Effect.fn("astro-ascendant/dasha/at")(function* (
+export const at = Effect.fn("astro-ascendant/dasha/vimshottari/at")(function* (
   timeline: VimshottariDasha,
   when?: DateTime.Utc,
 ) {
