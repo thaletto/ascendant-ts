@@ -1,19 +1,17 @@
 import { Effect } from "effect";
 
 import type { Rashis } from "../../chart/model.js";
-import { methods } from "../../provenance.js";
+import { jaiminiRashiDrishti } from "../../provenance.js";
 import { targetsOf } from "./helper.js";
 import type { Result } from "./model.js";
 
-/**
- * Derives the three Jaimini Rashi Drishti targets for one reference sign using
- * movable/fixed/dual modality rules, not planetary degree aspects or orbs.
- */
-export const calculate = Effect.fn("RashiDrishti.calculate")(function* (reference: Rashis) {
+export const calculate = Effect.fn("astro-ascendant/jaimini/rashi-drishti/calculate")(function* (
+  reference: Rashis,
+) {
   const targets = yield* targetsOf(reference);
 
   return {
-    provenance: methods.jaiminiRashiDrishti.provenance,
+    provenance: jaiminiRashiDrishti.provenance,
     reference,
     targets,
   } satisfies Result;
