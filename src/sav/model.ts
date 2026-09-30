@@ -1,16 +1,9 @@
 import { Schema } from "effect";
 
+import { CLASSICAL_PLANETS } from "../chart/internal/constants.js";
 import { LagnaName, Rashis } from "../chart/model.js";
 
-export const AshtakavargaPlanets = Schema.Literals([
-  "Sun",
-  "Moon",
-  "Mars",
-  "Mercury",
-  "Jupiter",
-  "Venus",
-  "Saturn",
-] as const);
+export const AshtakavargaPlanets = Schema.Literals(CLASSICAL_PLANETS);
 export type AshtakavargaPlanets = typeof AshtakavargaPlanets.Type;
 
 export const AshtakavargaEntities = Schema.Union([AshtakavargaPlanets, LagnaName]);
