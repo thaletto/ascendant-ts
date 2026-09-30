@@ -1,157 +1,176 @@
-import { Effect } from "effect";
+import { Effect, HashSet, Array } from "effect";
 
 import { RASHIS, SIGN_LORDS } from "../../chart/internal/constants.js";
-import { signAt, signIndexOf } from "../../chart/internal/position.js";
-import type { Moment, Placements, Planets, Rashis } from "../../chart/model.js";
+import { Planets, type Moment, type Placements, type Rashis } from "../../chart/model.js";
 import { compareExactDegrees, exactDegreeOf } from "../../jaimini/chara-karakas/helper.js";
-import { methods } from "../../provenance.js";
-import { DashaEvidenceError } from "../error.js";
-import { validateUniquePlanetPlacements } from "../evidence.js";
+import { charaDasha } from "../../provenance.js";
+import { indexOfSign, signAtIndex, signIndexOf } from "../../utils/position.js";
+import { placementOf, validateRequiredPlacements } from "../evidence.js";
 import { CharaDasha } from "../model.js";
-import { type Direction, RashiInternal, rashiIndex } from "../rashi-internal.js";
+import { type Direction, RashiInternal } from "../rashi-internal.js";
 
-const SAMA_PADA = new Set<Rashis>(["Aries", "Taurus", "Gemini", "Libra", "Scorpio", "Sagittarius"]);
+const SAMA_PADA = HashSet.make<Rashis[]>(
+  "Aries",
+  "Taurus",
+  "Gemini",
+  "Libra",
+  "Scorpio",
+  "Sagittarius",
+);
 
-const placementOf = Effect.fn("Dasha.charaPlacementOf")(function* (
+const CO_LORDS = {
+  Scorpio: ["Mars", "Ketu"],
+  Aquarius: ["Saturn", "Rahu"],
+} as const;
+
+const padaDirection = (sign: Rashis) =>
+  Effect.succeed((HashSet.has(SAMA_PADA, sign) ? 1 : -1) as Direction);
+
+const distanceInDirection = (from: number, to: number, direction: Direction) =>
+  Effect.succeed(((to - from) * direction + RASHIS.length) % RASHIS.length);
+
+const countAssociations = Effect.fn("astro-ascendant/dasha/chara/countAssociations")(function* (
   placements: Placements,
-  planet: Planets,
-  context: string,
+  exclude: Planets,
+  index: number,
 ) {
-  const matches = placements.planets.filter((placement) => placement.name === planet);
-  const match = matches[0];
-  if (matches.length !== 1 || match === undefined) {
-    return yield* DashaEvidenceError.make({
-      placement: planet,
-      expected: 1,
-      actual: matches.length,
-      context,
-    });
-  }
-  return match;
-});
-
-function padaDirection(sign: Rashis): Direction {
-  return SAMA_PADA.has(sign) ? 1 : -1;
-}
-
-function distanceInDirection(from: number, to: number, direction: Direction): number {
-  return ((to - from) * direction + RASHIS.length) % RASHIS.length;
-}
-
-/**
- * Resolves Scorpio's Mars/Ketu or Aquarius's Saturn/Rahu co-lord without an
- * interpretive strength judgement. Occupation makes the other co-lord active;
- * otherwise sign associations, exact degree, then the traditional planet break
- * the tie. A shared occupation means the sign receives its full twelve years.
- */
-const resolveCoLord = Effect.fn("Dasha.resolveCharaCoLord")(function* <Candidate extends Planets>(
-  placements: Placements,
-  sign: "Scorpio" | "Aquarius",
-  candidates: readonly [Candidate, Candidate],
-) {
-  const targetIndex = rashiIndex(sign);
-  const first = yield* placementOf(placements, candidates[0], `${sign} co-lord`);
-  const second = yield* placementOf(placements, candidates[1], `${sign} co-lord`);
-  const firstIndex = signIndexOf(first.longitude);
-  const secondIndex = signIndexOf(second.longitude);
-  const firstInSign = firstIndex === targetIndex;
-  const secondInSign = secondIndex === targetIndex;
-
-  if (firstInSign && secondInSign) {
-    return null;
-  }
-
-  if (firstInSign !== secondInSign) {
-    return firstInSign ? candidates[1] : candidates[0];
-  }
-
-  const firstAssociations = placements.planets.filter(
-    (placement) =>
-      placement.name !== candidates[0] && signIndexOf(placement.longitude) === firstIndex,
-  ).length;
-  const secondAssociations = placements.planets.filter(
-    (placement) =>
-      placement.name !== candidates[1] && signIndexOf(placement.longitude) === secondIndex,
-  ).length;
-  if (firstAssociations !== secondAssociations) {
-    return firstAssociations > secondAssociations ? candidates[0] : candidates[1];
-  }
-
-  const firstDegree = yield* exactDegreeOf(first.longitude);
-  const secondDegree = yield* exactDegreeOf(second.longitude);
-  const degreeComparison = compareExactDegrees(firstDegree, secondDegree);
-  if (degreeComparison !== 0) return degreeComparison > 0 ? candidates[0] : candidates[1];
-
-  // An exact association-and-degree tie retains the traditional planet: Mars for
-  // Scorpio and Saturn for Aquarius. This keeps the calculation total.
-  return candidates[0];
+  const indexes = yield* Effect.forEach(
+    placements.planets.filter((p) => p.name !== exclude),
+    (p) => signIndexOf(p.longitude),
+  );
+  return indexes.filter((i) => i === index).length;
 });
 
 /**
- * Counts the sign lord in that sign's pada direction, excluding the starting
- * sign. A lord in its own sign, including a jointly occupied co-lord sign,
- * receives the conventional twelve-year duration.
+ * Resolves the effective lord of Scorpio or Aquarius for Chara Dasha, where
+ * two planets share lordship (Mars/Ketu for Scorpio, Saturn/Rahu for Aquarius).
+ *
+ * Rules are applied in order, stopping at the first that decides:
+ * 1. If both candidates sit in the sign itself, there is no lord (`null`).
+ * 2. If exactly one candidate sits in the sign, the other one is the lord.
+ * 3. Otherwise the candidate with more associations in its own sign wins.
+ * 4. If still tied, the candidate at the higher exact degree wins, and on an
+ *    exact tie the first (traditional) planet is chosen.
  */
-const durationOf = Effect.fn("Dasha.charaDurationOf")(function* (
+const resolveCoLord = Effect.fn("astro-ascendant/dasha/chara/resolveCoLord")(function* <
+  Candidate extends Planets,
+>(placements: Placements, sign: "Scorpio" | "Aquarius", [a, b]: readonly [Candidate, Candidate]) {
+  const target = yield* indexOfSign(sign);
+
+  const describe = (planet: Candidate) =>
+    placementOf(placements, planet, `${sign} co-lord`).pipe(
+      Effect.flatMap(({ longitude }) =>
+        signIndexOf(longitude).pipe(
+          Effect.map((index) => ({ planet, longitude, index, inSign: index === target })),
+        ),
+      ),
+    );
+
+  const [x, y] = yield* Effect.all([describe(a), describe(b)]);
+
+  if (x.inSign && y.inSign) return null;
+  if (x.inSign !== y.inSign) return x.inSign ? y.planet : x.planet;
+
+  const [xCount, yCount] = yield* Effect.all([
+    countAssociations(placements, x.planet, x.index),
+    countAssociations(placements, y.planet, y.index),
+  ]);
+  if (xCount !== yCount) return xCount > yCount ? x.planet : y.planet;
+
+  const [xDeg, yDeg] = yield* Effect.all([exactDegreeOf(x.longitude), exactDegreeOf(y.longitude)]);
+  // Exact tie: `a` is the traditional planet (Mars, Saturn).
+  return compareExactDegrees(xDeg, yDeg) < 0 ? y.planet : x.planet;
+});
+
+/**
+ * Computes the Chara Dasha duration (in years) of a sign.
+ *
+ * The duration is the count of signs from the given sign to the position of
+ * its lord, counted in the sign's pada direction (zodiacal or reverse). For
+ * Scorpio and Aquarius the lord is resolved via `resolveCoLord`; all other
+ * signs use their single ruler. If the lord sits in the sign itself (distance
+ * of 0), or if no co-lord can be resolved, the duration is 12 years.
+ */
+const durationOf = Effect.fn("astro-ascendant/dasha/chara/durationOf")(function* (
   placements: Placements,
   sign: Rashis,
 ) {
-  const signIndex = rashiIndex(sign);
-  let lord: Planets | null;
-
-  if (sign === "Scorpio") {
-    lord = yield* resolveCoLord(placements, sign, ["Mars", "Ketu"]);
-  } else if (sign === "Aquarius") {
-    lord = yield* resolveCoLord(placements, sign, ["Saturn", "Rahu"]);
-  } else {
-    lord = SIGN_LORDS[sign];
-  }
+  const lord =
+    sign === "Scorpio" || sign === "Aquarius"
+      ? yield* resolveCoLord(placements, sign, CO_LORDS[sign])
+      : SIGN_LORDS[sign];
 
   if (lord === null) return 12;
-  const lordPlacement = yield* placementOf(placements, lord, `${sign} duration`);
-  const distance = distanceInDirection(
-    signIndex,
-    signIndexOf(lordPlacement.longitude),
-    padaDirection(sign),
+
+  const distance = yield* Effect.all({
+    signIndex: indexOfSign(sign),
+    lordIndex: placementOf(placements, lord, `${sign} duration`).pipe(
+      Effect.flatMap(({ longitude }) => signIndexOf(longitude)),
+    ),
+    direction: padaDirection(sign),
+  }).pipe(
+    Effect.flatMap(({ signIndex, lordIndex, direction }) =>
+      distanceInDirection(signIndex, lordIndex, direction),
+    ),
   );
+
   return distance === 0 ? 12 : distance;
 });
 
 /**
- * Builds the twelve-sign Jaimini Chara Dasha from Lagna. The ninth sign's pada
- * group determines the forward or reverse order; each sign's own pada direction
- * determines its duration. Antardashas are equal twelfths and end exactly with
- * their parent Mahadasha.
+ * Calculates the Chara Dasha timeline for a chart.
+ *
+ * Mahadashas run through all twelve signs, starting from the lagna sign and
+ * proceeding in the pada direction of the 9th sign from lagna (zodiacal or
+ * reverse). Each mahadasha lasts as many years as `durationOf` gives for that
+ * sign, and begins where the previous one ended, with the first starting at
+ * the moment's date. Antardashas within each mahadasha begin from the sign
+ * next to the mahadasha sign in the same direction.
+ *
+ * Fails if any required planet placement is missing.
  */
-export const calculateChara = Effect.fn("astro-ascendant/dasha/calculateChara")(function* (
+export const calculateChara = Effect.fn("astro-ascendant/dasha/chara/calculateChara")(function* (
   moment: Moment,
   placements: Placements,
 ) {
-  yield* validateUniquePlanetPlacements(placements, "Chara Dasha co-lord strength");
-  const lagnaIndex = signIndexOf(placements.lagna.longitude);
-  const ninthSign = signAt(lagnaIndex + 8);
-  const direction = padaDirection(ninthSign);
-  const sequence = RashiInternal.sequenceFrom(lagnaIndex, direction);
-  const mahadashas = [];
-  let mahadashaStart = moment.date;
+  yield* validateRequiredPlacements(placements, Planets.literals, "Chara Dasha co-lord strength");
 
-  for (const mahadasha of sequence) {
-    const years = yield* durationOf(placements, mahadasha);
-    const mahadashaIndex = rashiIndex(mahadasha);
-    const antardashaSequence = RashiInternal.sequenceFrom(mahadashaIndex + direction, direction);
-    const period = RashiInternal.makeRashiMahaDasha(
-      mahadasha,
-      mahadashaStart,
-      years,
-      antardashaSequence,
-    );
-    mahadashas.push(period);
-    mahadashaStart = period.end;
-  }
+  const lagnaIndex = yield* signIndexOf(placements.lagna.longitude);
+
+  // Direction is determined by the 9th sign from lagna
+  const direction = yield* signAtIndex(lagnaIndex + 8).pipe(
+    Effect.map((index) => Array.getUnsafe(RASHIS, index)),
+    Effect.flatMap((ninthSign) => padaDirection(ninthSign)),
+  );
+
+  // Effectful phase: resolve duration and sign index for each sign, in order
+  const specs = yield* Effect.forEach(
+    RashiInternal.sequenceFrom(lagnaIndex, direction),
+    (mahadasha) =>
+      Effect.all({
+        years: durationOf(placements, mahadasha),
+        mahadashaIndex: indexOfSign(mahadasha),
+      }).pipe(Effect.map((resolved) => ({ mahadasha, ...resolved }))),
+  );
+
+  // Pure phase: each period starts where the previous one ended
+  const [, mahadashas] = Array.mapAccum(
+    specs,
+    moment.date,
+    (start, { mahadasha, years, mahadashaIndex }) => {
+      const period = RashiInternal.makeRashiMahaDasha(
+        mahadasha,
+        start,
+        years,
+        RashiInternal.sequenceFrom(mahadashaIndex + direction, direction),
+      );
+      return [period.end, period] as const;
+    },
+  );
 
   return CharaDasha.make({
     system: "Chara",
-    provenance: methods.charaDasha.provenance,
+    provenance: charaDasha.provenance,
     mahadashas,
   });
 });
