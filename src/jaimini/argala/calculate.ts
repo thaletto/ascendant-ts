@@ -1,75 +1,82 @@
-import { Effect, HashMap, Option } from "effect";
+import { Array as Arr, Effect, HashMap, Match, Option, pipe } from "effect";
 
 import { PLANETS, RASHIS } from "../../chart/internal/constants.js";
-import { signAt, signIndexOf } from "../../chart/internal/position.js";
+import { signAt } from "../../chart/internal/position.js";
 import { Planets, Rashis, type Placements } from "../../chart/model.js";
-import { methods } from "../../provenance.js";
+import { jaiminiArgala } from "../../provenance.js";
+import { Placement, Zodiac } from "../../utils/index.js";
 import { relation } from "./helper.js";
-import type { Reference, Result } from "./model.js";
-import { CalculationError, EvidenceError } from "./model.js";
+import type { Reference, Relation, Result } from "./model.js";
+import { EvidenceError, Positions } from "./model.js";
 
-/**
- * Calculates Jaimini Argala around a supplied sign or Ketu reference. It first
- * validates one placement per planet, then returns the fixed supporting and
- * obstructing positions; Ketu reverses their directional counting.
- */
+/** Locates one planet's placement and sign; fails when it does not appear exactly once. */
+const locate = Effect.fn("astro-ascendant/jaimini/argala/locate")(function* (
+  placements: Placements,
+  planet: Planets,
+) {
+  const placement = yield* Placement.exactlyOnce(placements, planet, (actual) =>
+    EvidenceError.make({ placement: planet, expected: 1, actual }),
+  );
+  return { planet, placement, sign: yield* signAt(placement.longitude) };
+});
+
+/** Groups located planets by occupied sign; every sign stays present, even when empty. */
+function occupantsOf(located: ReadonlyArray<{ readonly planet: Planets; readonly sign: Rashis }>) {
+  return pipe(
+    RASHIS,
+    Arr.map(
+      (sign) =>
+        [
+          sign,
+          located.filter((entry) => entry.sign === sign).map((entry) => entry.planet),
+        ] as const,
+    ),
+    HashMap.fromIterable,
+  );
+}
+
+/** Calculates Jaimini Argala (planetary intervention) for a sign or Ketu reference. */
 export const calculate = Effect.fn("astro-ascendant/jaimini/argala/calculate")(function* (
   placements: Placements,
   reference: Reference,
 ) {
-  let byPlanet = HashMap.empty<Planets, Placements["planets"][number]>();
-  let occupants: HashMap.HashMap<Rashis, readonly Planets[]> = HashMap.fromIterable(
-    RASHIS.map((sign) => [sign, []] as const),
+  const located = yield* Effect.forEach(PLANETS, (planet) => locate(placements, planet));
+  const byPlanet = HashMap.fromIterable(
+    located.map(({ planet, placement }) => [planet, placement] as const),
   );
+  const occupants = occupantsOf(located);
 
-  for (const planet of PLANETS) {
-    const matches = placements.planets.filter((placement) => placement.name === planet);
-    const match = matches[0];
-    if (matches.length !== 1 || match === undefined) {
-      return yield* EvidenceError.make({
-        placement: planet,
-        expected: 1,
-        actual: matches.length,
-      });
-    }
-    byPlanet = HashMap.set(byPlanet, planet, match);
-    const sign = signAt(signIndexOf(match.longitude));
-    const signOccupants = HashMap.get(occupants, sign);
-    if (Option.isNone(signOccupants)) {
-      return yield* CalculationError.make({
-        message: `Missing occupants for ${sign}`,
-        cause: sign,
-      });
-    }
-    occupants = HashMap.set(occupants, sign, [...signOccupants.value, planet]);
-  }
-
-  const reverse = reference.kind === "Ketu";
   const ketu = HashMap.get(byPlanet, "Ketu");
   if (Option.isNone(ketu)) {
     return yield* EvidenceError.make({ placement: "Ketu", expected: 1, actual: 0 });
   }
-  const referenceSign =
-    reference.kind === "Sign" ? reference.sign : signAt(signIndexOf(ketu.value.longitude));
-  const referenceIndex = RASHIS.indexOf(referenceSign);
+  const reverse = reference.kind === "Ketu";
+  const referenceSign = yield* Match.value(reference).pipe(
+    Match.when({ kind: "Sign" }, ({ sign }) => Effect.succeed(sign)),
+    Match.when({ kind: "Ketu" }, () => signAt(ketu.value.longitude)),
+    Match.exhaustive,
+  );
+  const referenceIndex = Zodiac.rashiIndexOf(referenceSign);
 
-  const supporting2 = yield* relation(referenceIndex, 2, occupants, reverse);
-  const supporting4 = yield* relation(referenceIndex, 4, occupants, reverse);
-  const supporting11 = yield* relation(referenceIndex, 11, occupants, reverse);
-  const obstructing12 = yield* relation(referenceIndex, 12, occupants, reverse);
-  const obstructing10 = yield* relation(referenceIndex, 10, occupants, reverse);
-  const obstructing3 = yield* relation(referenceIndex, 3, occupants, reverse);
-  const secondarySupporting = yield* relation(referenceIndex, 5, occupants, reverse);
-  const secondaryObstructing = yield* relation(referenceIndex, 9, occupants, reverse);
+  // Positions.literals runs supporting (2, 4, 11), obstructing (12, 10, 3), then secondary (5, 9).
+  // forEach preserves order, so the results split 1:1 with the literals.
+  const relations = yield* Effect.forEach(Positions.literals, (position) =>
+    relation(referenceIndex, position, occupants, reverse),
+  );
+  const tripleAt = (start: number): readonly [Relation, Relation, Relation] => [
+    Arr.getUnsafe(relations, start),
+    Arr.getUnsafe(relations, start + 1),
+    Arr.getUnsafe(relations, start + 2),
+  ];
 
   return {
-    provenance: methods.jaiminiArgala.provenance,
+    provenance: jaiminiArgala.provenance,
     reference,
     referenceSign,
     direction: reverse ? ("reverse" as const) : ("forward" as const),
-    supporting: [supporting2, supporting4, supporting11],
-    obstructing: [obstructing12, obstructing10, obstructing3],
-    secondarySupporting,
-    secondaryObstructing,
+    supporting: tripleAt(0),
+    obstructing: tripleAt(3),
+    secondarySupporting: Arr.getUnsafe(relations, 6),
+    secondaryObstructing: Arr.getUnsafe(relations, 7),
   } satisfies Result;
 });
