@@ -2,7 +2,7 @@ import { Effect } from "effect";
 
 import { AstroParams } from "../astro-params/service.js";
 import { generate } from "../chart/generate.js";
-import { ChartParams, Longitude, Moment, type Planets } from "../chart/model.js";
+import { ChartParams, Moment, type Planets } from "../chart/model.js";
 import { Ephemeris } from "../ephemeris/service.js";
 import { TransitSearchExhausted, TransitValidationError } from "./error.js";
 import {
@@ -11,12 +11,22 @@ import {
   type TransitKind,
   type TransitRequest,
 } from "./model.js";
-import { normalize360, dateTimeFromJd, searchRawHits, type FixedTarget } from "./search.js";
+import {
+  DEFAULT_MAX_YEARS,
+  DEFAULT_PRECISION_MINUTES,
+  MINUTES_PER_DAY,
+  normalize360,
+  dateTimeFromJd,
+  searchRawHits,
+  type FixedTarget,
+} from "./search.js";
 
 const MAX_COUNT = 100;
 const MAX_YEARS = 200;
 
-const validateRequest = Effect.fn("Transit.validateRequest")(function* (request: TransitRequest) {
+const validateRequest = Effect.fn("astro-ascendant/transit/validateRequest")(function* (
+  request: TransitRequest,
+) {
   const invalid = (message: string) => TransitValidationError.make({ message, cause: request });
   if (!Number.isInteger(request.count) || request.count < 1 || request.count > MAX_COUNT) {
     return yield* invalid(`count must be an integer between 1 and ${MAX_COUNT}`);
@@ -30,22 +40,23 @@ const validateRequest = Effect.fn("Transit.validateRequest")(function* (request:
   if (request.kinds.includes("cusp-crossing") && request.house === undefined) {
     return yield* invalid("house is required for cusp-crossing searches");
   }
-  const maxYears = request.maxYears ?? 30;
+  const maxYears = request.maxYears ?? DEFAULT_MAX_YEARS;
   if (!Number.isFinite(maxYears) || maxYears <= 0 || maxYears > MAX_YEARS) {
     return yield* invalid(`maxYears must be between 0 (exclusive) and ${MAX_YEARS}`);
   }
-  const precisionMinutes = request.precisionMinutes ?? 1;
-  if (!Number.isFinite(precisionMinutes) || precisionMinutes <= 0 || precisionMinutes > 1440) {
+  const precisionMinutes = request.precisionMinutes ?? DEFAULT_PRECISION_MINUTES;
+  if (
+    !Number.isFinite(precisionMinutes) ||
+    precisionMinutes <= 0 ||
+    precisionMinutes > MINUTES_PER_DAY
+  ) {
     return yield* invalid("precisionMinutes must be between 0 (exclusive) and 1440");
   }
 });
 
-/**
- * Finds the next or previous Transit events for one graha from a Located
- * Moment. Cusp targets are the natal house cusps at `from` under the shared
- * AstroParams; Charts attach afterwards only when `includeCharts` asks.
- */
-export const findTransits = Effect.fn("Transit.findTransits")(function* (request: TransitRequest) {
+export const findTransits = Effect.fn("astro-ascendant/transit/findTransits")(function* (
+  request: TransitRequest,
+) {
   yield* validateRequest(request);
   const astroParams = yield* AstroParams;
   const ephemeris = yield* Ephemeris;
@@ -89,6 +100,10 @@ export const findTransits = Effect.fn("Transit.findTransits")(function* (request
     includeStations: request.kinds.includes("station" satisfies TransitKind),
     fixedTargets,
     ayanamsa: astroParams.ayanamsa,
+    ...(request.precisionMinutes === undefined
+      ? {}
+      : { precisionMinutes: request.precisionMinutes }),
+    ...(request.maxYears === undefined ? {} : { maxYears: request.maxYears }),
   });
 
   const provenance = {
@@ -100,7 +115,7 @@ export const findTransits = Effect.fn("Transit.findTransits")(function* (request
     TransitEvent.make({
       planet,
       moment: dateTimeFromJd(hit.julianDay),
-      longitude: Longitude.make(normalize360(hit.longitude)),
+      longitude: normalize360(hit.longitude),
       kind: hit.kind,
       sign: hit.sign,
       is_retrograde: hit.speed < 0,
@@ -111,7 +126,7 @@ export const findTransits = Effect.fn("Transit.findTransits")(function* (request
 
   if (!outcome.complete) {
     return yield* TransitSearchExhausted.make({
-      message: `Found ${events.length} of ${request.count} events within ${request.maxYears ?? 30} years`,
+      message: `Found ${events.length} of ${request.count} events within ${request.maxYears ?? DEFAULT_MAX_YEARS} years`,
       found: events,
       searchedUntil: dateTimeFromJd(outcome.endJulianDay),
     });
