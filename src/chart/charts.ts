@@ -1,9 +1,11 @@
 import { Array, Effect, Order, pipe, Record as Struct } from "effect";
 
-import { methods } from "../provenance.js";
-import { getDivisionalTarget } from "./divisional-mapping/index.js";
+import { chartProjection } from "../provenance.js";
+import { Zodiac } from "../utils/index.js";
+import { normalizeLongitude } from "../utils/position.js";
+import { getDivisionalTarget } from "./divisional-mapping/calculate.js";
 import { ChartCalculationError } from "./error.js";
-import { inSignStatus } from "./helper.js";
+import { inSignStatus, starOf, subLordOf } from "./helper.js";
 import { SIGN_LORDS } from "./internal/constants.js";
 import {
   Chart,
@@ -16,49 +18,53 @@ import {
   Rashis,
   Sign,
   type Sex,
+  HOUSE_SIGNIFICATIONS,
 } from "./model.js";
 
-/**
- * Assembles a Whole Sign chart from division-mapped Lagna and planet positions.
- * House one is the mapped Lagna sign and every following house advances one sign.
- */
-function chartFromMappedPlacements({
-  division,
-  lagna,
-  planets,
-  sex,
-}: {
+export interface MappedPositions {
   readonly division: Division;
   readonly lagna: Lagna;
   readonly planets: readonly Planet[];
   readonly sex: Sex | undefined;
-}): Chart {
+}
+
+const chartFromMappedPlacements = Effect.fn(function* ({
+  division,
+  lagna,
+  planets,
+  sex,
+}: MappedPositions) {
   const lagnaSignIndex = Rashis.literals.indexOf(lagna.sign.name);
-  const houses = Struct.fromEntries(
-    Array.range(0, 11).map((index) => {
-      const house = (index + 1) as Houses;
-      const houseSign = Array.getUnsafe(Rashis.literals, (lagnaSignIndex + index) % 12);
-      return [
-        String(house),
-        House.make({
-          sign: houseSign,
-          planets: planets.filter((planet) => planet.sign.name === houseSign),
-          lagna: house === 1 ? lagna : null,
-        }),
-      ] as const;
-    }),
-  ) as Record<Houses, House>;
+  const entries: Array<readonly [string, House]> = [];
+  for (const index of Array.range(0, 11)) {
+    const house = (index + 1) as Houses;
+    const houseSign = Zodiac.signAt(lagnaSignIndex + index);
+    const cusp = yield* normalizeLongitude(Zodiac.wrapIndex(lagnaSignIndex + index) * 30);
+    entries.push([
+      String(house),
+      House.make({
+        sign: houseSign,
+        cusp,
+        signLord: SIGN_LORDS[houseSign],
+        starLord: (yield* starOf(cusp)).lord,
+        subLord: yield* subLordOf(cusp),
+        significations: HOUSE_SIGNIFICATIONS[house],
+        planets: planets.filter((planet) => planet.sign.name === houseSign),
+        lagna: house === 1 ? lagna : null,
+      }),
+    ] as const);
+  }
+  const houses = Struct.fromEntries(entries) as Record<Houses, House>;
 
   return Chart.make({
     ...(sex === undefined ? {} : { sex }),
-    provenance: methods.chartProjection.provenance,
+    provenance: chartProjection.provenance,
     division,
     houses,
   });
-}
+});
 
-/** Maps canonical D1 Placements into one requested division before house assembly. */
-const chartFromPlacements = Effect.fn("astro-ascendant/chart/chartFromPlacements")(function* (
+export const mappedPositions = Effect.fn("astro-ascendant/chart/mappedPositions")(function* (
   placements: Placements,
   division: Division,
   sex: Sex | undefined,
@@ -100,10 +106,22 @@ const chartFromPlacements = Effect.fn("astro-ascendant/chart/chartFromPlacements
     { concurrency: "unbounded" },
   );
 
-  return chartFromMappedPlacements({ division, lagna, planets, sex });
+  return { division, lagna, planets, sex } satisfies MappedPositions;
 });
 
-function requestedDivisions(divisions: readonly Division[]): readonly [Division, ...Division[]] {
+const chartFromPlacements = Effect.fn("astro-ascendant/chart/chartFromPlacements")(function* (
+  placements: Placements,
+  division: Division,
+  sex: Sex | undefined,
+) {
+  const positions = yield* mappedPositions(placements, division, sex);
+
+  return yield* chartFromMappedPlacements(positions);
+});
+
+export function requestedDivisions(
+  divisions: readonly Division[],
+): readonly [Division, ...Division[]] {
   const requested = pipe(
     divisions,
     Array.filter((division) => division !== 1),
@@ -114,12 +132,6 @@ function requestedDivisions(divisions: readonly Division[]): readonly [Division,
   return [1, ...requested];
 }
 
-/**
- * Projects D1 plus requested divisional charts from shared Placements. D1 is
- * always first; duplicate requests are removed and remaining divisions sort in
- * ascending numeric order, preserving a stable calculation result.
- * Optional sex metadata is copied unchanged into every projected chart.
- */
 export const project = Effect.fn("astro-ascendant/chart/project")(
   function* (placements: Placements, divisions: readonly Division[] = [], sex?: Sex) {
     const requested = requestedDivisions(divisions);
