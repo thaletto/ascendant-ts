@@ -1,34 +1,7 @@
-import { Array, DateTime, HashSet, Record } from "effect";
+import { DateTime, HashSet, Record } from "effect";
 
 import * as Model from "../../src/chart/index.js";
-
-const RASHIS = Model.Rashis.literals;
-const SIGN_LORDS: Record<Model.Rashis, Model.RashiLords> = {
-  Aries: "Mars",
-  Taurus: "Venus",
-  Gemini: "Mercury",
-  Cancer: "Moon",
-  Leo: "Sun",
-  Virgo: "Mercury",
-  Libra: "Venus",
-  Scorpio: "Mars",
-  Sagittarius: "Jupiter",
-  Capricorn: "Saturn",
-  Aquarius: "Saturn",
-  Pisces: "Jupiter",
-};
-
-const ALL_PLANETS = [
-  "Sun",
-  "Moon",
-  "Mars",
-  "Mercury",
-  "Jupiter",
-  "Venus",
-  "Saturn",
-  "Rahu",
-  "Ketu",
-] as const;
+import { PLANETS } from "../../src/chart/internal/constants.js";
 
 function sourcePlanet(
   name: Model.Planets,
@@ -39,7 +12,7 @@ function sourcePlanet(
     name,
     longitude: Model.Longitude.make(longitude),
     is_retrograde: isRetrograde,
-    nakshatra: Model.Nakshatra.make({ name: "Ashwini", lord: "Ketu", pada: 1 }),
+    star: Model.Star.make({ name: "Ashwini", lord: "Ketu", pada: 1 }),
   });
 }
 
@@ -64,7 +37,7 @@ function placementsFromLongitudes(
     ...overrides,
   };
   const omitted = HashSet.fromIterable(options.omit ?? []);
-  const planets = ALL_PLANETS.filter((planet) => !HashSet.has(omitted, planet)).map((planet) =>
+  const planets = PLANETS.filter((planet) => !HashSet.has(omitted, planet)).map((planet) =>
     sourcePlanet(planet, longitudes[planet]),
   );
   if (options.duplicate !== undefined) {
@@ -75,88 +48,9 @@ function placementsFromLongitudes(
     lagna: Model.SourceLagna.make({
       name: "Lagna",
       longitude: Model.Longitude.make(options.lagnaLongitude ?? 0),
-      nakshatra: Model.Nakshatra.make({ name: "Ashwini", lord: "Ketu", pada: 1 }),
+      star: Model.Star.make({ name: "Ashwini", lord: "Ketu", pada: 1 }),
     }),
     planets,
-  });
-}
-
-function planetForHouse(
-  name: Model.Planets,
-  house: Model.Houses,
-  dignities: readonly Model.PlanetDignity[] = [],
-): Model.Planet {
-  const longitude = (house - 1) * 30;
-  const sign = Array.getUnsafe(RASHIS, house - 1);
-  return Model.Planet.make({
-    name,
-    longitude: Model.Longitude.make(longitude),
-    degree: Model.Degree.make(0),
-    is_retrograde: false,
-    in_sign: dignities,
-    sign: Model.Sign.make({ name: sign, lord: SIGN_LORDS[sign] }),
-  });
-}
-
-function calculationFromHouses(
-  overrides: Partial<Record<Model.Planets, Model.Houses>> = {},
-  divisions: readonly Model.Division[] = [1],
-  options: {
-    readonly dignities?: Partial<Record<Model.Planets, readonly Model.PlanetDignity[]>>;
-  } = {},
-): Model.ChartCalculation {
-  const planetHouses: Record<Model.Planets, Model.Houses> = {
-    Sun: 3,
-    Moon: 5,
-    Mars: 6,
-    Mercury: 8,
-    Jupiter: 9,
-    Venus: 11,
-    Saturn: 12,
-    Rahu: 2,
-    Ketu: 7,
-    ...overrides,
-  };
-  const planets = ALL_PLANETS.map((name) =>
-    planetForHouse(name, planetHouses[name], options.dignities?.[name]),
-  );
-  const houses = Record.fromEntries(
-    RASHIS.map((sign, index) => {
-      const house = (index + 1) as Model.Houses;
-      return [
-        String(house),
-        Model.House.make({
-          sign,
-          planets: planets.filter((planet) => planetHouses[planet.name] === house),
-          lagna:
-            house === 1
-              ? Model.Lagna.make({
-                  name: "Lagna",
-                  longitude: Model.Longitude.make(0),
-                  degree: Model.Degree.make(0),
-                  sign: Model.Sign.make({ name: "Aries", lord: "Mars" }),
-                })
-              : null,
-        }),
-      ];
-    }),
-  ) as Record<Model.Houses, Model.House>;
-  const sourcePlacements = placementsFromLongitudes(
-    Record.fromEntries(ALL_PLANETS.map((name) => [name, (planetHouses[name] - 1) * 30])) as Partial<
-      Record<Model.Planets, number>
-    >,
-  );
-  const charts = divisions.map((division) =>
-    Model.Chart.make({
-      provenance: { school: "Ascendant", method: "ascendant-divisional-mapping", version: 1 },
-      division,
-      houses,
-    }),
-  ) as [Model.Chart, ...Model.Chart[]];
-  return Model.ChartCalculation.make({
-    placements: sourcePlacements,
-    charts,
-    astroParams: { ayanamsa: "Lahiri", houseSystem: "WholeSign" },
   });
 }
 
@@ -164,12 +58,15 @@ function moment(date = "2000-01-01T12:00:00.000Z"): Model.Moment {
   return Model.Moment.make({ date: DateTime.makeUnsafe(date) });
 }
 
-function locatedMoment(): Model.LocatedMoment {
-  return Model.LocatedMoment.make({ moment: moment(), latitude: 12.9716, longitude: 77.5946 });
+function locatedMoment(
+  date = "2000-01-01T12:00:00.000Z",
+  latitude = 12.9716,
+  longitude = 77.5946,
+): Model.LocatedMoment {
+  return Model.LocatedMoment.make({ moment: moment(date), latitude, longitude });
 }
 
 export const fixtures = {
-  calculationFromHouses,
   locatedMoment,
   moment,
   placementsFromLongitudes,
