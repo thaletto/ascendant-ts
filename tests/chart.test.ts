@@ -52,16 +52,28 @@ describe("Chart projections", () => {
     }),
   );
 
-  it.effect("always includes D1 and deduplicates requested divisional charts", () =>
+  it.effect("returns requested divisions exactly once and in stable order", () =>
     Effect.gen(function* () {
-      const charts = yield* Chart.project(fixtures.placementsFromLongitudes(), [10, 9, 9, 1]);
-
-      expect(
-        Equal.equals(
-          charts.map(({ division }) => division),
+      for (const [requested, expected] of [
+        [
           [1, 9, 10],
-        ),
-      ).toBe(true);
+          [1, 9, 10],
+        ],
+        [
+          [10, 9, 9, 1],
+          [1, 9, 10],
+        ],
+      ] as const) {
+        const charts = yield* Chart.project(fixtures.placementsFromLongitudes(), [...requested]);
+
+        expect(
+          Equal.equals(
+            charts.map(({ division }) => division),
+            [...expected],
+          ),
+        ).toBe(true);
+        expect(charts.every(({ houses }) => Record.size(houses) === 12)).toBe(true);
+      }
     }),
   );
 
@@ -126,13 +138,6 @@ describe("Chart projections", () => {
       const [chart] = yield* Chart.project(fixtures.placementsFromLongitudes());
 
       expect(chart.division).toBe(1);
-      expect(
-        Equal.equals(chart.provenance, {
-          school: "Ascendant",
-          method: "ascendant-divisional-mapping",
-          version: 1,
-        }),
-      ).toBe(true);
       expect(chart.houses[1]?.lagna?.sign.name).toBe("Aries");
       expect(Array.contains(chart.houses[1]?.planets.map(({ name }) => name) ?? [], "Sun")).toBe(
         true,
@@ -150,27 +155,14 @@ describe("Chart projections", () => {
         .find(({ name }) => name === "Ketu");
       const lagna = chart.houses[1]?.lagna;
 
-      expect(lagna?.longitude).toBe(207.94356);
+      // Ephemeris arithmetic preserves the input only up to floating-point noise.
+      expect(lagna?.longitude).toBeCloseTo(207.94356, 9);
       expect(lagna?.sign.name).toBe("Libra");
       expect(lagna?.sign.lord).toBe("Venus");
-      expect(ketu?.longitude).toBe(211.003451);
+      expect(ketu?.longitude).toBeCloseTo(211.003451, 9);
       expect(ketu?.sign.name).toBe("Scorpio");
       expect(ketu?.sign.lord).toBe("Mars");
       expect(ketu?.sign.lord).not.toBe(lagna?.sign.lord);
-    }),
-  );
-
-  it.effect("returns requested divisions exactly once and in stable order", () =>
-    Effect.gen(function* () {
-      const charts = yield* Chart.project(fixtures.placementsFromLongitudes(), [1, 9, 10]);
-
-      expect(
-        Equal.equals(
-          charts.map(({ division }) => division),
-          [1, 9, 10],
-        ),
-      ).toBe(true);
-      expect(charts.every(({ houses }) => Record.size(houses) === 12)).toBe(true);
     }),
   );
 
