@@ -108,5 +108,5 @@
     "noPropertyAccessFromIndexSignature": false
   },
   "include": ["src/**/*.ts", "tests/**/*.ts", "vitest.config.ts"],
-  "exclude": ["dist", "examples", "node_modules", "repos"]
+  "exclude": ["dist", "examples", "node_modules", "repos", "tests/package"]
 }
