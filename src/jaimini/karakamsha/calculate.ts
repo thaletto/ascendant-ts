@@ -1,20 +1,17 @@
 import { Effect } from "effect";
 
-import { getDivisionalTarget } from "../../chart/divisional-mapping/index.js";
+import { getDivisionalTarget } from "../../chart/divisional-mapping/calculate.js";
 import { Placements } from "../../chart/model.js";
-import { methods } from "../../provenance.js";
-import * as CharaKarakas from "../chara-karakas/index.js";
+import { jaiminiKarakamsha } from "../../provenance.js";
+import { calculate as calculateCharaKarakas } from "../chara-karakas/calculate.js";
 import { signOf } from "./helper.js";
 import type { Result } from "./model.js";
 import { CalculationError, EvidenceError } from "./model.js";
 
-/**
- * Returns the D9 sign for every Atmakaraka holder. It reuses the exact-degree
- * Chara Karaka result, preserving all genuine Atmakaraka ties rather than
- * selecting one planet, and converts its failures to Karakamsha evidence errors.
- */
-export const calculate = Effect.fn("Karakamsha.calculate")(function* (placements: Placements) {
-  const charaKarakas = yield* CharaKarakas.calculate(placements).pipe(
+export const calculate = Effect.fn("astro-ascendant/jaimini/karakamsha/calculate")(function* (
+  placements: Placements,
+) {
+  const charaKarakas = yield* calculateCharaKarakas(placements).pipe(
     Effect.mapError((error) => {
       if (error._tag === "CharaKarakasEvidenceError") {
         return EvidenceError.make({
@@ -65,7 +62,7 @@ export const calculate = Effect.fn("Karakamsha.calculate")(function* (placements
   }
 
   return {
-    provenance: methods.jaiminiKarakamsha.provenance,
+    provenance: jaiminiKarakamsha.provenance,
     placements: [first, ...karakamshaPlacements.slice(1)],
   } satisfies Result;
 });
