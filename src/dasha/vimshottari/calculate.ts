@@ -1,98 +1,100 @@
-import { Effect } from "effect";
+import { Array as Arr, Effect, pipe } from "effect";
 
-import type { Moment, Placements, Planets } from "../../chart/model.js";
+import {
+  STAR_LORD_CYCLE,
+  VIMSHOTTARI_CYCLE_YEARS,
+  VIMSHOTTARI_YEARS,
+} from "../../chart/internal/constants.js";
+import type { Moment, Placements, SourcePlanet } from "../../chart/model.js";
 import { Calendar } from "../calendar.js";
 import { DashaCalculationError } from "../error.js";
 import { AntarDasha, MahaDasha } from "../model.js";
 
-const VIMSHOTTARI_PLANETS = [
-  "Ketu",
-  "Venus",
-  "Sun",
-  "Moon",
-  "Mars",
-  "Rahu",
-  "Jupiter",
-  "Saturn",
-  "Mercury",
-] as const satisfies readonly Planets[];
+/** Minutes of arc in one nakshatra (13°20′). */
+const STAR_ARC_MINUTES = 800;
 
-const VIMSHOTTARI_YEARS: Readonly<Record<(typeof VIMSHOTTARI_PLANETS)[number], number>> = {
-  Ketu: 7,
-  Venus: 20,
-  Sun: 6,
-  Moon: 10,
-  Mars: 7,
-  Rahu: 18,
-  Jupiter: 16,
-  Saturn: 19,
-  Mercury: 17,
-};
+type StarLord = (typeof STAR_LORD_CYCLE)[number];
 
-const NAKSHATRA_ARC_MINUTES = 800;
-const VIMSHOTTARI_CYCLE_YEARS = 120;
+/** Finds the natal Moon; Vimshottari starts from its nakshatra, so its absence is a calculation error. */
+const moonOf = Effect.fn("astro-ascendant/dasha/vimshottari/moonOf")(function* (
+  placements: Placements,
+) {
+  const moon = placements.planets.find((planet) => planet.name === "Moon");
+  if (moon === undefined) {
+    return yield* DashaCalculationError.make({
+      message: "Placements must contain the Moon",
+      cause: placements,
+    });
+  }
+  return moon;
+});
 
-function rotate<T>(values: readonly T[], start: number): readonly T[] {
-  return [...values.slice(start), ...values.slice(0, start)];
+/** Derives the Mahadasha order from the Moon's nakshatra lord and the balance of its period left at birth. */
+function balanceOf(moon: SourcePlanet) {
+  return pipe(
+    moon,
+    (placement) => ({
+      sequence: Arr.rotate(STAR_LORD_CYCLE, STAR_LORD_CYCLE.indexOf(placement.star.lord)),
+      elapsedArcMinutes:
+        Math.round(placement.longitude * 60 * 100) / 100 -
+        Math.floor(placement.longitude / (360 / 27)) * STAR_ARC_MINUTES,
+      lordYears: VIMSHOTTARI_YEARS[placement.star.lord],
+    }),
+    ({ sequence, elapsedArcMinutes, lordYears }) => ({
+      sequence,
+      elapsedYears:
+        lordYears - (lordYears / STAR_ARC_MINUTES) * (STAR_ARC_MINUTES - elapsedArcMinutes),
+    }),
+  );
 }
 
-/**
- * Derives the nine Vimshottari Mahadashas from the Moon's nakshatra and birth
- * balance. Each Mahadasha contains proportional Antardashas in cyclic order;
- * the final child is set to the parent end to retain contiguous UTC intervals.
- */
-export const calculate = Effect.fn("astro-ascendant/dasha/calculate")(
-  function* (moment: Moment, placements: Placements) {
-    const moon = placements.planets.find((planet) => planet.name === "Moon");
-    if (moon === undefined) {
-      return yield* DashaCalculationError.make({
-        message: "Placements must contain the Moon",
-        cause: placements,
-      });
-    }
-    const nakshatraLord = moon?.nakshatra.lord;
-    const startIndex = VIMSHOTTARI_PLANETS.indexOf(nakshatraLord);
-    const sequence = rotate(VIMSHOTTARI_PLANETS, startIndex);
-    const nakshatraIndex = Math.floor(moon.longitude / (360 / 27));
-    const nakshatraStart = nakshatraIndex * NAKSHATRA_ARC_MINUTES;
-    const elapsedArcMinutes = Math.round(moon.longitude * 60 * 100) / 100 - nakshatraStart;
-    const remainingArcMinutes = NAKSHATRA_ARC_MINUTES - elapsedArcMinutes;
-    const lordYears = VIMSHOTTARI_YEARS[nakshatraLord];
-    const elapsedYears = lordYears - (lordYears / NAKSHATRA_ARC_MINUTES) * remainingArcMinutes;
-
-    let mahadashaStart = Calendar.shiftDate(moment.date, elapsedYears, -1);
-    return sequence.map((mahadasha) => {
-      const mahadashaYears = VIMSHOTTARI_YEARS[mahadasha];
-      const mahadashaEnd = Calendar.shiftDate(mahadashaStart, mahadashaYears, 1);
-      const antardashaSequence = rotate(sequence, sequence.indexOf(mahadasha));
-      let antardashaStart = mahadashaStart;
-      let elapsedAntardashaYears = 0;
-
-      const antardashas = antardashaSequence.map((antardasha, index) => {
-        elapsedAntardashaYears +=
-          (mahadashaYears * VIMSHOTTARI_YEARS[antardasha]) / VIMSHOTTARI_CYCLE_YEARS;
-        const antardashaEnd =
+/** Builds the nine Antardashas within one Mahadasha, proportional to the 120-year cycle; the last clamps to the parent end. */
+function antardashasOf(
+  mahadasha: StarLord,
+  mahadashaStart: Moment["date"],
+  sequence: readonly StarLord[],
+) {
+  const mahadashaYears = VIMSHOTTARI_YEARS[mahadasha];
+  const mahadashaEnd = Calendar.shiftDate(mahadashaStart, mahadashaYears, 1);
+  const antardashaSequence = Arr.rotate(sequence, sequence.indexOf(mahadasha));
+  return pipe(
+    antardashaSequence,
+    Arr.reduce(
+      { start: mahadashaStart, elapsed: 0, periods: [] as Array<AntarDasha> },
+      ({ start, elapsed, periods }, antardasha, index) => {
+        const years =
+          elapsed + (mahadashaYears * VIMSHOTTARI_YEARS[antardasha]) / VIMSHOTTARI_CYCLE_YEARS;
+        const end =
           index === antardashaSequence.length - 1
             ? mahadashaEnd
-            : Calendar.shiftDate(mahadashaStart, elapsedAntardashaYears, 1);
-        const period = AntarDasha.make({
-          mahadasha,
-          antardasha,
-          start: antardashaStart,
-          end: antardashaEnd,
-        });
-        antardashaStart = antardashaEnd;
-        return period;
-      });
-      const period = MahaDasha.make({
-        mahadasha,
-        start: mahadashaStart,
-        end: mahadashaEnd,
-        antardashas,
-      });
-      mahadashaStart = mahadashaEnd;
-      return period;
-    });
+            : Calendar.shiftDate(mahadashaStart, years, 1);
+        const period = AntarDasha.make({ mahadasha, antardasha, start, end });
+        return { start: end, elapsed: years, periods: [...periods, period] };
+      },
+    ),
+    ({ periods }) => ({ end: mahadashaEnd, antardashas: periods }),
+  );
+}
+
+/** Builds the nine Mahadashas from the birth sequence start, chaining each period's end to the next start. */
+function mahadashasFrom(sequence: readonly StarLord[], start: Moment["date"]) {
+  return pipe(
+    sequence,
+    Arr.reduce({ start, periods: [] as Array<MahaDasha> }, ({ start, periods }, mahadasha) => {
+      const { end, antardashas } = antardashasOf(mahadasha, start, sequence);
+      const period = MahaDasha.make({ mahadasha, start, end, antardashas });
+      return { start: end, periods: [...periods, period] };
+    }),
+    ({ periods }) => periods,
+  );
+}
+
+/** Calculates the full Vimshottari Dasha timeline from the natal Moon's nakshatra position. */
+export const calculate = Effect.fn("astro-ascendant/dasha/vimshottari/calculate")(
+  function* (moment: Moment, placements: Placements) {
+    const moon = yield* moonOf(placements);
+    const { sequence, elapsedYears } = balanceOf(moon);
+    return mahadashasFrom(sequence, Calendar.shiftDate(moment.date, elapsedYears, -1));
   },
   Effect.mapError((cause) =>
     DashaCalculationError.make({
