@@ -1,4 +1,4 @@
-import { Effect, Layer } from "effect";
+import { Effect, Function, Layer } from "effect";
 import type { DateTime } from "effect/DateTime";
 
 import { Ayanamsa, HouseSystem } from "../../src/astro-params/model.js";
@@ -10,18 +10,40 @@ import {
 } from "../../src/ephemeris/model.js";
 import { Ephemeris } from "../../src/ephemeris/service.js";
 
-function positionAt(body: CelestialBody): PlanetaryPosition {
-  const longitude = CelestialBody.literals.indexOf(body) * 30;
+export const planetaryPosition: {
+  (longitudeSpeed: number): (longitude: number) => PlanetaryPosition;
+  (longitude: number, longitudeSpeed: number): PlanetaryPosition;
+} = Function.dual(2, (longitude: number, longitudeSpeed: number): PlanetaryPosition => ({
+  longitude,
+  latitude: 0,
+  distance: 1,
+  longitudeSpeed,
+  latitudeSpeed: 0,
+  distanceSpeed: 0,
+  flags: 0,
+}));
 
-  return {
-    longitude,
-    latitude: 0,
-    distance: 1,
-    longitudeSpeed: 1,
-    latitudeSpeed: 0,
-    distanceSpeed: 0,
-    flags: 0,
-  };
+export const wholeSignHouses: {
+  (houseSystem: typeof HouseSystem.Type): (cusps: ReadonlyArray<number>) => HouseData;
+  (cusps: ReadonlyArray<number>, houseSystem: typeof HouseSystem.Type): HouseData;
+} = Function.dual(
+  2,
+  (cusps: ReadonlyArray<number>, houseSystem: typeof HouseSystem.Type): HouseData => ({
+    cusps: [...cusps],
+    ascendant: 0,
+    mc: 270,
+    armc: 270,
+    vertex: 90,
+    equatorialAscendant: 0,
+    coAscendant1: 0,
+    coAscendant2: 0,
+    polarAscendant: 0,
+    houseSystem,
+  }),
+);
+
+function positionAt(body: CelestialBody): PlanetaryPosition {
+  return planetaryPosition(CelestialBody.literals.indexOf(body) * 30, 1);
 }
 
 function dateToJulianDay(_date: DateTime) {
@@ -43,18 +65,9 @@ function calculateHouses(
   houseSystem: typeof HouseSystem.Type,
   _ayanamsa: typeof Ayanamsa.Type,
 ) {
-  return Effect.succeed({
-    cusps: [0, 0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330],
-    ascendant: 0,
-    mc: 270,
-    armc: 270,
-    vertex: 90,
-    equatorialAscendant: 0,
-    coAscendant1: 0,
-    coAscendant2: 0,
-    polarAscendant: 0,
-    houseSystem,
-  } satisfies HouseData);
+  return Effect.succeed(
+    wholeSignHouses([0, 0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330], houseSystem),
+  );
 }
 
 export const EphemerisTestLayer = Layer.succeed(
