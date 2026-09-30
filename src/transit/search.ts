@@ -1,26 +1,30 @@
 import { DateTime, Effect } from "effect";
 
 import { Ayanamsa } from "../astro-params/model.js";
-import { Rashis } from "../chart/model.js";
+import { Longitude, Rashis } from "../chart/model.js";
 import { JulianDay, type CelestialBody } from "../ephemeris/model.js";
 import { Ephemeris } from "../ephemeris/service.js";
+import { Zodiac } from "../utils/index.js";
+import { EPS_BOUNDARY } from "../utils/position.js";
 import { type Planets, type TransitDirection, type TransitKind } from "./model.js";
 
-/** Julian Day of the Unix epoch; converts freely between JD and epoch millis. */
 export const JD_UNIX_EPOCH = 2_440_587.5;
+export const MS_PER_DAY = 86_400_000;
+export const MINUTES_PER_DAY = 1440;
+export const DEFAULT_MAX_YEARS = 30;
+export const DEFAULT_PRECISION_MINUTES = 1;
 const DAYS_PER_YEAR = 365.25;
-const MINUTES_PER_DAY = 1440;
 
-export function normalize360(degrees: number): number {
-  return ((degrees % 360) + 360) % 360;
+export function normalize360(degrees: number): Longitude {
+  return Longitude.make(((degrees % 360) + 360) % 360);
 }
 
 export function wrap180(degrees: number): number {
-  return normalize360(degrees + 180) - 180;
+  return ((((degrees + 180) % 360) + 360) % 360) - 180;
 }
 
 export function millisFromJd(julianDay: number): number {
-  return (julianDay - JD_UNIX_EPOCH) * 86_400_000;
+  return (julianDay - JD_UNIX_EPOCH) * MS_PER_DAY;
 }
 
 export function dateTimeFromJd(julianDay: number) {
@@ -90,7 +94,7 @@ export interface SearchOutcome {
   readonly endJulianDay: number;
 }
 
-export const sampleAt = Effect.fn("Transit.sampleAt")(function* (
+export const sampleAt = Effect.fn("astro-ascendant/transit/sampleAt")(function* (
   julianDay: number,
   planet: Planets,
   ayanamsa: typeof Ayanamsa.Type,
@@ -101,7 +105,7 @@ export const sampleAt = Effect.fn("Transit.sampleAt")(function* (
     PLANET_BODY[planet],
     ayanamsa,
   );
-  const raw = planet === "Ketu" ? position.longitude + 180 : position.longitude;
+  const raw = planet === "Ketu" ? normalize360(position.longitude + 180) : position.longitude;
   return {
     julianDay,
     longitude: normalize360(raw),
@@ -109,15 +113,6 @@ export const sampleAt = Effect.fn("Transit.sampleAt")(function* (
   } satisfies LongitudeSample;
 });
 
-function signIndexOf(longitude: number): number {
-  return Math.floor(normalize360(longitude) / 30) % 12;
-}
-
-function signAt(index: number): Rashis {
-  return Rashis.literals[((index % 12) + 12) % 12]!;
-}
-
-/** Sign entered when traversing `boundary` in `direction`. */
 function enteredSign(
   boundary: number,
   direction: TransitDirection,
@@ -125,28 +120,30 @@ function enteredSign(
 ): Rashis {
   const index = Math.round(normalize360(boundary) / 30) % 12;
   const rising = direction === "forward" ? longitudeRising : !longitudeRising;
-  return rising ? signAt(index) : signAt(index - 1);
+  return rising ? Zodiac.signAt(index) : Zodiac.signAt(index - 1);
 }
 
 function isBoundaryTarget(target: number): boolean {
   return normalize360(target) % 30 === 0;
 }
 
-/** Multiple of 30 crossed between two samples, with the longitude trend. */
 function crossedBoundary(
   earlier: number,
   later: number,
 ): { boundary: number; rising: boolean } | null {
-  if (signIndexOf(earlier) === signIndexOf(later)) return null;
+  if (
+    Zodiac.indexOfLongitude(normalize360(earlier)) === Zodiac.indexOfLongitude(normalize360(later))
+  )
+    return null;
   const low = Math.min(earlier, later);
   const high = Math.max(earlier, later);
   if (high - low > 180) return { boundary: 0, rising: earlier > later };
-  const boundary = (Math.ceil(low / 30 - 1e-9) * 30) % 360;
-  if (boundary > high + 1e-9) return null;
+  const boundary = (Math.ceil(low / 30 - EPS_BOUNDARY) * 30) % 360;
+  if (boundary > high + EPS_BOUNDARY) return null;
   return { boundary, rising: later > earlier };
 }
 
-const refineValue = Effect.fn("Transit.refineValue")(function* (
+const refineValue = Effect.fn("astro-ascendant/transit/refineValue")(function* (
   low: LongitudeSample,
   high: LongitudeSample,
   planet: Planets,
@@ -172,7 +169,7 @@ const refineValue = Effect.fn("Transit.refineValue")(function* (
   return yield* sampleAt((lower.julianDay + upper.julianDay) / 2, planet, ayanamsa);
 });
 
-const refineLongitude = Effect.fn("Transit.refineLongitude")(function* (
+const refineLongitude = Effect.fn("astro-ascendant/transit/refineLongitude")(function* (
   low: LongitudeSample,
   high: LongitudeSample,
   planet: Planets,
@@ -185,7 +182,7 @@ const refineLongitude = Effect.fn("Transit.refineLongitude")(function* (
   );
 });
 
-const refineStation = Effect.fn("Transit.refineStation")(function* (
+const refineStation = Effect.fn("astro-ascendant/transit/refineStation")(function* (
   low: LongitudeSample,
   high: LongitudeSample,
   planet: Planets,
@@ -202,13 +199,13 @@ const refineStation = Effect.fn("Transit.refineStation")(function* (
   );
 });
 
-const refineStep = Effect.fn("Transit.refineStep")(function* (
+const refineStep = Effect.fn("astro-ascendant/transit/refineStep")(function* (
   earlier: LongitudeSample,
   later: LongitudeSample,
   options: SearchOptions,
 ) {
   const hits: Array<RawHit> = [];
-  const precision = options.precisionMinutes ?? 1;
+  const precision = options.precisionMinutes ?? DEFAULT_PRECISION_MINUTES;
   const push = (sample: LongitudeSample, kind: TransitKind, sign: Rashis) => {
     const previous = hits[hits.length - 1];
     if (
@@ -264,7 +261,7 @@ const refineStep = Effect.fn("Transit.refineStep")(function* (
         target.kind,
         isBoundaryTarget(target.longitude)
           ? enteredSign(target.longitude, options.direction, rising)
-          : signAt(signIndexOf(refined.longitude)),
+          : Zodiac.signAt(Zodiac.indexOfLongitude(normalize360(refined.longitude))),
       );
     }
   }
@@ -280,7 +277,11 @@ const refineStep = Effect.fn("Transit.refineStep")(function* (
         options.ayanamsa,
         precision,
       );
-      push(refined, "station", signAt(signIndexOf(refined.longitude)));
+      push(
+        refined,
+        "station",
+        Zodiac.signAt(Zodiac.indexOfLongitude(normalize360(refined.longitude))),
+      );
     }
   }
 
@@ -291,17 +292,14 @@ const refineStep = Effect.fn("Transit.refineStep")(function* (
   );
 });
 
-/**
- * Sweeps coarse steps from `fromJulianDay`, refining every bracketed
- * crossing. Each zero-crossing counts, so retrograde triples yield three
- * hits in strict time order. Returns `complete: false` with the hits found
- * when `maxYears` runs out instead of silently returning a short list.
- */
-export const searchRawHits = Effect.fn("Transit.searchRawHits")(function* (options: SearchOptions) {
+/** Every zero-crossing counts, so retrograde triples yield three hits in time order. */
+export const searchRawHits = Effect.fn("astro-ascendant/transit/searchRawHits")(function* (
+  options: SearchOptions,
+) {
   const forward = options.direction === "forward";
   const sign = forward ? 1 : -1;
   const step = (options.stepDays ?? COARSE_STEP_DAYS[options.planet]) * sign;
-  const spanDays = (options.maxYears ?? 30) * DAYS_PER_YEAR * sign;
+  const spanDays = (options.maxYears ?? DEFAULT_MAX_YEARS) * DAYS_PER_YEAR * sign;
   const limit = options.fromJulianDay + spanDays;
   const maxIterations = Math.ceil(Math.abs(spanDays / step)) + 2;
 
@@ -323,7 +321,7 @@ export const searchRawHits = Effect.fn("Transit.searchRawHits")(function* (optio
     for (const hit of stepHits) {
       if (hits.length >= options.count) break;
       const last = hits[hits.length - 1];
-      const precision = options.precisionMinutes ?? 1;
+      const precision = options.precisionMinutes ?? DEFAULT_PRECISION_MINUTES;
       if (
         last !== undefined &&
         last.kind === hit.kind &&
