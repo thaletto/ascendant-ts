@@ -1,20 +1,29 @@
 import { Effect } from "effect";
 
 import type { Placements } from "../../chart/model.js";
-import { methods } from "../../provenance.js";
-import { calculateUpapada } from "./helper.js";
-import type { Result } from "./model.js";
+import { jaiminiUpapada } from "../../provenance.js";
+import { calculate as calculateArudhaPada } from "../arudha-pada/calculate.js";
+import type {
+  EvidenceError as ArudhaPadaEvidenceError,
+  Result as ArudhaPadaResult,
+} from "../arudha-pada/model.js";
+import { EvidenceError, type Result } from "./model.js";
 
-/**
- * Returns the twelfth-house Arudha Pada as Upapada. It delegates the projection
- * to the shared Arudha calculation while exposing its own Jaimini provenance and
- * typed evidence failures.
- */
-export const calculate = Effect.fn("Upapada.calculate")(function* (placements: Placements) {
-  const arudhaPada = yield* calculateUpapada(placements);
+export const calculate = Effect.fn("astro-ascendant/jaimini/upapada/calculate")(function* (
+  placements: Placements,
+) {
+  const arudhaPada: ArudhaPadaResult = yield* calculateArudhaPada(placements, 12).pipe(
+    Effect.catchTag(
+      "ArudhaPadaEvidenceError",
+      (error: ArudhaPadaEvidenceError): Effect.Effect<never, EvidenceError> =>
+        Effect.fail(
+          EvidenceError.make({ placement: error.placement, expected: 1, actual: error.actual }),
+        ),
+    ),
+  );
 
   return {
-    provenance: methods.jaiminiUpapada.provenance,
+    provenance: jaiminiUpapada.provenance,
     house: 12 as const,
     sourceSign: arudhaPada.sourceSign,
     lord: arudhaPada.lord,
