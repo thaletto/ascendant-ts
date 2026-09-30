@@ -9,7 +9,7 @@ export interface DivisionalTarget {
 export interface SourcePosition {
   readonly longitude: Longitude;
   readonly signIndex: number;
-  readonly degree: number;
+  readonly degree: Degree;
 }
 
 export interface Subdivision {
