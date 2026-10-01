@@ -1,7 +1,10 @@
 {
   "name": "astro-ascendant",
+  "displayName": "ascendant",
   "version": "4.0.1",
+  "description": "Effect-Native TypeScript library for sidereal astrology calculations.",
   "homepage": "https://ascendant-docs.vercel.app",
+  "author": {},
   "license": "AGPL-3.0-or-later",
   "files": [
     "dist",
