@@ -4,10 +4,8 @@ import { Effect, Layer } from "effect";
 import { runSelectedExample } from "./input.js";
 import { runtimeLayer } from "./runtime.js";
 
-const examples = Effect.scoped(
-  Effect.flatMap(Layer.build(runtimeLayer), (context) =>
-    Effect.provide(runSelectedExample, context),
-  ),
-);
+const MainLive = Layer.effectDiscard(runSelectedExample).pipe(Layer.provide(runtimeLayer));
+
+const examples = Effect.scoped(Layer.build(MainLive));
 
 BunRuntime.runMain(examples);

@@ -6,7 +6,6 @@ import {
   DateTime,
   Effect,
   FileSystem,
-  Layer,
   Match,
   Option,
   Order,
@@ -377,6 +376,9 @@ export const runSelectedExample = Effect.gen(function* () {
     Match.when("transit", () => transitExample(input)),
     Match.exhaustive,
   );
-  const astroParams = yield* Effect.scoped(Layer.build(AstroParams.layer(input.astroParams)));
-  yield* Effect.provide(program, astroParams);
+  yield* Effect.provideService(
+    program,
+    AstroParams.AstroParams,
+    AstroParams.AstroParams.of(input.astroParams),
+  );
 });
