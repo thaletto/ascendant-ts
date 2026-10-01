@@ -1,4 +1,4 @@
-import { Array as Arr, Effect, HashSet, pipe } from "effect";
+import { Array as Arr, Effect, HashSet, Order, pipe } from "effect";
 
 import { inSignStatus } from "../../chart/helper.js";
 import { RASHIS, SIGN_LORDS } from "../../chart/internal/constants.js";
@@ -45,10 +45,19 @@ function isEligibleBrahma(planet: Planets): planet is EligibleBrahmaPlanet {
 
 /** Orders Brahma contenders by total bala, then exact degree, then natural strength — all descending. */
 
-const byStrength = (left: Scored, right: Scored): number =>
-  right.total - left.total ||
-  compareExactDegrees(right.exactDegree, left.exactDegree) ||
-  right.naturalStrength - left.naturalStrength;
+const byTotalDescending = Order.mapInput(Order.Number, (scored: Scored) => -scored.total);
+const byExactDegreeDescending = Order.make<Scored>((left, right) => {
+  const compared = compareExactDegrees(right.exactDegree, left.exactDegree);
+  return compared < 0 ? -1 : compared > 0 ? 1 : 0;
+});
+const byNaturalStrengthDescending = Order.mapInput(
+  Order.Number,
+  (scored: Scored) => -scored.naturalStrength,
+);
+const byStrength: Order.Order<Scored> = Order.combine(
+  byTotalDescending,
+  Order.combine(byExactDegreeDescending, byNaturalStrengthDescending),
+);
 
 /** Rashi strength as Chara Bala (movability) + Sthira Bala (occupancy) + Drishti Bala (aspect). */
 const rashiBalaOf = Effect.fn("astro-ascendant/dasha/sthira/rashiBalaOf")(function* (
@@ -210,7 +219,7 @@ const scoredOf = Effect.fn("astro-ascendant/dasha/sthira/scoredOf")(function* (
     yield* Effect.forEach(candidates, (candidate) =>
       scoreCandidate(candidate, placements, karakas, atmakarakaSignIndex),
     ),
-    (scored) => [...scored].sort(byStrength),
+    (scored) => Arr.sort(scored, byStrength),
   );
   if (winner === undefined) {
     return yield* DashaCalculationError.make({

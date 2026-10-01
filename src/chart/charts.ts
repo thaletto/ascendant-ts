@@ -84,8 +84,9 @@ export const mappedPositions = Effect.fn("astro-ascendant/chart/mappedPositions"
     }),
   );
 
-  const planets = yield* Effect.all(
-    placements.planets.map((source) =>
+  const planets = yield* Effect.forEach(
+    placements.planets,
+    (source) =>
       getDivisionalTarget(source.longitude, division).pipe(
         Effect.map((mapped) => {
           const mappedSign = Array.getUnsafe(Rashis.literals, mapped.signIndex);
@@ -102,7 +103,6 @@ export const mappedPositions = Effect.fn("astro-ascendant/chart/mappedPositions"
           });
         }),
       ),
-    ),
     { concurrency: "unbounded" },
   );
 
@@ -137,8 +137,9 @@ export const project = Effect.fn("astro-ascendant/chart/project")(
     const requested = requestedDivisions(divisions);
     const [firstDivision, ...remainingDivisions] = requested;
     const firstChart = yield* chartFromPlacements(placements, firstDivision, sex);
-    const remainingCharts = yield* Effect.all(
-      remainingDivisions.map((division) => chartFromPlacements(placements, division, sex)),
+    const remainingCharts = yield* Effect.forEach(
+      remainingDivisions,
+      (division) => chartFromPlacements(placements, division, sex),
       { concurrency: "unbounded" },
     );
 

@@ -164,10 +164,10 @@ const reduceScores = Effect.fn("astro-ascendant/sav/reduceScores")(function* (sc
 const calculateReduced = Effect.fn("astro-ascendant/sav/calculateReduced")(function* (
   bhinna: BhinnaAshtakavarga,
 ) {
-  const reducedEntries = yield* Effect.all(
-    ASHTAKAVARGA_PLANET_ORDER.map((planet) =>
+  const reducedEntries = yield* Effect.forEach(
+    ASHTAKAVARGA_PLANET_ORDER,
+    (planet) =>
       reduceScores(bhinna[planet]).pipe(Effect.map((scores) => [planet, scores] as const)),
-    ),
     { concurrency: "unbounded" },
   );
   return Record.fromEntries(reducedEntries) as ReducedAshtakavarga;

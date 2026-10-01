@@ -1,4 +1,4 @@
-import { Effect, HashMap, Option, Record, Schema } from "effect";
+import { Array, Effect, HashMap, Option, Order, Record, Schema } from "effect";
 import type { DateTime as DateTimeType } from "effect/DateTime";
 
 import type { HouseData } from "../ephemeris/model.js";
@@ -63,13 +63,15 @@ const agentOf = Effect.fn(function* (planet: Planet, houses: readonly House[]) {
 
   const house = houses.find((item) => item.planets.some(({ name }) => name === planet.name));
 
-  const conjunction = house?.planets
-    .filter((item) => item.name !== planet.name)
-    .sort(
-      (first, second) =>
-        angularDistance(first.longitude, planet.longitude) -
-        angularDistance(second.longitude, planet.longitude),
-    )[0];
+  const conjunction =
+    house === undefined
+      ? undefined
+      : Array.sort(
+          house.planets.filter((item) => item.name !== planet.name),
+          Order.mapInput(Order.Number, (candidate: Planet) =>
+            angularDistance(candidate.longitude, planet.longitude),
+          ),
+        )[0];
 
   return conjunction?.name ?? planet.sign.lord;
 });

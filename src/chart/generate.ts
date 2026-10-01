@@ -48,20 +48,18 @@ const calculatePlacementEvidence = Effect.fn("astro-ascendant/chart/calculatePla
       astroParams.houseSystem,
       astroParams.ayanamsa,
     );
-    const planetEntries = yield* Effect.all(
-      Planets.literals
-        .filter((planet) => planet !== "Ketu")
-        .map((planet) =>
-          Effect.gen(function* () {
-            const body = yield* planetBodyOf(planet);
-            const position = yield* ephemeris.calculatePosition(
-              julianDay,
-              body,
-              astroParams.ayanamsa,
-            );
-            return [planet, position] as const;
-          }),
-        ),
+    const planetEntries = yield* Effect.forEach(
+      Planets.literals.filter((planet) => planet !== "Ketu"),
+      (planet) =>
+        Effect.gen(function* () {
+          const body = yield* planetBodyOf(planet);
+          const position = yield* ephemeris.calculatePosition(
+            julianDay,
+            body,
+            astroParams.ayanamsa,
+          );
+          return [planet, position] as const;
+        }),
       { concurrency: "unbounded" },
     );
 

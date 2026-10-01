@@ -134,8 +134,9 @@ export const findTransits = Effect.fn("astro-ascendant/transit/findTransits")(fu
 
   const divisions = request.includeCharts ?? [];
   if (divisions.length === 0) return events;
-  return yield* Effect.all(
-    events.map((event) =>
+  return yield* Effect.forEach(
+    events,
+    (event) =>
       Effect.gen(function* () {
         const input = ChartParams.make({
           moment: Moment.make({ date: event.moment }),
@@ -155,7 +156,6 @@ export const findTransits = Effect.fn("astro-ascendant/transit/findTransits")(fu
           calculation,
         });
       }),
-    ),
     { concurrency: "unbounded" },
   );
 });

@@ -1,4 +1,4 @@
-import { Effect, HashMap } from "effect";
+import { Array, Effect, HashMap, Order } from "effect";
 
 import { Placements } from "../../chart/model.js";
 import { jaiminiCharaKarakas } from "../../provenance.js";
@@ -12,10 +12,22 @@ import {
 import type { Result, Holder, Role, RankedHolder } from "./model.js";
 import { EvidenceError, ParseError } from "./model.js";
 
+const byExactDegreeDescending = Order.make<RankedHolder>((left, right) => {
+  const compared = compareExactDegrees(right.exactDegree, left.exactDegree);
+  return compared < 0 ? -1 : compared > 0 ? 1 : 0;
+});
+const byClassicalPlanetOrder = Order.mapInput(Order.Number, (holder: RankedHolder) =>
+  CLASSICAL_PLANET_ORDER.indexOf(holder.planet),
+);
+const byKarakaRank: Order.Order<RankedHolder> = Order.combine(
+  byExactDegreeDescending,
+  byClassicalPlanetOrder,
+);
+
 export const calculate = Effect.fn("astro-ascendant/jaimini/chara-karakas/calculate")(function* (
   placements: Placements,
 ) {
-  const holders: RankedHolder[] = [];
+  let holders: RankedHolder[] = [];
   for (const planet of CLASSICAL_PLANET_ORDER) {
     const matches = placements.planets.filter((placement) => placement.name === planet);
     const match = matches[0];
@@ -30,11 +42,7 @@ export const calculate = Effect.fn("astro-ascendant/jaimini/chara-karakas/calcul
     holders.push({ planet, degree: exactDegree.value, exactDegree });
   }
 
-  holders.sort(
-    (left, right) =>
-      compareExactDegrees(right.exactDegree, left.exactDegree) ||
-      CLASSICAL_PLANET_ORDER.indexOf(left.planet) - CLASSICAL_PLANET_ORDER.indexOf(right.planet),
-  );
+  holders = Array.sort(holders, byKarakaRank);
 
   let byRole = HashMap.empty<Role, readonly [Holder, ...Holder[]]>();
   let rank = 0;
