@@ -1,8 +1,8 @@
 import { Console, DateTime, Effect, Match } from "effect";
-import { Prompt } from "effect/unstable/cli";
+import { Prompt } from "effect/cli";
 
-import { Chart, Dasha } from "../src/index.ts";
-import type { ExampleInput } from "./input.ts";
+import { Chart, Dasha } from "../src/index.js";
+import type { ExampleInput } from "./input.js";
 
 const DASHA_CHOICES = [
   {
@@ -22,9 +22,7 @@ const DASHA_CHOICES = [
   },
 ] as const;
 
-const printVimshottariDasha = Effect.fn("Examples.printVimshottariDasha")(function* (
-  timeline: Dasha.VimshottariDasha,
-) {
+const printVimshottariDasha = Effect.fn(function* (timeline: Dasha.VimshottariDasha) {
   yield* Console.log("Vimshottari Mahadashas");
   yield* Console.table(
     timeline.map((period) => ({
@@ -48,9 +46,7 @@ const printVimshottariDasha = Effect.fn("Examples.printVimshottariDasha")(functi
   }
 });
 
-const printRashiDasha = Effect.fn("Examples.printRashiDasha")(function* (
-  timeline: Dasha.RashiDasha,
-) {
+const printRashiDasha = Effect.fn(function* (timeline: Dasha.RashiDasha) {
   const brahma = Match.value(timeline).pipe(
     Match.when(
       { system: "Sthira" },
@@ -119,29 +115,19 @@ const printRashiDasha = Effect.fn("Examples.printRashiDasha")(function* (
   }
 });
 
-const calculateChara = Effect.fn("Examples.calculateChara")(function* (
-  moment: Chart.Moment,
-  placements: Chart.Placements,
-) {
+const calculateChara = Effect.fn(function* (moment: Chart.Moment, placements: Chart.Placements) {
   return yield* Dasha.calculateChara(moment, placements);
 });
 
-const calculateSthira = Effect.fn("Examples.calculateSthira")(function* (
-  moment: Chart.Moment,
-  placements: Chart.Placements,
-) {
+const calculateSthira = Effect.fn(function* (moment: Chart.Moment, placements: Chart.Placements) {
   return yield* Dasha.calculateSthira(moment, placements);
 });
 
-export const dashaExample = Effect.fn("Examples.dasha")(function* ({
-  moment,
-  latitude,
-  longitude,
-}: ExampleInput) {
+export const dashaExample = Effect.fn(function* ({ moment, latitude, longitude }: ExampleInput) {
   const calculation = yield* Chart.generate(
     Chart.LocatedMoment.make({ moment, latitude, longitude }),
   );
-  const dasha = yield* Prompt.select<(typeof DASHA_CHOICES)[number]["value"]>({
+  const dasha = yield* Prompt.Select<(typeof DASHA_CHOICES)[number]["value"]>({
     message: "Choose a Dasha system",
     choices: DASHA_CHOICES,
   });
