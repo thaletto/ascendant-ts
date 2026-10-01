@@ -136,7 +136,7 @@ describe("SchemaRepresentation.toJsonSchemaMultiDocument", () => {
             child: { $ref: "#/$defs/ChildEncoded" }
           },
           required: ["child"],
-          additionalProperties: false
+          additionalProperties: true
         }
       })
     })
@@ -368,7 +368,8 @@ describe("SchemaRepresentation.toJsonSchemaMultiDocument", () => {
         type: "object",
         patternProperties: {
           "^key$": { type: "string" }
-        }
+        },
+        additionalProperties: true
       }])
     })
 
@@ -415,7 +416,7 @@ describe("SchemaRepresentation.toJsonSchemaMultiDocument", () => {
               ]
             }
           },
-          additionalProperties: false
+          additionalProperties: true
         },
         NodeEncoded: { $ref: "#/$defs/Objects_" }
       })
@@ -461,7 +462,7 @@ describe("SchemaRepresentation.toJsonSchemaMultiDocument", () => {
             next: { $ref: "#/$defs/Suspend_" }
           },
           required: ["next"],
-          additionalProperties: false
+          additionalProperties: true
         },
         NodeEncoded: {
           type: "object",
@@ -469,7 +470,7 @@ describe("SchemaRepresentation.toJsonSchemaMultiDocument", () => {
             next: { $ref: "#/$defs/Suspend_" }
           },
           required: ["next"],
-          additionalProperties: false
+          additionalProperties: true
         },
         Suspend_1: {
           type: "object",
@@ -477,7 +478,7 @@ describe("SchemaRepresentation.toJsonSchemaMultiDocument", () => {
             next: { $ref: "#/$defs/Suspend_1" }
           },
           required: ["next"],
-          additionalProperties: false
+          additionalProperties: true
         },
         NodeEncoded_1: {
           type: "object",
@@ -485,7 +486,7 @@ describe("SchemaRepresentation.toJsonSchemaMultiDocument", () => {
             next: { $ref: "#/$defs/Suspend_1" }
           },
           required: ["next"],
-          additionalProperties: false
+          additionalProperties: true
         }
       })
     })
@@ -541,7 +542,7 @@ describe("SchemaRepresentation.toJsonSchemaMultiDocument", () => {
           {
             _tag: "Union",
             types: [StringRepresentation, { _tag: "Boolean", checks: [] }],
-            mode: "oneOf",
+            options: { mode: "oneOf" },
             checks: []
           }
         ],
@@ -558,6 +559,53 @@ describe("SchemaRepresentation.toJsonSchemaMultiDocument", () => {
         },
         { oneOf: [{ type: "string" }, { type: "boolean" }] }
       ])
+    })
+
+    it("resolves oneOf exactness through recursive references", () => {
+      const approximate: SchemaRepresentation.Representation = {
+        _tag: "String",
+        checks: [{
+          _tag: "Filter",
+          aborted: false,
+          annotations: { toJsonSchema: () => [{ minLength: 1 }, true] }
+        }]
+      }
+      const output = SchemaRepresentation.toJsonSchemaMultiDocument({
+        representations: [
+          { _tag: "Reference", $ref: "Exact" },
+          { _tag: "Reference", $ref: "Approximate" }
+        ],
+        references: {
+          Exact: {
+            _tag: "Union",
+            types: [{ _tag: "Reference", $ref: "Exact" }, { _tag: "Boolean", checks: [] }],
+            options: { mode: "oneOf" },
+            checks: []
+          },
+          Approximate: {
+            _tag: "Union",
+            types: [{ _tag: "Reference", $ref: "Approximate" }, approximate],
+            options: { mode: "oneOf" },
+            checks: []
+          }
+        }
+      })
+
+      assert.deepStrictEqual(output, {
+        dialect: "draft-2020-12",
+        schemas: [
+          { $ref: "#/$defs/Exact" },
+          { $ref: "#/$defs/Approximate" }
+        ],
+        definitions: {
+          Exact: {
+            oneOf: [{ $ref: "#/$defs/Exact" }, { type: "boolean" }]
+          },
+          Approximate: {
+            anyOf: [{ $ref: "#/$defs/Approximate" }, { type: "string", minLength: 1 }]
+          }
+        }
+      })
     })
 
     it("uses group overrides without visiting children and otherwise falls back to allOf", () => {
@@ -688,7 +736,7 @@ describe("SchemaRepresentation.toJsonSchemaMultiDocument", () => {
         checks: []
       })
       const pattern = SchemaRepresentation.toRepresentation(
-        Schema.String.check(Schema.isPattern(/^a/)).ast
+        Schema.String.check(Schema.isPattern(/^a/u)).ast
       ).representation
       const output = SchemaRepresentation.toJsonSchemaMultiDocument({
         representations: [
@@ -704,11 +752,12 @@ describe("SchemaRepresentation.toJsonSchemaMultiDocument", () => {
       assert.deepStrictEqual(output.schemas, [
         {
           type: "object",
-          patternProperties: { "^a": { type: "string" } }
+          patternProperties: { "^a": { type: "string" } },
+          additionalProperties: true
         },
         {
           type: "object",
-          additionalProperties: { type: "string" }
+          additionalProperties: true
         }
       ])
 

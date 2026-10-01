@@ -37,7 +37,7 @@ export interface CheckRepresentationAnnotation<S> extends RepresentationAnnotati
 }
 
 /**
- * Input passed to JSON Schema compiler annotations.
+ * Input and output contracts for JSON Schema compiler annotations.
  *
  * @since 4.0.0
  */
@@ -54,18 +54,70 @@ export declare namespace ToJsonSchema {
   }
 
   /**
-   * Compiles a check to a JSON Schema fragment.
+   * The result of compiling a check to JSON Schema.
+   *
+   * **Details**
+   *
+   * Return the JSON Schema fragment directly when it represents the check
+   * exactly. Return `[schema, true]` when the fragment is a safe, looser
+   * approximation: it must accept every value accepted by the check, but may
+   * accept additional values. Use `[{}, true]` when the constraint is omitted;
+   * a bare `{}` declares that the check imposes no constraint.
+   *
+   * Approximation propagates through enclosing schemas and dependencies listed
+   * in `representation.schemas`, including recursive references. A `oneOf`
+   * union with an approximate branch exports as `anyOf`. Approximate record-key
+   * patterns cannot be used as `patternProperties` selectors.
    *
    * **Gotchas**
    *
-   * Treat the input schemas as immutable. The returned value must be a valid JSON Schema object graph and must not be
-   * mutated after this function returns. Local `$defs` references must use valid JSON Pointer URI fragments. Return a
-   * new object graph to produce different output during a later compilation.
+   * The compiler trusts the callback's declaration; it does not prove that the
+   * fragment is exact or safely looser. Returning a plain fragment does not
+   * override approximation inherited from a schema dependency.
+   *
+   * **Example** (Declaring a Unicode length approximation)
+   *
+   * ```ts import.meta.vitest
+   * import { Schema } from "effect"
+   *
+   * const short = Schema.String.check(Schema.makeFilter(
+   *   (value: string) => value.length <= 1,
+   *   { toJsonSchema: () => [{ maxLength: 1 }, true] }
+   * ))
+   * const schema = Schema.Union([short, Schema.Literal("😀")], { mode: "oneOf" })
+   * const document = Schema.toJsonSchemaDocument(schema)
+   *
+   * Schema.is(schema)("😀") // => true
+   * document.schema.oneOf // => undefined
+   * document.schema.anyOf // => [{ type: "string", maxLength: 1 }, { type: "string", enum: ["😀"] }]
+   * ```
    *
    * @category models
    * @since 4.0.0
    */
-  export type Check = (input: CheckInput) => JsonSchema.JsonSchema
+  export type CheckOutput = JsonSchema.JsonSchema | readonly [schema: JsonSchema.JsonSchema, approximate: true]
+
+  /**
+   * Compiles a check to a JSON Schema fragment.
+   *
+   * **Details**
+   *
+   * Return a fragment for an exact translation or `[fragment, true]` for a safe,
+   * looser approximation. Dependencies in `representation.schemas` are compiled
+   * into the input's `schemas` array; their approximation status propagates automatically.
+   *
+   * **Gotchas**
+   *
+   * Treat the input schemas as immutable. The returned fragment must be a valid JSON Schema object graph and must not be
+   * mutated after this function returns. Local `$defs` references must use valid JSON Pointer URI fragments. Return a
+   * new object graph to produce different output during a later compilation.
+   *
+   * @see {@link CheckOutput} for exact and approximate results
+   *
+   * @category models
+   * @since 4.0.0
+   */
+  export type Check = (input: CheckInput) => CheckOutput
 }
 
 /**
@@ -274,7 +326,12 @@ export interface Literal extends Keyword<"Literal"> {
 }
 
 /**
- * A unique global symbol representation.
+ * A unique symbol representation.
+ *
+ * **Details**
+ *
+ * Globally registered symbols have an exact JSON string representation. Local
+ * symbols have no JSON representation.
  *
  * @category models
  * @since 4.0.0
@@ -296,7 +353,7 @@ export interface ObjectKeyword extends Keyword<"ObjectKeyword"> {}
  *
  * **Details**
  *
- * Enum members are stored as native string or number values. Persistent
+ * Enum members are stored as native string or finite number values. Persistent
  * codecs add an explicit type discriminator when encoding them.
  *
  * @category models
@@ -393,7 +450,7 @@ export interface Objects extends Keyword<"Objects"> {
  */
 export interface Union extends Keyword<"Union"> {
   readonly types: ReadonlyArray<Representation>
-  readonly mode: "anyOf" | "oneOf"
+  readonly options?: SchemaAST.UnionOptions | undefined
 }
 
 /**
@@ -848,63 +905,63 @@ export const isBase64UrlReviver: FilterReviver<null> = makeReviverFilter(
 )
 
 /**
- * Reviver for persisted `isStartsWith` checks.
+ * Reviver for persisted `isStartingWith` checks.
  *
  * **When to use**
  *
- * Use when reconstructing documents that may contain checks created by {@link Schema.isStartsWith}.
+ * Use when reconstructing documents that may contain checks created by {@link Schema.isStartingWith}.
  *
- * @see {@link Schema.isStartsWith} for creating the corresponding check
+ * @see {@link Schema.isStartingWith} for creating the corresponding check
  *
  * @category validation
  * @since 4.0.0
  */
-export const isStartsWithReviver: FilterReviver<{
+export const isStartingWithReviver: FilterReviver<{
   readonly startsWith: string
 }> = makeReviverFilter(
-  "effect/schema/isStartsWith",
+  "effect/schema/isStartingWith",
   Schema.Struct({ startsWith: Schema.String }),
-  ({ annotations, payload }) => Schema.isStartsWith(payload.startsWith, annotations)
+  ({ annotations, payload }) => Schema.isStartingWith(payload.startsWith, annotations)
 )
 
 /**
- * Reviver for persisted `isEndsWith` checks.
+ * Reviver for persisted `isEndingWith` checks.
  *
  * **When to use**
  *
- * Use when reconstructing documents that may contain checks created by {@link Schema.isEndsWith}.
+ * Use when reconstructing documents that may contain checks created by {@link Schema.isEndingWith}.
  *
- * @see {@link Schema.isEndsWith} for creating the corresponding check
+ * @see {@link Schema.isEndingWith} for creating the corresponding check
  *
  * @category validation
  * @since 4.0.0
  */
-export const isEndsWithReviver: FilterReviver<{
+export const isEndingWithReviver: FilterReviver<{
   readonly endsWith: string
 }> = makeReviverFilter(
-  "effect/schema/isEndsWith",
+  "effect/schema/isEndingWith",
   Schema.Struct({ endsWith: Schema.String }),
-  ({ annotations, payload }) => Schema.isEndsWith(payload.endsWith, annotations)
+  ({ annotations, payload }) => Schema.isEndingWith(payload.endsWith, annotations)
 )
 
 /**
- * Reviver for persisted `isIncludes` checks.
+ * Reviver for persisted `isIncluding` checks.
  *
  * **When to use**
  *
- * Use when reconstructing documents that may contain checks created by {@link Schema.isIncludes}.
+ * Use when reconstructing documents that may contain checks created by {@link Schema.isIncluding}.
  *
- * @see {@link Schema.isIncludes} for creating the corresponding check
+ * @see {@link Schema.isIncluding} for creating the corresponding check
  *
  * @category validation
  * @since 4.0.0
  */
-export const isIncludesReviver: FilterReviver<{
+export const isIncludingReviver: FilterReviver<{
   readonly includes: string
 }> = makeReviverFilter(
-  "effect/schema/isIncludes",
+  "effect/schema/isIncluding",
   Schema.Struct({ includes: Schema.String }),
-  ({ annotations, payload }) => Schema.isIncludes(payload.includes, annotations)
+  ({ annotations, payload }) => Schema.isIncluding(payload.includes, annotations)
 )
 
 /**
@@ -1184,24 +1241,70 @@ export const isMaxLengthReviver: FilterReviver<{
 )
 
 /**
- * Reviver for persisted `isLengthBetween` checks.
+ * Reviver for persisted `isBetweenLength` checks.
  *
  * **When to use**
  *
- * Use when reconstructing documents that may contain checks created by {@link Schema.isLengthBetween}.
+ * Use when reconstructing documents that may contain checks created by {@link Schema.isBetweenLength}.
  *
- * @see {@link Schema.isLengthBetween} for creating the corresponding check
+ * @see {@link Schema.isBetweenLength} for creating the corresponding check
  *
  * @category validation
  * @since 4.0.0
  */
-export const isLengthBetweenReviver: FilterReviver<{
+export const isBetweenLengthReviver: FilterReviver<{
   readonly minimum: number
   readonly maximum: number
 }> = makeReviverFilter(
-  "effect/schema/isLengthBetween",
+  "effect/schema/isBetweenLength",
   Schema.Struct({ minimum: Schema.Natural, maximum: Schema.Natural }),
-  ({ annotations, payload }) => Schema.isLengthBetween(payload.minimum, payload.maximum, annotations)
+  ({ annotations, payload }) => Schema.isBetweenLength(payload.minimum, payload.maximum, annotations)
+)
+
+/**
+ * Reviver for persisted `isMinCodePoints` checks.
+ *
+ * @see {@link Schema.isMinCodePoints} for creating the corresponding check
+ * @category validation
+ * @since 4.0.0
+ */
+export const isMinCodePointsReviver: FilterReviver<{
+  readonly minCodePoints: number
+}> = makeReviverFilter(
+  "effect/schema/isMinCodePoints",
+  Schema.Struct({ minCodePoints: Schema.Natural }),
+  ({ annotations, payload }) => Schema.isMinCodePoints(payload.minCodePoints, annotations)
+)
+
+/**
+ * Reviver for persisted `isMaxCodePoints` checks.
+ *
+ * @see {@link Schema.isMaxCodePoints} for creating the corresponding check
+ * @category validation
+ * @since 4.0.0
+ */
+export const isMaxCodePointsReviver: FilterReviver<{
+  readonly maxCodePoints: number
+}> = makeReviverFilter(
+  "effect/schema/isMaxCodePoints",
+  Schema.Struct({ maxCodePoints: Schema.Natural }),
+  ({ annotations, payload }) => Schema.isMaxCodePoints(payload.maxCodePoints, annotations)
+)
+
+/**
+ * Reviver for persisted `isBetweenCodePoints` checks.
+ *
+ * @see {@link Schema.isBetweenCodePoints} for creating the corresponding check
+ * @category validation
+ * @since 4.0.0
+ */
+export const isBetweenCodePointsReviver: FilterReviver<{
+  readonly minimum: number
+  readonly maximum: number
+}> = makeReviverFilter(
+  "effect/schema/isBetweenCodePoints",
+  Schema.Struct({ minimum: Schema.Natural, maximum: Schema.Natural }),
+  ({ annotations, payload }) => Schema.isBetweenCodePoints(payload.minimum, payload.maximum, annotations)
 )
 
 /**
@@ -1245,24 +1348,24 @@ export const isMaxSizeReviver: FilterReviver<{
 )
 
 /**
- * Reviver for persisted `isSizeBetween` checks.
+ * Reviver for persisted `isBetweenSize` checks.
  *
  * **When to use**
  *
- * Use when reconstructing documents that may contain checks created by {@link Schema.isSizeBetween}.
+ * Use when reconstructing documents that may contain checks created by {@link Schema.isBetweenSize}.
  *
- * @see {@link Schema.isSizeBetween} for creating the corresponding check
+ * @see {@link Schema.isBetweenSize} for creating the corresponding check
  *
  * @category validation
  * @since 4.0.0
  */
-export const isSizeBetweenReviver: FilterReviver<{
+export const isBetweenSizeReviver: FilterReviver<{
   readonly minimum: number
   readonly maximum: number
 }> = makeReviverFilter(
-  "effect/schema/isSizeBetween",
+  "effect/schema/isBetweenSize",
   Schema.Struct({ minimum: Schema.Natural, maximum: Schema.Natural }),
-  ({ annotations, payload }) => Schema.isSizeBetween(payload.minimum, payload.maximum, annotations)
+  ({ annotations, payload }) => Schema.isBetweenSize(payload.minimum, payload.maximum, annotations)
 )
 
 /**
@@ -1306,24 +1409,24 @@ export const isMaxPropertiesReviver: FilterReviver<{
 )
 
 /**
- * Reviver for persisted `isPropertiesLengthBetween` checks.
+ * Reviver for persisted `isBetweenProperties` checks.
  *
  * **When to use**
  *
- * Use when reconstructing documents that may contain checks created by {@link Schema.isPropertiesLengthBetween}.
+ * Use when reconstructing documents that may contain checks created by {@link Schema.isBetweenProperties}.
  *
- * @see {@link Schema.isPropertiesLengthBetween} for creating the corresponding check
+ * @see {@link Schema.isBetweenProperties} for creating the corresponding check
  *
  * @category validation
  * @since 4.0.0
  */
-export const isPropertiesLengthBetweenReviver: FilterReviver<{
+export const isBetweenPropertiesReviver: FilterReviver<{
   readonly minimum: number
   readonly maximum: number
 }> = makeReviverFilter(
-  "effect/schema/isPropertiesLengthBetween",
+  "effect/schema/isBetweenProperties",
   Schema.Struct({ minimum: Schema.Natural, maximum: Schema.Natural }),
-  ({ annotations, payload }) => Schema.isPropertiesLengthBetween(payload.minimum, payload.maximum, annotations)
+  ({ annotations, payload }) => Schema.isBetweenProperties(payload.minimum, payload.maximum, annotations)
 )
 
 /**
@@ -2145,6 +2248,8 @@ const jsonSchemaRevivers: ReadonlyArray<AnyReviver> = [
   isIntReviver,
   isMinLengthReviver,
   isMaxLengthReviver,
+  isMinCodePointsReviver,
+  isMaxCodePointsReviver,
   isMinPropertiesReviver,
   isMaxPropertiesReviver,
   isPropertyNamesReviver,
@@ -2165,12 +2270,15 @@ const jsonSchemaRevivers: ReadonlyArray<AnyReviver> = [
  *
  * - `"error"` rejects the document and is the default.
  * - `"ignore"` skips the constraint.
- * - `"apply"` compiles and enforces the constraint with the runtime's native regular expression engine.
+ * - `"apply"` compiles and enforces the constraint with the runtime's native regular expression engine in Unicode
+ *   mode. Patterns that cannot be compiled with the `u` flag are rejected with their source path.
  *
  * **Gotchas**
  *
  * Use `patterns: "apply"` only for trusted documents because regular expression evaluation may block for an unbounded
- * amount of time. `patterns: "ignore"` weakens validation by accepting values that the source document may reject.
+ * amount of time. `patterns: "ignore"` can admit values the source rejects, but can also reject previously valid
+ * values inside `oneOf` when removing constraints makes multiple branches match.
+ * Input documents are assumed to be valid Draft 2020-12 schemas and are not validated against the meta-schema.
  * Ignoring `patternProperties` also skips its value constraints and `additionalProperties`, because matching keys cannot
  * be determined without evaluating the patterns.
  * `onEnter` must return a JSON Schema object. Its result is used directly, and exceptions raised by the callback pass
@@ -2324,7 +2432,9 @@ export interface ToRepresentationOptions {
  * **Details**
  *
  * Apply `SchemaAST.toType` to the AST first to lower its type side instead. The optional reference policy controls which
- * candidates are moved into the document's shared reference table.
+ * candidates are moved into the document's shared reference table. TypeScript-only
+ * distinctions such as those added by `Schema.brand` are absent from the AST
+ * and cannot be reconstructed from the resulting document.
  *
  * @see {@link toRepresentations} for multiple roots sharing one reference table
  *
@@ -2385,22 +2495,34 @@ export function toMultiDocument(document: Document): MultiDocument {
  *
  * **Details**
  *
- * For representation documents whose validation semantics can be expressed exactly in JSON Schema, importing the
- * emitted document with {@link fromJsonSchemaDocument} reconstructs a schema that accepts the same JSON values. This
- * is a semantic round-trip guarantee; the emitted document and reconstructed representation may have different shapes.
+ * The generated document is intended for preliminary validation. JSON Schema
+ * and Effect checks do not always have identical semantics, so the Effect
+ * decoder remains the final authority. Passing JSON Schema validation does not
+ * guarantee that Effect decoding will succeed.
+ *
+ * A `oneOf` union exports as `anyOf` when any branch contains a known
+ * approximation; otherwise it retains `oneOf`. Approximation propagates through
+ * checks, nested schemas, check dependencies, and recursive references. Filters
+ * without a `toJsonSchema` callback and opaque declarations are approximate.
+ * Custom callbacks declare their result using {@link ToJsonSchema.CheckOutput}.
  *
  * **Gotchas**
  *
  * - Reference allocation is already fixed in the input `Document`. The inherited `referencePolicy` option has no effect
  *   here; pass it to {@link toRepresentation} when creating the document.
- * - Opaque declarations are represented by an unconstrained JSON Schema and are outside the exact round-trip subset.
+ * - String length, RegExp flags, and decoded-object property checks can differ from Effect validation.
+ * - Opaque declarations are represented by an unconstrained JSON Schema.
  * - Check callback results are used directly, and exceptions raised by a callback pass through unchanged. Callbacks
- *   must treat their input schemas as immutable. Each returned value must be a valid JSON Schema object graph and must
- *   not be mutated after the callback returns.
+ *   must treat their input schemas as immutable. Each returned fragment must be a valid JSON Schema object graph and must
+ *   not be mutated after the callback returns. The callback author is responsible for the emitted semantics.
  * - Local definition references returned by callbacks are resolved together with compiler-generated references.
  *   Invalid JSON Pointer URI fragments throw an `Error`.
- * - Effect decoding may discard excess object properties by default. Use `onExcessProperty: "error"` when comparing
- *   validation semantics with the emitted JSON Schema.
+ * - The default `onExcessProperty: "ignore"` matches the decoder default. Use `onExcessProperty: "error"` in both
+ *   places when a closed object contract is required.
+ * - Record keys require an exact translation to a pattern before they can select `patternProperties` values.
+ *   Otherwise, `"ignore"` omits that index-signature constraint. In `"error"` mode, the compiler emits the generated
+ *   key schemas under `propertyNames` and allows unmatched properties to satisfy any candidate index value schema.
+ *   Exact selectors from other index signatures are retained, even when their value schemas are approximate.
  *
  * @see {@link toJsonSchemaMultiDocument} for multiple roots sharing definitions
  *
@@ -2421,14 +2543,21 @@ export function toJsonSchemaDocument(
  *
  * Use when several representation roots must share the same JSON Schema definitions.
  *
+ * **Details**
+ *
+ * Uses the same approximation tracking and `oneOf` and record-key fallbacks as
+ * {@link toJsonSchemaDocument}, including across shared and recursive definitions.
+ *
  * **Gotchas**
  *
  * - Reference allocation is already fixed in the input `MultiDocument`. The inherited `referencePolicy` option has no
  *   effect here; pass it to {@link toRepresentations} when creating the document.
  * - Every definition is compiled, including definitions that are not reachable from a root. Check callbacks must treat
- *   their input schemas as immutable. Each returned value must be a valid JSON Schema object graph and must not be
+ *   their input schemas as immutable. Each returned fragment must be a valid JSON Schema object graph and must not be
  *   mutated after the callback returns. Local definition references returned by callbacks are resolved together with
  *   compiler-generated references. Invalid JSON Pointer URI fragments throw an `Error`.
+ * - String length, RegExp flags, decoded-object property checks, and custom check callbacks can differ from
+ *   Effect validation, as described by {@link toJsonSchemaDocument}.
  *
  * @see {@link toJsonSchemaDocument} for a single root
  *
@@ -2614,7 +2743,9 @@ const UnionSchema = Schema.Struct({
   _tag: Schema.tag("Union"),
   ...KeywordFields,
   types: RepresentationsSchema,
-  mode: Schema.Literals(["anyOf", "oneOf"])
+  options: Schema.optionalKey(Schema.Struct({
+    mode: Schema.optionalKey(Schema.Literals(["anyOf", "oneOf"]))
+  }))
 })
 const ReferenceSchema = Schema.Struct({
   _tag: Schema.tag("Reference"),
@@ -2824,30 +2955,43 @@ export function fromRepresentations(
  *
  * **Details**
  *
- * For the Draft 2020-12 subset translated exactly by this importer, compiling the imported schema through
- * {@link toRepresentation} and {@link toJsonSchemaDocument} produces a document that accepts the same JSON values as
- * the input. This is a semantic round-trip guarantee; keyword layout, definitions, and annotations may be normalized.
+ * Translates a Draft 2020-12 subset using Effect schemas and built-in checks. Validation follows those checks and the
+ * decoder's parse options, so import and re-export do not guarantee identical accepted values or a lossless round trip.
+ * Import errors explain the unsupported constraint or reference and include its source path.
+ * The input is assumed to be a valid Draft 2020-12 document; this function does not validate it against the meta-schema.
+ * Instance validation semantics assume JSON-compatible JavaScript values produced by `JSON.parse`.
  *
  * **Gotchas**
  *
- * - `$dynamicRef`, `contains`, `dependentRequired`, `dependentSchemas`, `not`, active `if` / `then` / `else`,
- *   `unevaluatedItems`, and `unevaluatedProperties` throw an `Unsupported JSON Schema keyword` error. Inactive
+ * - `{ not: {} }` imports as `Never`. Other uses of `not` are unsupported.
+ * - When `additionalProperties` is `true`, `{}`, or omitted, additional values use `Schema.Json` and are retained.
+ *   Closed objects normally strip excess properties by default; pass `onExcessProperty: "error"` to reject them.
+ *   Closed empty objects instead use `Schema.Record(Schema.String, Schema.Never)` and reject string-keyed entries
+ *   regardless of that option.
+ *   Object keyword scopes still constrain declared properties in intersections. Combinations requiring index
+ *   signatures that exclude explicit properties or patterned keys are rejected with an explanation of the limitation.
+ * - Property count and name checks run on the decoded object, after excess properties have been stripped.
+ * - String `minLength` and `maxLength` checks count Unicode code points, except that `minLength: 1` uses the equivalent
+ *   UTF-16 non-empty check. `integer` uses `Schema.isInt`, which requires safe integers.
+ * - Applied patterns use `Schema.isPattern` with the `u` flag. Patterns that cannot be compiled in Unicode mode are
+ *   rejected as unsupported translations with their source path.
+ * - `$dynamicRef`, `contains`, `dependentRequired`, `dependentSchemas`, active `if` / `then` / `else`,
+ *   `unevaluatedItems`, and `unevaluatedProperties` are rejected with an error identifying the unsupported keyword. Inactive
  *   conditional keywords and `minContains` / `maxContains` without `contains` have no validation effect and are ignored.
- * - Objects and arrays used as `const` values or `enum` members throw an `Unsupported structured JSON Schema value`
- *   error.
+ * - Objects and arrays used as `const` values or `enum` members are rejected. Only strings, numbers, booleans, and null
+ *   are supported.
  * - Intersections of overlapping unions are limited to disjoint root-type partitions and finite primitive `anyOf`
- *   literal sets. Other union intersections, including cases that would duplicate a nested choice, throw an
- *   `Unsupported intersection of overlapping unions` error.
+ *   literal sets. Other union intersections, including cases that would duplicate a nested choice, are rejected.
  * - Unknown extension keywords are ignored and their semantics are not enforced.
  * - Only direct local references to top-level definitions in the form `#/$defs/<escaped-token>` are supported. Root
- *   references, external references, and pointers below a definition throw an `Unsupported reference` error. A direct
- *   reference to a missing definition throws an `Invalid reference` error.
+ *   references, external references, and pointers below a definition are rejected with the supported reference format.
+ *   Missing definitions are reported by name. References reached inside nested schema
+ *   resources introduced by `$id` are rejected instead of resolved against the top-level definitions.
  * - Built-in declarations and checks are reconstructed with importer-owned revivers.
  * - Pattern constraints reached during translation cause an error by default. Use `patterns: "apply"` only for trusted
- *   documents, or `patterns: "ignore"` to weaken validation explicitly; ignored patterns are outside the round-trip
- *   guarantee.
- * - `onEnter` results replace the corresponding input nodes, so the round-trip guarantee applies to the rewritten
- *   document.
+ *   documents, or `patterns: "ignore"` to skip them. Ignoring patterns can both admit invalid values and reject valid
+ *   values when `oneOf` branches start overlapping.
+ * - `onEnter` results replace the corresponding input nodes before translation.
  * - Callback results are used directly, and exceptions raised by a callback pass through unchanged.
  *
  * @see {@link fromJsonSchemaMultiDocument} for multiple roots sharing definitions
@@ -2870,21 +3014,27 @@ export function fromJsonSchemaDocument(
  *
  * Use when multiple imported roots share reachable definitions, aliases, or recursion.
  *
+ * **Details**
+ *
+ * Uses the same best-effort translation, built-in checks, and excess-property behavior as {@link fromJsonSchemaDocument}.
+ * The input is assumed to be a valid Draft 2020-12 document; this function does not validate it against the meta-schema.
+ *
  * **Gotchas**
  *
  * - Only definitions reachable from a root are translated.
- * - Unsupported standard validation and applicator keywords throw an `Unsupported JSON Schema keyword` error. Unknown
+ * - Unsupported standard validation and applicator keywords are rejected with an error identifying the keyword. Unknown
  *   extension keywords are ignored and their semantics are not enforced.
- * - Objects and arrays used as `const` values or `enum` members throw an `Unsupported structured JSON Schema value`
- *   error.
+ * - Objects and arrays used as `const` values or `enum` members are rejected. Only strings, numbers, booleans, and null
+ *   are supported.
  * - Intersections of overlapping unions are limited to disjoint root-type partitions and finite primitive `anyOf`
- *   literal sets. Other union intersections, including cases that would duplicate a nested choice, throw an
- *   `Unsupported intersection of overlapping unions` error.
+ *   literal sets. Other union intersections, including cases that would duplicate a nested choice, are rejected.
  * - Only direct local references to top-level definitions in the form `#/$defs/<escaped-token>` are supported. Root
- *   references, external references, and pointers below a definition throw an `Unsupported reference` error. A direct
- *   reference to a missing definition throws an `Invalid reference` error.
+ *   references, external references, and pointers below a definition are rejected with the supported reference format.
+ *   Missing definitions are reported by name. References reached inside nested schema
+ *   resources introduced by `$id` are rejected instead of resolved against the top-level definitions.
  * - Pattern constraints reached during translation cause an error by default. Use `patterns: "apply"` only for trusted
- *   documents, or `patterns: "ignore"` to weaken validation explicitly.
+ *   documents, or `patterns: "ignore"` to skip them. Ignoring patterns can both admit invalid values and reject valid
+ *   values when `oneOf` branches start overlapping.
  * - Callback results are used directly, and exceptions raised by a callback pass through unchanged.
  *
  * @see {@link fromJsonSchemaDocument} for a single root
