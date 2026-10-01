@@ -1,23 +1,29 @@
 import {
+  Array,
   Config,
   ConfigProvider,
   Console,
   DateTime,
   Effect,
   FileSystem,
+  Layer,
   Match,
   Option,
+  Order,
+  Path,
+  RegExp,
   Schema,
+  pipe,
 } from "effect";
-import { Prompt } from "effect/unstable/cli";
+import { Prompt } from "effect/cli";
 
-import type { Moment } from "../src/chart/index.ts";
-import { AstroParams, Chart } from "../src/index.ts";
-import { chartExample } from "./chart.ts";
-import { dashaExample } from "./dasha.ts";
-import { jaiminiExample } from "./jaimini.ts";
-import { savExample } from "./sav.ts";
-import { transitExample } from "./transit.ts";
+import type { Moment } from "../src/chart/index.js";
+import { AstroParams, Chart } from "../src/index.js";
+import { chartExample } from "./chart.js";
+import { dashaExample } from "./dasha.js";
+import { jaiminiExample } from "./jaimini.js";
+import { savExample } from "./sav.js";
+import { transitExample } from "./transit.js";
 
 export interface ExampleInput {
   readonly moment: Moment;
@@ -25,16 +31,18 @@ export interface ExampleInput {
   readonly longitude: number;
 }
 
-const DATE_PATTERN = /^\d{2}\/\d{2}\/\d{4}$/;
-const TIME_PATTERN = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
-const EXAMPLES_DIRECTORY = import.meta.dir;
-const ENVIRONMENT_INPUT_ERROR = [
-  "Could not load a complete moment from the environment.",
-  "Set MOMENT_DATE (an ISO 8601 date and time), LATITUDE (-90 to 90), and LONGITUDE (-180 to 180).",
-  "Optionally set AYANAMSA and HOUSE_SYSTEM; they default to Lahiri and WholeSign.",
-  "Values are read in this order: process environment, .env.local, .env, then config.json.",
-  "Continue by entering the moment manually.",
-].join("\n");
+const DATE_PATTERN = new RegExp.RegExp("^\\d{2}/\\d{2}/\\d{4}$");
+const TIME_PATTERN = new RegExp.RegExp("^(?:[01]\\d|2[0-3]):[0-5]\\d$");
+const ENVIRONMENT_INPUT_ERROR = Array.join(
+  [
+    "Could not load a complete moment from the environment.",
+    "Set MOMENT_DATE (an ISO 8601 date and time), LATITUDE (-90 to 90), and LONGITUDE (-180 to 180).",
+    "Optionally set AYANAMSA and HOUSE_SYSTEM; they default to Lahiri and WholeSign.",
+    "Values are read in this order: process environment, .env.local, .env, then config.json.",
+    "Continue by entering the moment manually.",
+  ],
+  "\n",
+);
 const PRECOMPUTED_LOCATIONS = [
   { name: "Agra", latitude: 27.1767, longitude: 78.0081 },
   { name: "Bangalore", latitude: 12.9716, longitude: 77.5946 },
@@ -49,75 +57,72 @@ const PRECOMPUTED_LOCATIONS = [
   { name: "Trichy", latitude: 10.7905, longitude: 78.7047 },
 ] as const;
 
-const TIME_ZONE_CHOICES = ["Asia/Kolkata", "UTC", ...Intl.supportedValuesOf("timeZone")]
-  .sort((left, right) => {
-    if (left === "Asia/Kolkata") return -1;
-    if (right === "Asia/Kolkata") return 1;
-    return left.localeCompare(right);
-  })
-  .map((timeZone) => ({ title: timeZone, value: timeZone }));
+const timeZoneOrder = Order.make<string>((left, right) => {
+  if (left === "Asia/Kolkata") return -1;
+  if (right === "Asia/Kolkata") return 1;
+  const compared = left.localeCompare(right);
+  return compared < 0 ? -1 : compared > 0 ? 1 : 0;
+});
+
+const TIME_ZONE_CHOICES = pipe(
+  ["Asia/Kolkata", "UTC", ...Intl.supportedValuesOf("timeZone")],
+  Array.sort(timeZoneOrder),
+  Array.map((timeZone) => ({ title: timeZone, value: timeZone })),
+);
 const DEFAULT_ASTRO_PARAMS = AstroParams.Options.make({
   ayanamsa: "Lahiri",
   houseSystem: "WholeSign",
 });
 
-function makeMomentFromEnvironment(value: string): Effect.Effect<Chart.Moment, string> {
-  return Option.match(DateTime.make(value), {
+const makeMomentFromEnvironment = (value: string) =>
+  Option.match(DateTime.make(value), {
     onNone: () => Effect.fail("MOMENT_DATE must be a valid ISO 8601 date and time"),
     onSome: (date) => Effect.succeed(Chart.Moment.make({ date })),
   });
-}
 
-function validateCoordinate(
+const validateCoordinate = (
   value: number,
   name: "LATITUDE" | "LONGITUDE",
   minimum: number,
   maximum: number,
-): Effect.Effect<number, string> {
-  return Match.value(value >= minimum && value <= maximum).pipe(
+) =>
+  Match.value(value >= minimum && value <= maximum).pipe(
     Match.when(true, () => Effect.succeed(value)),
     Match.when(false, () => Effect.fail(`${name} must be between ${minimum} and ${maximum}`)),
     Match.exhaustive,
   );
-}
 
-function validateDate(value: string): Effect.Effect<string, string> {
-  return Match.value(DATE_PATTERN.test(value)).pipe(
+const validateDate = (value: string) =>
+  Match.value(DATE_PATTERN.test(value)).pipe(
     Match.when(true, () => Effect.succeed(value)),
     Match.when(false, () => Effect.fail("Enter a date in DD/MM/YYYY format")),
     Match.exhaustive,
   );
-}
 
-function validateTime(value: string): Effect.Effect<string, string> {
-  return Match.value(TIME_PATTERN.test(value)).pipe(
+const validateTime = (value: string) =>
+  Match.value(TIME_PATTERN.test(value)).pipe(
     Match.when(true, () => Effect.succeed(value)),
     Match.when(false, () => Effect.fail("Enter a 24-hour time in HH:MM format")),
     Match.exhaustive,
   );
-}
 
-function makeAstroParams(
-  ayanamsa: string,
-  houseSystem: string,
-): Effect.Effect<AstroParams.Options, string> {
-  return Schema.decodeUnknownEffect(AstroParams.Options)({ ayanamsa, houseSystem }).pipe(
+const makeAstroParams = (ayanamsa: string, houseSystem: string) =>
+  Schema.decodeUnknownEffect(AstroParams.Options)({ ayanamsa, houseSystem }).pipe(
     Effect.mapError(
       () =>
-        `AYANAMSA must be one of: ${AstroParams.Ayanamsa.literals.join(", ")}. ` +
-        `HOUSE_SYSTEM must be one of: ${AstroParams.HouseSystem.literals.join(", ")}.`,
+        `AYANAMSA must be one of: ${Array.join(AstroParams.Ayanamsa.literals, ", ")}. ` +
+        `HOUSE_SYSTEM must be one of: ${Array.join(AstroParams.HouseSystem.literals, ", ")}.`,
     ),
   );
-}
 
-const promptCoordinates = Effect.fn("Examples.promptCoordinates")(function* () {
-  const latitude = yield* Prompt.float({
+const promptCoordinates = Effect.fn(function* () {
+  const latitude = yield* Prompt.Number({
     message: "Latitude",
     min: -90,
     max: 90,
     precision: 6,
   });
-  const longitude = yield* Prompt.float({
+  const longitude = yield* Prompt.Number({
     message: "Longitude",
     min: -180,
     max: 180,
@@ -126,13 +131,13 @@ const promptCoordinates = Effect.fn("Examples.promptCoordinates")(function* () {
   return { latitude, longitude };
 });
 
-const selectLocation = Effect.fn("Examples.selectLocation")(function* () {
-  const location = yield* Prompt.select<
+const selectLocation = Effect.fn(function* () {
+  const location = yield* Prompt.Select<
     { readonly latitude: number; readonly longitude: number } | "manual"
   >({
     message: "Location",
     choices: [
-      ...PRECOMPUTED_LOCATIONS.map((precomputedLocation) => ({
+      ...Array.map(PRECOMPUTED_LOCATIONS, (precomputedLocation) => ({
         title: precomputedLocation.name,
         description: `${precomputedLocation.latitude}, ${precomputedLocation.longitude}`,
         value: {
@@ -172,7 +177,7 @@ function makeMomentFromInput(
   );
 }
 
-const addDotEnvProvider = Effect.fn("Examples.addDotEnvProvider")(function* (
+const addDotEnvProvider = Effect.fn(function* (
   provider: ConfigProvider.ConfigProvider,
   path: string,
   exists: boolean,
@@ -188,7 +193,12 @@ const addDotEnvProvider = Effect.fn("Examples.addDotEnvProvider")(function* (
   );
 });
 
-const addJsonConfigProvider = Effect.fn("Examples.addJsonConfigProvider")(function* (
+class JsonConfigError extends Schema.TaggedError<JsonConfigError>()("JsonConfigError", {
+  message: Schema.String,
+  cause: Schema.Defect(),
+}) {}
+
+const addJsonConfigProvider = Effect.fn(function* (
   provider: ConfigProvider.ConfigProvider,
   path: string,
   exists: boolean,
@@ -198,12 +208,18 @@ const addJsonConfigProvider = Effect.fn("Examples.addJsonConfigProvider")(functi
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
         const content = yield* fileSystem.readFileString(path);
-        const value = yield* Effect.try({
-          try: () => JSON.parse(content),
-          catch: (error) => new Error(`Could not parse ${path}: ${String(error)}`),
-        });
+        const value = yield* Schema.decodeEffect(Schema.fromJsonString(Schema.Unknown))(
+          content,
+        ).pipe(
+          Effect.mapError((cause) =>
+            JsonConfigError.make({ message: `Could not parse ${path}`, cause }),
+          ),
+        );
         if (typeof value !== "object" || value === null || Array.isArray(value)) {
-          return yield* Effect.fail(new Error(`${path} must contain a JSON object`));
+          return yield* JsonConfigError.make({
+            message: `${path} must contain a JSON object`,
+            cause: value,
+          });
         }
         return ConfigProvider.orElse(ConfigProvider.fromUnknown(value), provider);
       }),
@@ -213,11 +229,13 @@ const addJsonConfigProvider = Effect.fn("Examples.addJsonConfigProvider")(functi
   );
 });
 
-const environmentConfigProvider = Effect.fn("Examples.environmentConfigProvider")(function* () {
+const environmentConfigProvider = Effect.fn(function* () {
   const fileSystem = yield* FileSystem.FileSystem;
-  const dotEnvPath = `${EXAMPLES_DIRECTORY}/.env`;
-  const dotEnvLocalPath = `${EXAMPLES_DIRECTORY}/.env.local`;
-  const configJsonPath = `${EXAMPLES_DIRECTORY}/config.json`;
+  const path = yield* Path.Path;
+  const examplesDirectory = path.dirname(yield* path.fromFileUrl(new URL(import.meta.url)));
+  const dotEnvPath = path.join(examplesDirectory, ".env");
+  const dotEnvLocalPath = path.join(examplesDirectory, ".env.local");
+  const configJsonPath = path.join(examplesDirectory, "config.json");
   const hasDotEnv = yield* fileSystem.exists(dotEnvPath);
   const hasDotEnvLocal = yield* fileSystem.exists(dotEnvLocalPath);
   const hasConfigJson = yield* fileSystem.exists(configJsonPath);
@@ -233,17 +251,17 @@ const environmentConfigProvider = Effect.fn("Examples.environmentConfigProvider"
   return ConfigProvider.orElse(ConfigProvider.fromEnv(), withDotEnvLocal);
 });
 
-const inputFromEnvironment = Effect.fn("Examples.inputFromEnvironment")(function* () {
+const inputFromEnvironment = Effect.fn(function* () {
   const provider = yield* environmentConfigProvider();
-  const date = yield* Config.string("MOMENT_DATE").parse(provider);
-  const latitude = yield* Config.number("LATITUDE").parse(provider);
-  const longitude = yield* Config.number("LONGITUDE").parse(provider);
+  const date = yield* Config.String("MOMENT_DATE").parse(provider);
+  const latitude = yield* Config.Number("LATITUDE").parse(provider);
+  const longitude = yield* Config.Number("LONGITUDE").parse(provider);
   const ayanamsa = yield* Config.withDefault(
-    Config.string("AYANAMSA"),
+    Config.String("AYANAMSA"),
     DEFAULT_ASTRO_PARAMS.ayanamsa,
   ).parse(provider);
   const houseSystem = yield* Config.withDefault(
-    Config.string("HOUSE_SYSTEM"),
+    Config.String("HOUSE_SYSTEM"),
     DEFAULT_ASTRO_PARAMS.houseSystem,
   ).parse(provider);
   const moment = yield* makeMomentFromEnvironment(date);
@@ -253,16 +271,16 @@ const inputFromEnvironment = Effect.fn("Examples.inputFromEnvironment")(function
   return { moment, latitude: validLatitude, longitude: validLongitude, astroParams };
 });
 
-const promptInput = Effect.fn("Examples.promptInput")(function* () {
-  const date = yield* Prompt.text({
+const promptInput = Effect.fn(function* () {
+  const date = yield* Prompt.String({
     message: "Date (DD/MM/YYYY)",
     validate: validateDate,
   });
-  const time = yield* Prompt.text({
+  const time = yield* Prompt.String({
     message: "Time (24-hour HH:MM)",
     validate: validateTime,
   });
-  const timeZone = yield* Prompt.autoComplete<string>({
+  const timeZone = yield* Prompt.AutoComplete<string>({
     message: "Timezone",
     filterLabel: "Search timezone",
     filterPlaceholder: "Type a city or region",
@@ -273,8 +291,8 @@ const promptInput = Effect.fn("Examples.promptInput")(function* () {
   return { moment, ...coordinates, astroParams: DEFAULT_ASTRO_PARAMS };
 });
 
-export const selectInput = Effect.fn("Examples.selectInput")(function* () {
-  const source = yield* Prompt.select<"environment" | "input">({
+export const selectInput = Effect.fn(function* () {
+  const source = yield* Prompt.Select<"environment" | "input">({
     message: "How would you like to provide the moment?",
     choices: [
       {
@@ -304,7 +322,7 @@ export const selectInput = Effect.fn("Examples.selectInput")(function* () {
   );
 });
 
-const transitInput = Effect.fn("Examples.transitInput")(function* () {
+const transitInput = Effect.fn(function* () {
   const date = yield* DateTime.now;
   const coordinates = yield* selectLocation();
   return {
@@ -314,8 +332,8 @@ const transitInput = Effect.fn("Examples.transitInput")(function* () {
   };
 });
 
-export const runSelectedExample = Effect.fn("Examples.runSelectedExample")(function* () {
-  const example = yield* Prompt.select<"chart" | "dasha" | "jaimini" | "sav" | "transit">({
+export const runSelectedExample = Effect.gen(function* () {
+  const example = yield* Prompt.Select<"chart" | "dasha" | "jaimini" | "sav" | "transit">({
     message: "Choose an example to run",
     choices: [
       {
@@ -359,5 +377,6 @@ export const runSelectedExample = Effect.fn("Examples.runSelectedExample")(funct
     Match.when("transit", () => transitExample(input)),
     Match.exhaustive,
   );
-  yield* program.pipe(Effect.provide(AstroParams.layer(input.astroParams)));
+  const astroParams = yield* Effect.scoped(Layer.build(AstroParams.layer(input.astroParams)));
+  yield* Effect.provide(program, astroParams);
 });
