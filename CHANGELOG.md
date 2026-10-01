@@ -1,5 +1,12 @@
 # astro-ascendant
 
+## 4.0.1
+
+### Patch Changes
+
+- 7dbf503: Internal refactor only, no API changes: use `Effect.forEach` for concurrent traversals and `Array.sort` with `Order` combinators instead of native `Array#sort` / `Effect.all` over `Array#map`.
+- 244d938: Track Effect v4 GA: `effect`, `@effect/platform-bun`, and `@effect/vitest` move from `4.0.0-rc.112` to `4.0.0`, and the `effect` peer dependency becomes `^4.0.0`. Consumers should upgrade to Effect v4 GA.
+
 ## 4.0.0
 
 ### Major Changes
