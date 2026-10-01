@@ -1,19 +1,15 @@
 import { Console, DateTime, Effect } from "effect";
-import { Prompt } from "effect/unstable/cli";
+import { Prompt } from "effect/cli";
 
-import { Chart, Transit } from "../src/index.ts";
-import type { ExampleInput } from "./input.ts";
+import { Chart, Transit } from "../src/index.js";
+import type { ExampleInput } from "./input.js";
 
-export const transitExample = Effect.fn("Examples.transit")(function* ({
-  moment,
-  latitude,
-  longitude,
-}: ExampleInput) {
-  const planet = yield* Prompt.select<Chart.Planets>({
+export const transitExample = Effect.fn(function* ({ moment, latitude, longitude }: ExampleInput) {
+  const planet = yield* Prompt.Select<Chart.Planets>({
     message: "Graha",
     choices: Chart.Planets.literals.map((name) => ({ title: name, value: name })),
   });
-  const direction = yield* Prompt.select<Transit.TransitDirection>({
+  const direction = yield* Prompt.Select<Transit.TransitDirection>({
     message: "Direction",
     choices: [
       { title: "Next transits", value: "forward" },
