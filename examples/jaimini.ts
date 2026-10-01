@@ -7,13 +7,9 @@ import * as CharaKarakas from "../src/jaimini/chara-karakas/index.js";
 import * as Karakamsha from "../src/jaimini/karakamsha/index.js";
 import * as RashiDrishti from "../src/jaimini/rashi-drishti/index.js";
 import * as Upapada from "../src/jaimini/upapada/index.js";
-import type { ExampleInput } from "./input.ts";
+import type { ExampleInput } from "./input.js";
 
-export const jaiminiExample = Effect.fn("Examples.jaimini")(function* ({
-  moment,
-  latitude,
-  longitude,
-}: ExampleInput) {
+export const jaiminiExample = Effect.fn(function* ({ moment, latitude, longitude }: ExampleInput) {
   const calculation = yield* Chart.generate(
     Chart.LocatedMoment.make({
       moment,
