@@ -813,6 +813,11 @@ export const isFile = (u: unknown): u is File => hasProperty(u, FileTypeId)
  * and retrieving file information. File handles are automatically managed
  * within scoped operations to ensure proper cleanup.
  *
+ * Each handle tracks its own cursor, which can differ from the POSIX file
+ * offset. In append mode, writes go to the end of the file without moving the
+ * cursor. Outside append mode, `truncate` clamps a cursor past the new length
+ * to that length.
+ *
  * **Example** (Working with file handles)
  *
  * ```ts import.meta.vitest
@@ -906,10 +911,9 @@ export declare namespace File {
    * permissions, and size information. This structure is returned by file
    * stat operations.
    *
-   * Node and Bun preserve `size` and `blksize` exactly. Unsafe numeric metadata
-   * (such as `ino` or `dev`) fails the entire stat operation with `BadArgument`,
-   * including optional fields. Inode values above `Number.MAX_SAFE_INTEGER`
-   * can therefore prevent stat and HTTP file serving even for small files.
+   * Node and Bun preserve `size` and `blksize` exactly. Optional `number`
+   * metadata is `Option.none()` when absent or outside the safe integer range.
+   * Unsafe `dev` or `mode` values fail the stat operation with `BadArgument`.
    *
    * **Example** (Inspecting file information)
    *

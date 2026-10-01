@@ -23,7 +23,7 @@ import * as DateTime from "./DateTime.ts"
 import type { Differ } from "./Differ.ts"
 import * as Duration_ from "./Duration.ts"
 import * as Effect from "./Effect.ts"
-import * as Encoding from "./Encoding.ts"
+import * as Base64 from "./encoding/Base64.ts"
 import * as Equal from "./Equal.ts"
 import type * as Equivalence from "./Equivalence.ts"
 import * as Exit_ from "./Exit.ts"
@@ -33,6 +33,9 @@ import { identity } from "./Function.ts"
 import type * as Graph_ from "./Graph.ts"
 import * as HashMap_ from "./HashMap.ts"
 import * as HashSet_ from "./HashSet.ts"
+import * as Cookies_ from "./http/Cookies.ts"
+import * as Headers_ from "./http/Headers.ts"
+import * as UrlParams_ from "./http/UrlParams.ts"
 import * as core from "./internal/core.ts"
 import { effectIsExit } from "./internal/effect.ts"
 import * as InternalGraph from "./internal/graph.ts"
@@ -52,6 +55,9 @@ import { isSchemaError as isSchemaErrorInternal, SchemaErrorTypeId } from "./int
 import { getStackTraceLimit, setStackTraceLimit } from "./internal/stackTraceLimit.ts"
 import type * as JsonPatch from "./JsonPatch.ts"
 import type * as JsonSchema from "./JsonSchema.ts"
+import * as IpInterface_ from "./net/IpInterface.ts"
+import * as IpNetwork_ from "./net/IpNetwork.ts"
+import * as NetAddress_ from "./net/NetAddress.ts"
 import { remainder } from "./Number.ts"
 import type * as Optic_ from "./Optic.ts"
 import * as Option_ from "./Option.ts"
@@ -71,14 +77,8 @@ import * as SchemaTransformation from "./SchemaTransformation.ts"
 import type { StandardJSONSchemaV1, StandardSchemaV1 } from "./StandardSchema.ts"
 import type { Assign, Lambda, Mutable, Simplify } from "./Struct.ts"
 import * as Struct_ from "./Struct.ts"
-import type { RequiredKeys, UnionToIntersection } from "./Types.ts"
+import type { IsUnion, RequiredKeys } from "./Types.ts"
 import type { Unify } from "./Unify.ts"
-import * as Cookies_ from "./unstable/http/Cookies.ts"
-import * as Headers_ from "./unstable/http/Headers.ts"
-import * as UrlParams_ from "./unstable/http/UrlParams.ts"
-import * as IpInterface_ from "./unstable/net/IpInterface.ts"
-import * as IpNetwork_ from "./unstable/net/IpNetwork.ts"
-import * as NetAddress_ from "./unstable/net/NetAddress.ts"
 
 const TypeId = InternalMake.TypeId
 /**
@@ -115,8 +115,8 @@ export type ConstructorDefault = "no-default" | "with-default"
  *
  * **When to use**
  *
- * Use when passing `disableChecks: true` to skip validation when you trust the data.
- * - Pass `parseOptions` to control error reporting behavior.
+ * Use when passing `disableChecks: true` to skip validation when you trust the
+ * data. Pass `parseOptions` to control parsing behavior.
  *
  * @see {@link BottomWithoutNew.makeEffect}
  * @see {@link BottomWithoutNew.make}
@@ -246,13 +246,23 @@ export interface BottomWithoutNew<
    *
    * **When to use**
    *
-   * Use when constructor input may fail validation and you want to
-   * compose that failure with other `Effect` operations instead of throwing.
+   * Use when construction must compose with other `Effect` operations or when
+   * the result supplies a nested constructor default. Otherwise, use
+   * {@link BottomWithoutNew.make} when invalid construction should throw.
    *
    * **Details**
    *
-   * Validation failures are returned directly as `SchemaIssue.Issue` values
-   * and are not wrapped in `SchemaError`.
+   * `SchemaParser` uses `SchemaIssue.Issue` as its canonical structured failure,
+   * and this method exposes the same representation directly. Keeping the issue
+   * unwrapped lets an enclosing schema attach its own path when the effect is
+   * used with {@link withConstructorDefault}. It also avoids allocating a
+   * `SchemaError` and keeps its formatting path out of the resulting bundle.
+   *
+   * **Gotchas**
+   *
+   * Unlike the decoding helpers in `Schema`, validation failures are not wrapped
+   * in `SchemaError`. Map the issue to `SchemaError` or to a domain-specific error
+   * when a wrapped error is needed at the application boundary.
    *
    * @see {@link BottomWithoutNew.make} — construct synchronously when validation failure should throw
    * @see {@link BottomWithoutNew.makeOption} — construct synchronously and discard validation details
@@ -2852,6 +2862,11 @@ export interface Enum<A extends { [x: string]: string | number }>
 }
 /**
  * Creates a schema from a TypeScript enum object. Validates that the input is one of the enum's values.
+ * Numeric enum values must be finite.
+ *
+ * **Gotchas**
+ *
+ * Throws when a numeric member is `NaN`, `Infinity`, or `-Infinity`.
  *
  * **Example** (Defining a direction enum)
  *
@@ -2973,6 +2988,58 @@ export interface String extends Bottom<string, string, never, never, SchemaAST.S
  * @since 4.0.0
  */
 export const String: String = make(SchemaAST.string)
+
+/**
+ * Type-level representation of {@link StringForLiteralAutocomplete}.
+ *
+ * @category models
+ * @since 4.0.0
+ */
+export interface StringForLiteralAutocomplete extends
+  Bottom<
+    string & {},
+    string & {},
+    never,
+    never,
+    SchemaAST.String,
+    StringForLiteralAutocomplete
+  >
+{}
+/**
+ * Schema for `string & {}`. Validates that the input is `typeof` `"string"`.
+ *
+ * **When to use**
+ *
+ * Use with {@link Union} and {@link Literals} when a value may be any string
+ * and known literals should stay available for editor autocomplete.
+ *
+ * **Details**
+ *
+ * `string & {}` stays alongside string literals in a union, so editors keep
+ * suggesting those literals. Any string still passes validation. Read the
+ * literals from the {@link Literals} member.
+ *
+ * **Example** (Suggesting known HTTP methods)
+ *
+ * ```ts import.meta.vitest
+ * import { Schema } from "effect"
+ *
+ * const Method = Schema.Union([
+ *   Schema.StringForLiteralAutocomplete,
+ *   Schema.Literals(["GET", "POST"])
+ * ])
+ *
+ * // Type: "GET" | "POST" | (string & {})
+ * Method.make("PATCH") // => "PATCH"
+ * Method.members[1].literals // => ["GET", "POST"]
+ * ```
+ *
+ * @see {@link String} for a schema whose type is plain `string`.
+ * @see {@link Literals} for the known literals to include in the union.
+ * @category schemas
+ * @since 4.0.0
+ */
+export const StringForLiteralAutocomplete: StringForLiteralAutocomplete = String
 /**
  * Type-level representation of {@link Number}.
  *
@@ -3104,6 +3171,12 @@ export interface UniqueSymbol<sym extends symbol>
 {}
 /**
  * Creates a schema for a specific symbol. Only that exact symbol satisfies the schema.
+ *
+ * **Gotchas**
+ *
+ * Only globally registered symbols have a JSON encoding. Their canonical JSON
+ * form is the exact string returned by `String(symbol)`. A local symbol cannot
+ * be encoded as JSON.
  *
  * **Example** (Defining a specific symbol)
  *
@@ -3354,6 +3427,9 @@ function makeStruct<const Fields extends Struct.Fields>(ast: SchemaAST.Objects, 
  *
  * The resulting schema's `Type` is a readonly object type with the fields'
  * decoded types. The `Encoded` form mirrors the field schemas' encoded types.
+ * Declared fields may be inherited and are copied to own properties in the
+ * output. The `__proto__` field is accepted only when it is an own property.
+ * Parsing does not guarantee that output keys retain their input order.
  *
  * **Example** (Defining a basic struct)
  *
@@ -3768,8 +3844,9 @@ export interface $Record<Key extends Record.Key, Value extends Constraint> exten
  *
  * When decoded or encoded key transformations produce the same property key,
  * sequential parsing applies selected own properties in selection order, so
- * the later selected property overwrites the earlier value. With concurrency
- * greater than `1`, completion order determines which value is retained.
+ * the later selected property overwrites the earlier value. Dynamic key
+ * selection always examines own properties. Finite literal keys are declared
+ * fields and may therefore be inherited. Output key order is not guaranteed.
  *
  * **Example** (Defining a string-keyed record of numbers)
  *
@@ -4452,7 +4529,7 @@ export function withArrayLengthConstraints<Item extends Constraint>(
   maximum: number | undefined
 ): $Array<Item> {
   if (minimum !== undefined && maximum !== undefined) {
-    return self.check(isLengthBetween(minimum, maximum))
+    return self.check(isBetweenLength(minimum, maximum))
   }
   if (minimum !== undefined) return self.check(isMinLength(minimum))
   if (maximum !== undefined) return self.check(isMaxLength(maximum))
@@ -4698,7 +4775,7 @@ function makeUnion<Members extends ReadonlyArray<Constraint>>(
     ): Union<Simplify<Readonly<To>>> {
       const members = f(this.members)
       return makeUnion(
-        SchemaAST.union(members, this.ast.mode, options?.unsafePreserveChecks ? this.ast.checks : undefined),
+        SchemaAST.union(members, this.ast.options, options?.unsafePreserveChecks ? this.ast.checks : undefined),
         members
       )
     }
@@ -4730,9 +4807,9 @@ function makeUnion<Members extends ReadonlyArray<Constraint>>(
  */
 export function Union<const Members extends ReadonlyArray<Constraint>>(
   members: Members,
-  options?: { mode?: "anyOf" | "oneOf" }
+  options?: SchemaAST.UnionOptions
 ): Union<Members> {
-  return makeUnion(SchemaAST.union(members, options?.mode ?? "anyOf", undefined), members)
+  return makeUnion(SchemaAST.union(members, options, undefined), members)
 }
 /**
  * Type-level representation returned by {@link Literals}.
@@ -4774,7 +4851,7 @@ export interface Literals<L extends ReadonlyArray<SchemaAST.LiteralValue>>
  */
 export function Literals<const L extends ReadonlyArray<SchemaAST.LiteralValue>>(literals: L): Literals<L> {
   const members = literals.map(Literal) as { readonly [K in keyof L]: Literal<L[K]> }
-  return make(SchemaAST.union(members, "anyOf", undefined), {
+  return make(SchemaAST.union(members, undefined, undefined), {
     literals,
     members,
     mapMembers<To extends ReadonlyArray<Constraint>>(
@@ -4980,14 +5057,19 @@ export function refine<S extends Constraint, T extends S["Type"]>(
   return (schema: S): refine<T, S> =>
     make(SchemaAST.appendChecks(schema.ast, [SchemaAST.makeFilterByGuard(refinement, annotations)]), { schema })
 }
-type DistributeBrands<B> = UnionToIntersection<B extends infer U extends string ? Brand.Brand<U> : never>
+// A concrete key requires a property; broad and open template keys do not.
+type EnsureSingleBrandKey<K extends PropertyKey> = IsUnion<K> extends false
+  ? {} extends Record<K, unknown> ? never : unknown
+  : never
+// Collect all keys, including those not shared by every union member.
+type FromBrandKeys<A extends Brand.Brand<any>> = A extends unknown ? Brand.Brand.Keys<A> : never
 /**
  * Type-level representation returned by {@link brand}.
  *
  * @category branding
  * @since 3.10.0
  */
-export interface brand<S extends Constraint, B> extends
+export interface brand<S extends Constraint, B extends string> extends
   BottomLazy<
     S["ast"],
     brand<S, B>,
@@ -4999,19 +5081,19 @@ export interface brand<S extends Constraint, B> extends
     S["~encoded.optionality"]
   >
 {
-  readonly "Type": S["Type"] & DistributeBrands<B>
+  readonly "Type": S["Type"] & Brand.Brand<B>
   readonly "Encoded": S["Encoded"]
   readonly "DecodingServices": S["DecodingServices"]
   readonly "EncodingServices": S["EncodingServices"]
   readonly "~type.make.in": S["~type.make.in"]
-  readonly "~type.make": S["Type"] & DistributeBrands<B>
-  readonly "Iso": S["Type"] & DistributeBrands<B>
+  readonly "~type.make": S["Type"] & Brand.Brand<B>
+  readonly "Iso": S["Type"] & Brand.Brand<B>
   readonly schema: S
   readonly identifier: string
 }
 /**
- * Adds a nominal brand to a schema, intersecting the output type with
- * `Brand.Brand<B>` to prevent accidental mixing of structurally identical types.
+ * Intersects a schema's output type with `Brand.Brand<B>` to prevent accidental
+ * mixing of structurally identical types.
  *
  * **When to use**
  *
@@ -5020,31 +5102,52 @@ export interface brand<S extends Constraint, B> extends
  *
  * **Gotchas**
  *
- * `brand` adds brand metadata and narrows the TypeScript output type, but it
- * does not add runtime checks.
+ * - `identifier` must be a single concrete string literal. Widened strings,
+ *   unions, and open template literal types are rejected.
+ * - `brand` only narrows the TypeScript output type. It does not change the
+ *   schema's runtime AST or add runtime checks.
+ * - Schema representations and generated schema code omit the brand. Reapply
+ *   `brand` after rebuilding or generating a schema when the nominal type is
+ *   still required.
  *
- * @see {@link fromBrand} for applying a Brand constructor's checks along with the brand tag
+ * @see {@link fromBrand} for applying a Brand constructor's checks along with its branded type
  *
  * @category branding
  * @since 3.10.0
  */
-export function brand<B extends string>(identifier: B) {
+export function brand<B extends string>(identifier: B & EnsureSingleBrandKey<B>) {
   return <S extends ConstraintRebuildable>(schema: S): brand<S["Rebuild"], B> =>
-    make(SchemaAST.brand(schema.ast, identifier), { schema, identifier })
+    make(schema.ast, { schema, identifier })
 }
 /**
  * Creates a branded schema from a {@link Brand.Constructor}, applying the
- * constructor's checks and brand tag to the underlying schema.
+ * constructor's checks and branded type to the underlying schema.
+ *
+ * **When to use**
+ *
+ * Use to reuse the checks from a constructor with one concrete brand key.
+ *
+ * **Gotchas**
+ *
+ * `identifier` must match the constructor's only brand key. Apply `fromBrand`
+ * repeatedly to compose distinct brands, and use {@link Union} to represent
+ * alternatives.
+ *
+ * @see {@link brand} for adding a brand without constructor checks
  *
  * @category branding
  * @since 3.10.0
  */
-export function fromBrand<A extends Brand.Brand<any>>(identifier: string, ctor: Brand.Constructor<A>) {
+export function fromBrand<A extends Brand.Brand<any>>(
+  identifier: Brand.Brand.Keys<A> & string,
+  ctor: Brand.Constructor<A> & EnsureSingleBrandKey<FromBrandKeys<A>>
+) {
+  type B = Brand.Brand.Keys<A> & string
   return <S extends Top & { readonly "Type": Brand.Brand.Unbranded<A> }>(
     self: S
-  ): brand<S["Rebuild"], Brand.Brand.Keys<A>> => {
-    return (ctor.checks ? self.check(...ctor.checks) : self).pipe(brand(identifier))
-  }
+  ): brand<S["Rebuild"], B> =>
+    // The constructor already guarantees a single concrete brand key.
+    (ctor.checks ? self.check(...ctor.checks) : self).pipe(brand<B>(identifier as B & EnsureSingleBrandKey<B>))
 }
 /**
  * Type-level representation returned by {@link middlewareDecoding}.
@@ -5379,7 +5482,7 @@ export function decodeTo<To extends Constraint, From extends Constraint, RD = ne
       SchemaAST.decodeTo(
         from.ast,
         to.ast,
-        transformation ? SchemaTransformation.make(transformation) : SchemaTransformation.passthrough()
+        transformation ? SchemaTransformation.makeTransformation(transformation) : SchemaTransformation.passthrough()
       ),
       {
         from,
@@ -6366,7 +6469,7 @@ export function link<T>() {
       readonly encode: SchemaGetter.Getter<NoInfer<To["Type"]>, T>
     }
   ): SchemaAST.Link => {
-    return new SchemaAST.Link(encodeTo.ast, SchemaTransformation.make(transformation))
+    return new SchemaAST.Link(encodeTo.ast, SchemaTransformation.makeTransformation(transformation))
   }
 }
 /**
@@ -6538,7 +6641,9 @@ export function isTrimmed(annotations?: Annotations.Filter) {
  *
  * JSON Schema:
  *
- * This check corresponds to the `pattern` constraint in JSON Schema.
+ * Unless annotations override `toJsonSchema`, JSON Schema receives a `pattern`
+ * only when the JavaScript RegExp uses the Unicode flag and its other flags are
+ * `d`, `g`, or `y`. Sticky patterns are anchored at the start of the string.
  *
  * Arbitrary:
  *
@@ -6554,10 +6659,12 @@ export function isPattern(
 ): SchemaAST.Filter<string> {
   const source = regExp.source
   const flags = regExp.flags
+  const canExport = /^[dg]*uy?$/.test(flags)
   const runtimeRegExp = flags === ""
     ? `new RegExp(${format(source)})`
     : `new RegExp(${format(source)}, ${format(flags)})`
   return SchemaAST.isPattern(regExp, {
+    toJsonSchema: () => canExport ? { pattern: flags.endsWith("y") ? `^(?:${source})` : source } : [{}, true],
     toCode: () => ({ runtime: `Schema.isPattern(${runtimeRegExp})` }),
     ...annotations
   })
@@ -6826,30 +6933,43 @@ export function isBase64Url(annotations?: Annotations.Filter) {
     }
   )
 }
+
+function literalToJsonSchema(
+  literal: string,
+  original: string,
+  pattern: string
+): SchemaRepresentation.ToJsonSchema.CheckOutput {
+  if (literal.length === 0) return original.length === 0 ? {} : [{}, true]
+  const constraint = { pattern: new globalThis.RegExp(pattern).source }
+  return literal === original ? constraint : [constraint, true]
+}
+
 /**
  * Validates at runtime that a string starts with the specified literal prefix.
  *
  * **Details**
  *
  * RegExp metacharacters in the prefix are escaped in JSON Schema and arbitrary
- * metadata so that the generated patterns retain literal `startsWith` semantics.
+ * metadata. If the prefix ends with a high surrogate, the JSON Schema pattern
+ * omits that code unit so Unicode matching cannot reject a valid string.
  *
  * @category validation
  * @since 4.0.0
  */
-export function isStartsWith(startsWith: string, annotations?: Annotations.Filter) {
+export function isStartingWith(startsWith: string, annotations?: Annotations.Filter) {
   const formatted = JSON.stringify(startsWith)
   const regExp = new globalThis.RegExp(`^${RegExp_.escape(startsWith)}`)
+  const jsonSchemaLiteral = startsWith.replace(/[\uD800-\uDBFF]$/, "")
   return makeFilter(
     (s: string) => s.startsWith(startsWith),
     {
       expected: `a string starting with ${formatted}`,
       representation: {
-        id: "effect/schema/isStartsWith",
+        id: "effect/schema/isStartingWith",
         payload: { startsWith }
       },
-      toJsonSchema: () => ({ pattern: regExp.source }),
-      toCode: () => ({ runtime: `Schema.isStartsWith(${format(startsWith)})` }),
+      toJsonSchema: () => literalToJsonSchema(jsonSchemaLiteral, startsWith, `^${RegExp_.escape(jsonSchemaLiteral)}`),
+      toCode: () => ({ runtime: `Schema.isStartingWith(${format(startsWith)})` }),
       arbitraryConstraint: {
         patterns: [{ source: regExp.source, flags: regExp.flags }]
       },
@@ -6863,24 +6983,26 @@ export function isStartsWith(startsWith: string, annotations?: Annotations.Filte
  * **Details**
  *
  * RegExp metacharacters in the suffix are escaped in JSON Schema and arbitrary
- * metadata so that the generated patterns retain literal `endsWith` semantics.
+ * metadata. If the suffix begins with a low surrogate, the JSON Schema pattern
+ * omits that code unit so Unicode matching cannot reject a valid string.
  *
  * @category validation
  * @since 4.0.0
  */
-export function isEndsWith(endsWith: string, annotations?: Annotations.Filter) {
+export function isEndingWith(endsWith: string, annotations?: Annotations.Filter) {
   const formatted = JSON.stringify(endsWith)
   const regExp = new globalThis.RegExp(`${RegExp_.escape(endsWith)}$`)
+  const jsonSchemaLiteral = endsWith.replace(/^[\uDC00-\uDFFF]/, "")
   return makeFilter(
     (s: string) => s.endsWith(endsWith),
     {
       expected: `a string ending with ${formatted}`,
       representation: {
-        id: "effect/schema/isEndsWith",
+        id: "effect/schema/isEndingWith",
         payload: { endsWith }
       },
-      toJsonSchema: () => ({ pattern: regExp.source }),
-      toCode: () => ({ runtime: `Schema.isEndsWith(${format(endsWith)})` }),
+      toJsonSchema: () => literalToJsonSchema(jsonSchemaLiteral, endsWith, `${RegExp_.escape(jsonSchemaLiteral)}$`),
+      toCode: () => ({ runtime: `Schema.isEndingWith(${format(endsWith)})` }),
       arbitraryConstraint: {
         patterns: [{ source: regExp.source, flags: regExp.flags }]
       },
@@ -6894,25 +7016,27 @@ export function isEndsWith(endsWith: string, annotations?: Annotations.Filter) {
  * **Details**
  *
  * RegExp metacharacters in the substring are escaped in JSON Schema and
- * arbitrary metadata so that the generated patterns retain literal `includes`
- * semantics.
+ * arbitrary metadata. A leading low surrogate or trailing high surrogate is
+ * omitted from the JSON Schema pattern so Unicode matching cannot reject a
+ * valid string.
  *
  * @category validation
  * @since 4.0.0
  */
-export function isIncludes(includes: string, annotations?: Annotations.Filter) {
+export function isIncluding(includes: string, annotations?: Annotations.Filter) {
   const formatted = JSON.stringify(includes)
   const regExp = new globalThis.RegExp(RegExp_.escape(includes))
+  const jsonSchemaLiteral = includes.replace(/^[\uDC00-\uDFFF]|[\uD800-\uDBFF]$/g, "")
   return makeFilter(
     (s: string) => s.includes(includes),
     {
       expected: `a string including ${formatted}`,
       representation: {
-        id: "effect/schema/isIncludes",
+        id: "effect/schema/isIncluding",
         payload: { includes }
       },
-      toJsonSchema: () => ({ pattern: regExp.source }),
-      toCode: () => ({ runtime: `Schema.isIncludes(${format(includes)})` }),
+      toJsonSchema: () => literalToJsonSchema(jsonSchemaLiteral, includes, RegExp_.escape(jsonSchemaLiteral)),
+      toCode: () => ({ runtime: `Schema.isIncluding(${format(includes)})` }),
       arbitraryConstraint: {
         patterns: [{ source: regExp.source, flags: regExp.flags }]
       },
@@ -6944,7 +7068,7 @@ export function isUppercased(annotations?: Annotations.Filter) {
         id: "effect/schema/isUppercased",
         payload: null
       },
-      toJsonSchema: () => ({ pattern: regExp.source }),
+      toJsonSchema: () => [{ pattern: regExp.source }, true],
       toCode: () => ({ runtime: "Schema.isUppercased()" }),
       arbitraryConstraint: {
         patterns: [{ source: UPPERCASED_PATTERN, flags: "" }]
@@ -6977,7 +7101,7 @@ export function isLowercased(annotations?: Annotations.Filter) {
         id: "effect/schema/isLowercased",
         payload: null
       },
-      toJsonSchema: () => ({ pattern: regExp.source }),
+      toJsonSchema: () => [{ pattern: regExp.source }, true],
       toCode: () => ({ runtime: "Schema.isLowercased()" }),
       arbitraryConstraint: {
         patterns: [{ source: LOWERCASED_PATTERN, flags: "" }]
@@ -6987,7 +7111,7 @@ export function isLowercased(annotations?: Annotations.Filter) {
   )
 }
 
-const CAPITALIZED_PATTERN = "^[^a-z]?.*$"
+const CAPITALIZED_PATTERN = "^(?:[^a-z][\\s\\S]*)?$"
 /**
  * Validates that the first character of a string is unchanged by
  * `toUpperCase()`.
@@ -7010,7 +7134,7 @@ export function isCapitalized(annotations?: Annotations.Filter) {
         id: "effect/schema/isCapitalized",
         payload: null
       },
-      toJsonSchema: () => ({ pattern: regExp.source }),
+      toJsonSchema: () => [{ pattern: regExp.source }, true],
       toCode: () => ({ runtime: "Schema.isCapitalized()" }),
       arbitraryConstraint: {
         patterns: [{ source: CAPITALIZED_PATTERN, flags: "" }]
@@ -7020,7 +7144,7 @@ export function isCapitalized(annotations?: Annotations.Filter) {
   )
 }
 
-const UNCAPITALIZED_PATTERN = "^[^A-Z]?.*$"
+const UNCAPITALIZED_PATTERN = "^(?:[^A-Z][\\s\\S]*)?$"
 /**
  * Validates that the first character of a string is unchanged by
  * `toLowerCase()`.
@@ -7043,7 +7167,7 @@ export function isUncapitalized(annotations?: Annotations.Filter) {
         id: "effect/schema/isUncapitalized",
         payload: null
       },
-      toJsonSchema: () => ({ pattern: regExp.source }),
+      toJsonSchema: () => [{ pattern: regExp.source }, true],
       toCode: () => ({ runtime: "Schema.isUncapitalized()" }),
       arbitraryConstraint: {
         patterns: [{ source: UNCAPITALIZED_PATTERN, flags: "" }]
@@ -7469,24 +7593,38 @@ export const isBetween: (options: {
  * JSON Schema:
  *
  * This check corresponds to the `multipleOf` constraint in JSON Schema.
+ * Negative divisors are normalized to their absolute value because JSON
+ * Schema requires `multipleOf` to be positive.
+ *
+ * **Gotchas**
+ *
+ * Throws a `RangeError` when `divisor` is zero or is not finite.
  *
  * @category validation
  * @since 4.0.0
  */
-export const isMultipleOf: (divisor: number, annotations?: Annotations.Filter) => SchemaAST.Filter<number> =
-  makeIsMultipleOf({
-    remainder,
-    zero: 0,
-    annotate: (divisor) => ({
+export function isMultipleOf(
+  divisor: number,
+  annotations?: Annotations.Filter
+): SchemaAST.Filter<number> {
+  if (!globalThis.Number.isFinite(divisor) || divisor === 0) {
+    throw new globalThis.RangeError(`Expected a finite non-zero number, got ${globalThis.String(divisor)}`)
+  }
+  divisor = globalThis.Math.abs(divisor)
+  return makeFilter(
+    (input: number) => remainder(input, divisor) === 0,
+    {
       expected: `a value that is a multiple of ${divisor}`,
       representation: {
         id: "effect/schema/isMultipleOf",
         payload: { divisor }
       },
       toJsonSchema: () => ({ multipleOf: divisor }),
-      toCode: () => ({ runtime: `Schema.isMultipleOf(${format(divisor)})` })
-    })
-  })
+      toCode: () => ({ runtime: `Schema.isMultipleOf(${format(divisor)})` }),
+      ...annotations
+    }
+  )
+}
 /**
  * Validates that a number is a safe integer (within the safe integer range
  * that can be exactly represented in JavaScript).
@@ -7513,7 +7651,7 @@ export function isInt(annotations?: Annotations.Filter) {
         id: "effect/schema/isInt",
         payload: null
       },
-      toJsonSchema: () => ({ type: "integer" }),
+      toJsonSchema: () => [{ type: "integer" }, true],
       toCode: () => ({ runtime: "Schema.isInt()" }),
       arbitraryConstraint: {
         number: "integer"
@@ -7657,7 +7795,7 @@ export const isGreaterThanDate: (
         id: "effect/schema/isGreaterThanDate",
         payload: { exclusiveMinimum: encoded }
       },
-      toJsonSchema: () => ({}),
+      toJsonSchema: () => [{}, true],
       toCode: () => ({ runtime: `Schema.isGreaterThanDate(${formatDateRuntime(exclusiveMinimum)})` })
     }
   }
@@ -7692,7 +7830,7 @@ export const isGreaterThanOrEqualToDate: (
         id: "effect/schema/isGreaterThanOrEqualToDate",
         payload: { minimum: encoded }
       },
-      toJsonSchema: () => ({}),
+      toJsonSchema: () => [{}, true],
       toCode: () => ({ runtime: `Schema.isGreaterThanOrEqualToDate(${formatDateRuntime(minimum)})` })
     }
   }
@@ -7721,7 +7859,7 @@ export const isLessThanDate: (
         id: "effect/schema/isLessThanDate",
         payload: { exclusiveMaximum: encoded }
       },
-      toJsonSchema: () => ({}),
+      toJsonSchema: () => [{}, true],
       toCode: () => ({ runtime: `Schema.isLessThanDate(${formatDateRuntime(exclusiveMaximum)})` })
     }
   }
@@ -7756,7 +7894,7 @@ export const isLessThanOrEqualToDate: (
         id: "effect/schema/isLessThanOrEqualToDate",
         payload: { maximum: encoded }
       },
-      toJsonSchema: () => ({}),
+      toJsonSchema: () => [{}, true],
       toCode: () => ({ runtime: `Schema.isLessThanOrEqualToDate(${formatDateRuntime(maximum)})` })
     }
   }
@@ -7800,7 +7938,7 @@ export const isBetweenDate: (options: {
         id: "effect/schema/isBetweenDate",
         payload
       },
-      toJsonSchema: () => ({}),
+      toJsonSchema: () => [{}, true],
       toCode: () => ({
         runtime: `Schema.isBetweenDate({ minimum: ${formatDateRuntime(options.minimum)}, maximum: ${
           formatDateRuntime(options.maximum)
@@ -7833,7 +7971,7 @@ export const isGreaterThanBigInt: (
         id: "effect/schema/isGreaterThanBigInt",
         payload: { exclusiveMinimum: encoded }
       },
-      toJsonSchema: () => ({}),
+      toJsonSchema: () => [{}, true],
       toCode: () => ({ runtime: `Schema.isGreaterThanBigInt(${format(exclusiveMinimum)})` })
     }
   }
@@ -7863,7 +8001,7 @@ export const isGreaterThanOrEqualToBigInt: (
         id: "effect/schema/isGreaterThanOrEqualToBigInt",
         payload: { minimum: encoded }
       },
-      toJsonSchema: () => ({}),
+      toJsonSchema: () => [{}, true],
       toCode: () => ({ runtime: `Schema.isGreaterThanOrEqualToBigInt(${format(minimum)})` })
     }
   }
@@ -7892,7 +8030,7 @@ export const isLessThanBigInt: (
         id: "effect/schema/isLessThanBigInt",
         payload: { exclusiveMaximum: encoded }
       },
-      toJsonSchema: () => ({}),
+      toJsonSchema: () => [{}, true],
       toCode: () => ({ runtime: `Schema.isLessThanBigInt(${format(exclusiveMaximum)})` })
     }
   }
@@ -7922,7 +8060,7 @@ export const isLessThanOrEqualToBigInt: (
         id: "effect/schema/isLessThanOrEqualToBigInt",
         payload: { maximum: encoded }
       },
-      toJsonSchema: () => ({}),
+      toJsonSchema: () => [{}, true],
       toCode: () => ({ runtime: `Schema.isLessThanOrEqualToBigInt(${format(maximum)})` })
     }
   }
@@ -7961,7 +8099,7 @@ export const isBetweenBigInt: (options: {
         id: "effect/schema/isBetweenBigInt",
         payload
       },
-      toJsonSchema: () => ({}),
+      toJsonSchema: () => [{}, true],
       toCode: () => ({
         runtime: `Schema.isBetweenBigInt({ minimum: ${format(options.minimum)}, maximum: ${
           format(options.maximum)
@@ -7970,6 +8108,7 @@ export const isBetweenBigInt: (options: {
     }
   }
 })
+
 /**
  * Validates that a value has at least the specified length. Works with strings
  * and arrays.
@@ -7978,8 +8117,11 @@ export const isBetweenBigInt: (options: {
  *
  * JSON Schema:
  *
- * This check corresponds to the `minLength` constraint for strings or the
- * `minItems` constraint for arrays in JSON Schema.
+ * The bound must be finite; it is rounded down and clamped to zero. For arrays,
+ * this check corresponds to `minItems`. JavaScript counts UTF-16 code units
+ * while JSON Schema counts Unicode code points, so strings use
+ * `minLength: Math.ceil(minLength / 2)`, the tightest lower bound that cannot
+ * reject a string accepted by this check.
  *
  * Arbitrary:
  *
@@ -8002,7 +8144,11 @@ export const isBetweenBigInt: (options: {
  * @since 4.0.0
  */
 export function isMinLength(minLength: number, annotations?: Annotations.Filter) {
-  minLength = Math.max(0, Math.floor(minLength))
+  minLength = normalizeCardinality(minLength)
+  return makeIsMinLength(minLength, Math.ceil(minLength / 2), annotations)
+}
+
+function makeIsMinLength(minLength: number, minCodePoints: number, annotations?: Annotations.Filter) {
   return makeFilter<{ readonly length: number }>(
     (input) => input.length >= minLength,
     {
@@ -8011,7 +8157,16 @@ export function isMinLength(minLength: number, annotations?: Annotations.Filter)
         id: "effect/schema/isMinLength",
         payload: { minLength }
       },
-      toJsonSchema: ({ type }) => type === "array" ? { minItems: minLength } : { minLength },
+      toJsonSchema: ({ type }) =>
+        type === "string"
+          ? minLength <= 1
+            ? { minLength: minCodePoints }
+            : [{ minLength: minCodePoints }, true]
+          : type === "array"
+          ? { minItems: minLength }
+          : type === undefined
+          ? [{ minLength: minCodePoints, minItems: minLength }, true]
+          : [{}, true],
       toCode: () => ({ runtime: `Schema.isMinLength(${minLength})` }),
       [InternalAnnotations.STRUCTURAL_ANNOTATION_KEY]: true,
       arbitraryConstraint: {
@@ -8041,7 +8196,7 @@ export function isMinLength(minLength: number, annotations?: Annotations.Filter)
  * @since 4.0.0
  */
 export function isNonEmpty(annotations?: Annotations.Filter) {
-  return isMinLength(1, annotations)
+  return makeIsMinLength(1, 1, annotations)
 }
 /**
  * Validates that a value has at most the specified length. Works with strings
@@ -8051,8 +8206,10 @@ export function isNonEmpty(annotations?: Annotations.Filter) {
  *
  * JSON Schema:
  *
- * This check corresponds to the `maxLength` constraint for strings or the
- * `maxItems` constraint for arrays in JSON Schema.
+ * The bound must be finite; it is rounded down and clamped to zero. This check
+ * corresponds to `maxItems` for arrays. Strings use the same bound for
+ * `maxLength`, which cannot reject a string accepted by this check because a
+ * string has no more code points than UTF-16 code units.
  *
  * Arbitrary:
  *
@@ -8064,7 +8221,7 @@ export function isNonEmpty(annotations?: Annotations.Filter) {
  * @since 4.0.0
  */
 export function isMaxLength(maxLength: number, annotations?: Annotations.Filter) {
-  maxLength = Math.max(0, Math.floor(maxLength))
+  maxLength = normalizeCardinality(maxLength)
   return makeFilter<{ readonly length: number }>(
     (input) => input.length <= maxLength,
     {
@@ -8073,7 +8230,14 @@ export function isMaxLength(maxLength: number, annotations?: Annotations.Filter)
         id: "effect/schema/isMaxLength",
         payload: { maxLength }
       },
-      toJsonSchema: ({ type }) => type === "array" ? { maxItems: maxLength } : { maxLength },
+      toJsonSchema: ({ type }) =>
+        type === "string"
+          ? maxLength === 0 ? { maxLength } : [{ maxLength }, true]
+          : type === "array"
+          ? { maxItems: maxLength }
+          : type === undefined
+          ? [{ maxLength, maxItems: maxLength }, true]
+          : [{}, true],
       toCode: () => ({ runtime: `Schema.isMaxLength(${maxLength})` }),
       [InternalAnnotations.STRUCTURAL_ANNOTATION_KEY]: true,
       arbitraryConstraint: {
@@ -8091,8 +8255,11 @@ export function isMaxLength(maxLength: number, annotations?: Annotations.Filter)
  *
  * JSON Schema:
  *
- * This check corresponds to `minLength`/`maxLength` constraints for strings
- * or `minItems`/`maxItems` constraints for arrays in JSON Schema.
+ * Both bounds must be finite; they are rounded down and clamped to zero. Arrays
+ * use the same bounds for `minItems` and `maxItems`. JavaScript counts UTF-16
+ * code units while JSON Schema counts Unicode code points, so strings use
+ * `Math.ceil(minimum / 2)` for `minLength` and `maximum` for `maxLength`. These
+ * are the tightest bounds that cannot reject a string accepted by this check.
  *
  * Arbitrary:
  *
@@ -8103,9 +8270,9 @@ export function isMaxLength(maxLength: number, annotations?: Annotations.Filter)
  * @category validation
  * @since 4.0.0
  */
-export function isLengthBetween(minimum: number, maximum: number, annotations?: Annotations.Filter) {
-  minimum = Math.max(0, Math.floor(minimum))
-  maximum = Math.max(0, Math.floor(maximum))
+export function isBetweenLength(minimum: number, maximum: number, annotations?: Annotations.Filter) {
+  minimum = normalizeCardinality(minimum)
+  maximum = normalizeCardinality(maximum)
   return makeFilter<{ readonly length: number }>(
     (input) => input.length >= minimum && input.length <= maximum,
     {
@@ -8114,14 +8281,25 @@ export function isLengthBetween(minimum: number, maximum: number, annotations?: 
         : `a value with a length between ${minimum} and ${maximum}`,
 
       representation: {
-        id: "effect/schema/isLengthBetween",
+        id: "effect/schema/isBetweenLength",
         payload: { minimum, maximum }
       },
       toJsonSchema: ({ type }) =>
-        type === "array"
-          ? { allOf: [{ minItems: minimum }, { maxItems: maximum }] }
-          : { allOf: [{ minLength: minimum }, { maxLength: maximum }] },
-      toCode: () => ({ runtime: `Schema.isLengthBetween(${minimum}, ${maximum})` }),
+        type === "string"
+          ? maximum === 0 || Math.ceil(minimum / 2) > maximum
+            ? { minLength: Math.ceil(minimum / 2), maxLength: maximum }
+            : [{ minLength: Math.ceil(minimum / 2), maxLength: maximum }, true]
+          : type === "array"
+          ? { minItems: minimum, maxItems: maximum }
+          : type === undefined
+          ? [{
+            minLength: Math.ceil(minimum / 2),
+            maxLength: maximum,
+            minItems: minimum,
+            maxItems: maximum
+          }, true]
+          : [{}, true],
+      toCode: () => ({ runtime: `Schema.isBetweenLength(${minimum}, ${maximum})` }),
       [InternalAnnotations.STRUCTURAL_ANNOTATION_KEY]: true,
       arbitraryConstraint: {
         minLength: minimum,
@@ -8132,10 +8310,149 @@ export function isLengthBetween(minimum: number, maximum: number, annotations?: 
   )
 }
 /**
+ * Validates that a string contains at least the specified number of Unicode code points.
+ *
+ * **Details**
+ *
+ * The bound must be finite; it is rounded down and clamped to zero. This check
+ * corresponds to `minLength` in JSON Schema and guides arbitrary generation by
+ * code point count.
+ *
+ * **Gotchas**
+ *
+ * Code points are not grapheme clusters: combining marks and joined emoji can
+ * contribute multiple code points to one visible character. Unpaired UTF-16
+ * surrogates count as one code point each. This check does not normalize strings.
+ *
+ * @see {@link isMinLength} for counting UTF-16 code units
+ * @see {@link isMaxCodePoints}
+ * @see {@link isBetweenCodePoints}
+ * @category validation
+ * @since 4.0.0
+ */
+export function isMinCodePoints(minCodePoints: number, annotations?: Annotations.Filter) {
+  minCodePoints = normalizeCardinality(minCodePoints)
+  return makeFilter<string>(
+    (input) => countCodePointsUpTo(input, minCodePoints) >= minCodePoints,
+    {
+      expected: `a string with at least ${minCodePoints} code points`,
+      representation: {
+        id: "effect/schema/isMinCodePoints",
+        payload: { minCodePoints }
+      },
+      toJsonSchema: () => ({ minLength: minCodePoints }),
+      toCode: () => ({ runtime: `Schema.isMinCodePoints(${minCodePoints})` }),
+      arbitraryConstraint: { minCodePoints },
+      ...annotations
+    }
+  )
+}
+/**
+ * Validates that a string contains at most the specified number of Unicode code points.
+ *
+ * **Details**
+ *
+ * The bound must be finite; it is rounded down and clamped to zero. This check
+ * corresponds to `maxLength` in JSON Schema and guides arbitrary generation by
+ * code point count.
+ *
+ * **Gotchas**
+ *
+ * Code points are not grapheme clusters: combining marks and joined emoji can
+ * contribute multiple code points to one visible character. Unpaired UTF-16
+ * surrogates count as one code point each. This check does not normalize strings.
+ *
+ * @see {@link isMaxLength} for counting UTF-16 code units
+ * @see {@link isMinCodePoints}
+ * @see {@link isBetweenCodePoints}
+ * @category validation
+ * @since 4.0.0
+ */
+export function isMaxCodePoints(maxCodePoints: number, annotations?: Annotations.Filter) {
+  maxCodePoints = normalizeCardinality(maxCodePoints)
+  return makeFilter<string>(
+    (input) => countCodePointsUpTo(input, maxCodePoints + 1) <= maxCodePoints,
+    {
+      expected: `a string with at most ${maxCodePoints} code points`,
+      representation: {
+        id: "effect/schema/isMaxCodePoints",
+        payload: { maxCodePoints }
+      },
+      toJsonSchema: () => ({ maxLength: maxCodePoints }),
+      toCode: () => ({ runtime: `Schema.isMaxCodePoints(${maxCodePoints})` }),
+      arbitraryConstraint: { maxCodePoints },
+      ...annotations
+    }
+  )
+}
+/**
+ * Validates that a string's Unicode code point count is within the specified inclusive range.
+ *
+ * **Details**
+ *
+ * Bounds must be finite; they are rounded down and clamped to zero. Equal bounds
+ * require an exact count. This check corresponds to `minLength` and `maxLength`
+ * in JSON Schema and guides arbitrary generation by code point count.
+ *
+ * **Gotchas**
+ *
+ * Code points are not grapheme clusters: combining marks and joined emoji can
+ * contribute multiple code points to one visible character. Unpaired UTF-16
+ * surrogates count as one code point each. This check does not normalize strings.
+ *
+ * @see {@link isBetweenLength} for counting UTF-16 code units
+ * @see {@link isMinCodePoints}
+ * @see {@link isMaxCodePoints}
+ * @category validation
+ * @since 4.0.0
+ */
+export function isBetweenCodePoints(minimum: number, maximum: number, annotations?: Annotations.Filter) {
+  minimum = normalizeCardinality(minimum)
+  maximum = normalizeCardinality(maximum)
+  return makeFilter<string>(
+    (input) => {
+      const count = countCodePointsUpTo(input, maximum + 1)
+      return count >= minimum && count <= maximum
+    },
+    {
+      expected: minimum === maximum
+        ? `a string with ${minimum} code points`
+        : `a string with between ${minimum} and ${maximum} code points`,
+      representation: {
+        id: "effect/schema/isBetweenCodePoints",
+        payload: { minimum, maximum }
+      },
+      toJsonSchema: () => ({ allOf: [{ minLength: minimum }, { maxLength: maximum }] }),
+      toCode: () => ({ runtime: `Schema.isBetweenCodePoints(${minimum}, ${maximum})` }),
+      arbitraryConstraint: { minCodePoints: minimum, maxCodePoints: maximum },
+      ...annotations
+    }
+  )
+}
+
+function countCodePointsUpTo(input: string, limit: number): number {
+  if (limit === 0) return 0
+  let count = 0
+  for (const _ of input) {
+    if (++count >= limit) break
+  }
+  return count
+}
+
+function normalizeCardinality(value: number): number {
+  if (!globalThis.Number.isFinite(value)) {
+    throw new globalThis.RangeError(`Expected a finite number, got ${value}`)
+  }
+  return Math.max(0, Math.floor(value))
+}
+
+/**
  * Validates that a value has at least the specified size. Works with values
  * that have a `size` property, such as `Set` or `Map`.
  *
  * **Details**
+ *
+ * The bound must be finite; it is rounded down and clamped to zero.
  *
  * JSON Schema:
  *
@@ -8150,7 +8467,7 @@ export function isLengthBetween(minimum: number, maximum: number, annotations?: 
  * @since 4.0.0
  */
 export function isMinSize(minSize: number, annotations?: Annotations.Filter) {
-  minSize = Math.max(0, Math.floor(minSize))
+  minSize = normalizeCardinality(minSize)
   return makeFilter<{ readonly size: number }>(
     (input) => input.size >= minSize,
     {
@@ -8159,7 +8476,7 @@ export function isMinSize(minSize: number, annotations?: Annotations.Filter) {
         id: "effect/schema/isMinSize",
         payload: { minSize }
       },
-      toJsonSchema: () => ({}),
+      toJsonSchema: () => [{}, true],
       toCode: () => ({ runtime: `Schema.isMinSize(${minSize})` }),
       [InternalAnnotations.STRUCTURAL_ANNOTATION_KEY]: true,
       arbitraryConstraint: {
@@ -8175,6 +8492,8 @@ export function isMinSize(minSize: number, annotations?: Annotations.Filter) {
  *
  * **Details**
  *
+ * The bound must be finite; it is rounded down and clamped to zero.
+ *
  * JSON Schema:
  *
  * This check does not have a direct JSON Schema equivalent, as it applies to
@@ -8188,7 +8507,7 @@ export function isMinSize(minSize: number, annotations?: Annotations.Filter) {
  * @since 4.0.0
  */
 export function isMaxSize(maxSize: number, annotations?: Annotations.Filter) {
-  maxSize = Math.max(0, Math.floor(maxSize))
+  maxSize = normalizeCardinality(maxSize)
   return makeFilter<{ readonly size: number }>(
     (input) => input.size <= maxSize,
     {
@@ -8197,7 +8516,7 @@ export function isMaxSize(maxSize: number, annotations?: Annotations.Filter) {
         id: "effect/schema/isMaxSize",
         payload: { maxSize }
       },
-      toJsonSchema: () => ({}),
+      toJsonSchema: () => [{}, true],
       toCode: () => ({ runtime: `Schema.isMaxSize(${maxSize})` }),
       [InternalAnnotations.STRUCTURAL_ANNOTATION_KEY]: true,
       arbitraryConstraint: {
@@ -8213,6 +8532,8 @@ export function isMaxSize(maxSize: number, annotations?: Annotations.Filter) {
  *
  * **Details**
  *
+ * Both bounds must be finite; they are rounded down and clamped to zero.
+ *
  * JSON Schema:
  *
  * This check does not have a direct JSON Schema equivalent, as it applies to
@@ -8225,9 +8546,9 @@ export function isMaxSize(maxSize: number, annotations?: Annotations.Filter) {
  * @category validation
  * @since 4.0.0
  */
-export function isSizeBetween(minimum: number, maximum: number, annotations?: Annotations.Filter) {
-  minimum = Math.max(0, Math.floor(minimum))
-  maximum = Math.max(0, Math.floor(maximum))
+export function isBetweenSize(minimum: number, maximum: number, annotations?: Annotations.Filter) {
+  minimum = normalizeCardinality(minimum)
+  maximum = normalizeCardinality(maximum)
   return makeFilter<{ readonly size: number }>(
     (input) => input.size >= minimum && input.size <= maximum,
     {
@@ -8236,11 +8557,11 @@ export function isSizeBetween(minimum: number, maximum: number, annotations?: An
         : `a value with a size between ${minimum} and ${maximum}`,
 
       representation: {
-        id: "effect/schema/isSizeBetween",
+        id: "effect/schema/isBetweenSize",
         payload: { minimum, maximum }
       },
-      toJsonSchema: () => ({}),
-      toCode: () => ({ runtime: `Schema.isSizeBetween(${minimum}, ${maximum})` }),
+      toJsonSchema: () => [{}, true],
+      toCode: () => ({ runtime: `Schema.isBetweenSize(${minimum}, ${maximum})` }),
       [InternalAnnotations.STRUCTURAL_ANNOTATION_KEY]: true,
       arbitraryConstraint: {
         minSize: minimum,
@@ -8257,9 +8578,14 @@ export function isSizeBetween(minimum: number, maximum: number, annotations?: An
  *
  * **Details**
  *
+ * The bound must be finite; it is rounded down and clamped to zero.
+ *
  * JSON Schema:
  *
- * This check corresponds to the `minProperties` constraint in JSON Schema.
+ * This check corresponds to `minProperties` in JSON Schema. Effect applies the
+ * check to the decoded object, while JSON Schema applies it to the original
+ * input. Defaults and property transformations can therefore produce different
+ * results.
  *
  * Arbitrary:
  *
@@ -8269,7 +8595,7 @@ export function isSizeBetween(minimum: number, maximum: number, annotations?: An
  * @since 4.0.0
  */
 export function isMinProperties(minProperties: number, annotations?: Annotations.Filter) {
-  minProperties = Math.max(0, Math.floor(minProperties))
+  minProperties = normalizeCardinality(minProperties)
   return makeFilter<object>(
     (input) => Reflect.ownKeys(input).length >= minProperties,
     {
@@ -8278,7 +8604,7 @@ export function isMinProperties(minProperties: number, annotations?: Annotations
         id: "effect/schema/isMinProperties",
         payload: { minProperties }
       },
-      toJsonSchema: () => ({ minProperties }),
+      toJsonSchema: ({ type }) => type === "object" ? { minProperties } : [{ minProperties }, true],
       toCode: () => ({ runtime: `Schema.isMinProperties(${minProperties})` }),
       [InternalAnnotations.STRUCTURAL_ANNOTATION_KEY]: true,
       arbitraryConstraint: {
@@ -8294,9 +8620,14 @@ export function isMinProperties(minProperties: number, annotations?: Annotations
  *
  * **Details**
  *
+ * The bound must be finite; it is rounded down and clamped to zero.
+ *
  * JSON Schema:
  *
- * This check corresponds to the `maxProperties` constraint in JSON Schema.
+ * This check corresponds to `maxProperties` in JSON Schema. Effect applies the
+ * check to the decoded object, while JSON Schema applies it to the original
+ * input. Excess-property handling and property transformations can therefore
+ * produce different results.
  *
  * Arbitrary:
  *
@@ -8306,7 +8637,7 @@ export function isMinProperties(minProperties: number, annotations?: Annotations
  * @since 4.0.0
  */
 export function isMaxProperties(maxProperties: number, annotations?: Annotations.Filter) {
-  maxProperties = Math.max(0, Math.floor(maxProperties))
+  maxProperties = normalizeCardinality(maxProperties)
   return makeFilter<object>(
     (input) => Reflect.ownKeys(input).length <= maxProperties,
     {
@@ -8315,7 +8646,7 @@ export function isMaxProperties(maxProperties: number, annotations?: Annotations
         id: "effect/schema/isMaxProperties",
         payload: { maxProperties }
       },
-      toJsonSchema: () => ({ maxProperties }),
+      toJsonSchema: ({ type }) => type === "object" ? { maxProperties } : [{ maxProperties }, true],
       toCode: () => ({ runtime: `Schema.isMaxProperties(${maxProperties})` }),
       [InternalAnnotations.STRUCTURAL_ANNOTATION_KEY]: true,
       arbitraryConstraint: {
@@ -8331,10 +8662,14 @@ export function isMaxProperties(maxProperties: number, annotations?: Annotations
  *
  * **Details**
  *
+ * Both bounds must be finite; they are rounded down and clamped to zero.
+ *
  * JSON Schema:
  *
- * This check corresponds to `minProperties` and `maxProperties`
- * constraints in JSON Schema.
+ * This check corresponds to `minProperties` and `maxProperties` in JSON
+ * Schema. Effect applies the check to the decoded object, while JSON Schema
+ * applies it to the original input. Defaults, excess-property handling, and
+ * property transformations can therefore produce different results.
  *
  * Arbitrary:
  *
@@ -8343,9 +8678,9 @@ export function isMaxProperties(maxProperties: number, annotations?: Annotations
  * @category validation
  * @since 4.0.0
  */
-export function isPropertiesLengthBetween(minimum: number, maximum: number, annotations?: Annotations.Filter) {
-  minimum = Math.max(0, Math.floor(minimum))
-  maximum = Math.max(0, Math.floor(maximum))
+export function isBetweenProperties(minimum: number, maximum: number, annotations?: Annotations.Filter) {
+  minimum = normalizeCardinality(minimum)
+  maximum = normalizeCardinality(maximum)
   return makeFilter<object>(
     (input) => Reflect.ownKeys(input).length >= minimum && Reflect.ownKeys(input).length <= maximum,
     {
@@ -8354,11 +8689,14 @@ export function isPropertiesLengthBetween(minimum: number, maximum: number, anno
         : `a value with between ${minimum} and ${maximum} entries`,
 
       representation: {
-        id: "effect/schema/isPropertiesLengthBetween",
+        id: "effect/schema/isBetweenProperties",
         payload: { minimum, maximum }
       },
-      toJsonSchema: () => ({ minProperties: minimum, maxProperties: maximum }),
-      toCode: () => ({ runtime: `Schema.isPropertiesLengthBetween(${minimum}, ${maximum})` }),
+      toJsonSchema: ({ type }) =>
+        type === "object"
+          ? { minProperties: minimum, maxProperties: maximum }
+          : [{ minProperties: minimum, maxProperties: maximum }, true],
+      toCode: () => ({ runtime: `Schema.isBetweenProperties(${minimum}, ${maximum})` }),
       [InternalAnnotations.STRUCTURAL_ANNOTATION_KEY]: true,
       arbitraryConstraint: {
         minProperties: minimum,
@@ -8378,8 +8716,10 @@ export function isPropertiesLengthBetween(minimum: number, maximum: number, anno
  * string property names.
  *
  * JSON Schema:
- * For string property names, this corresponds to the `propertyNames` constraint
- * in JSON Schema.
+ * This check corresponds to `propertyNames` in JSON Schema. Effect checks the
+ * decoded object's keys, including symbols, while JSON Schema checks the string
+ * names in the original input. Property transformations and excess-property
+ * handling can therefore produce different results.
  *
  * @category validation
  * @since 4.0.0
@@ -8410,7 +8750,8 @@ export function isPropertyNames(keySchema: Constraint, annotations?: Annotations
         payload: null,
         schemas: [propertyNames.ast]
       },
-      toJsonSchema: ({ schemas }) => ({ propertyNames: schemas[0] }),
+      toJsonSchema: ({ schemas, type }) =>
+        type === "object" ? { propertyNames: schemas[0] } : [{ propertyNames: schemas[0] }, true],
       toCode: ({ schemas }) => ({ runtime: `Schema.isPropertyNames(${schemas[0].runtime})` }),
       [InternalAnnotations.STRUCTURAL_ANNOTATION_KEY]: true,
       ...annotations
@@ -8522,12 +8863,12 @@ export interface Char extends String {
  *
  * @see {@link String} for unconstrained string values
  * @see {@link NonEmptyString} for strings with length greater than zero
- * @see {@link isLengthBetween} for the underlying length check
+ * @see {@link isBetweenLength} for the underlying length check
  *
  * @category schemas
  * @since 3.10.0
  */
-export const Char: Char = String.check(isLengthBetween(1, 1))
+export const Char: Char = String.check(isBetweenLength(1, 1))
 /**
  * Type-level representation of {@link ErrorInstance}.
  *
@@ -8879,7 +9220,7 @@ export const RegExp: RegExp = instanceOf(
           source: String,
           flags: String
         }),
-        SchemaTransformation.transformOrFail({
+        SchemaTransformation.transformEffect({
           decode: (e, options) =>
             Effect.try({
               try: () => new globalThis.RegExp(e.source, e.flags),
@@ -9191,9 +9532,9 @@ export const File: File = instanceOf(globalThis.File, {
         name: String,
         lastModified: Int
       }),
-      SchemaTransformation.transformOrFail({
+      SchemaTransformation.transformEffect({
         decode: (e, options) =>
-          Result_.match(Encoding.decodeBase64(e.data), {
+          Result_.match(Base64.decode(e.data), {
             onFailure: () =>
               Effect.fail(
                 new SchemaIssue.InvalidValue(
@@ -9214,7 +9555,7 @@ export const File: File = instanceOf(globalThis.File, {
             try: async () => {
               const bytes = new globalThis.Uint8Array(await file.arrayBuffer())
               return {
-                data: Encoding.encodeBase64(bytes),
+                data: Base64.encode(bytes),
                 type: file.type,
                 name: file.name,
                 lastModified: file.lastModified
@@ -9271,7 +9612,7 @@ export const FormData: FormData = instanceOf(globalThis.FormData, {
           ])
         ])
       ),
-      SchemaTransformation.transformOrFail({
+      SchemaTransformation.transformEffect({
         decode: (e) => {
           const out = new globalThis.FormData()
           for (const [key, entry] of e) {
@@ -10002,7 +10343,7 @@ export const Uint8ArrayFromHex: Uint8ArrayFromHex = String.annotate({
 // -----------------------------------------------------------------------------
 
 const bigDecimalFromString: SchemaTransformation.Transformation<BigDecimal_.BigDecimal, string> = SchemaTransformation
-  .transformOrFail<BigDecimal_.BigDecimal, string>({
+  .transformEffect<BigDecimal_.BigDecimal, string>({
     decode: (s, options) => {
       const result = BigDecimal_.fromString(s)
       return Option_.isNone(result)
@@ -10101,50 +10442,6 @@ export interface BigDecimal extends declare<BigDecimal_.BigDecimal> {
   readonly "Rebuild": BigDecimal
 }
 const BigDecimalString = String.annotate({ expected: "a string that will be decoded as a BigDecimal" })
-const arbitraryBigDecimalMaxScale = 20
-function bigIntArbitrarySchema(minimum: bigint | undefined, maximum: bigint | undefined): Codec<bigint> {
-  if (minimum !== undefined && maximum !== undefined) {
-    return BigInt.check(isBetweenBigInt({ minimum, maximum }))
-  }
-  if (minimum !== undefined) return BigInt.check(isGreaterThanOrEqualToBigInt(minimum))
-  if (maximum !== undefined) return BigInt.check(isLessThanOrEqualToBigInt(maximum))
-  return BigInt
-}
-function bigDecimalValueAtScale(value: BigDecimal_.BigDecimal, scale: number): bigint {
-  return value.value * globalThis.BigInt(10) ** globalThis.BigInt(scale - value.scale)
-}
-function bigDecimalArbitrarySchema(
-  constraint: Annotations.ToArbitrary.GenerationConstraint<BigDecimal_.BigDecimal> | undefined
-): Codec<{ readonly value: bigint; readonly scale: number }> {
-  if (constraint?.minimum === undefined && constraint?.maximum === undefined) {
-    return Struct({
-      value: BigInt,
-      scale: Int.check(isBetween({ minimum: 0, maximum: arbitraryBigDecimalMaxScale }))
-    })
-  }
-  const scale = Math.max(
-    arbitraryBigDecimalMaxScale,
-    constraint.minimum?.scale ?? 0,
-    constraint.maximum?.scale ?? 0,
-    constraint.exclusiveMinimum === true && constraint.minimum !== undefined ? constraint.minimum.scale + 1 : 0,
-    constraint.exclusiveMaximum === true && constraint.maximum !== undefined ? constraint.maximum.scale + 1 : 0
-  )
-  const minimum = constraint.minimum === undefined
-    ? undefined
-    : bigDecimalValueAtScale(constraint.minimum, scale) +
-      (constraint.exclusiveMinimum === true ? globalThis.BigInt(1) : globalThis.BigInt(0))
-  const maximum = constraint.maximum === undefined
-    ? undefined
-    : bigDecimalValueAtScale(constraint.maximum, scale) -
-      (constraint.exclusiveMaximum === true ? globalThis.BigInt(1) : globalThis.BigInt(0))
-  if (minimum !== undefined && maximum !== undefined && minimum > maximum) {
-    return Struct({
-      value: BigInt,
-      scale: Int.check(isBetween({ minimum: 0, maximum: arbitraryBigDecimalMaxScale }))
-    })
-  }
-  return Struct({ value: bigIntArbitrarySchema(minimum, maximum), scale: Literal(scale) })
-}
 /**
  * Schema for `BigDecimal` values.
  *
@@ -10177,11 +10474,6 @@ export const BigDecimal: BigDecimal = declare(
       importDeclarations: [`import * as BigDecimal from "effect/BigDecimal"`]
     }),
     expected: "BigDecimal",
-    toCodecArbitrary: ({ constraint }) =>
-      linkDecoding<BigDecimal_.BigDecimal>()(
-        bigDecimalArbitrarySchema(constraint),
-        SchemaGetter.transform(({ scale, value }) => BigDecimal_.make(value, scale))
-      ),
     toCodecJson: () =>
       link<BigDecimal_.BigDecimal>()(
         BigDecimalString,
@@ -10496,7 +10788,16 @@ export function CauseReason<E extends Constraint, D extends Constraint>(
                   return Cause_.makeInterruptReason(e.fiberId)
               }
             },
-            encode: identity
+            encode: (reason) => {
+              switch (reason._tag) {
+                case "Fail":
+                  return { _tag: "Fail" as const, error: reason.error }
+                case "Die":
+                  return { _tag: "Die" as const, defect: reason.defect }
+                case "Interrupt":
+                  return { _tag: "Interrupt" as const, fiberId: reason.fiberId }
+              }
+            }
           })
         )
     }
@@ -10700,7 +11001,7 @@ export function Chunk<Value extends Constraint>(value: Value): Chunk<Value> {
 // -----------------------------------------------------------------------------
 
 function dateTimeUtcFromInput<E extends DateTime.DateTime.Input>(): SchemaGetter.Getter<DateTime.Utc, E> {
-  return SchemaGetter.transformOrFail((input, options) => {
+  return SchemaGetter.transformEffect((input, options) => {
     return Option_.match(DateTime.make(input), {
       onNone: () =>
         Effect.fail(
@@ -10716,7 +11017,7 @@ const timeZoneOffsetFromNumber: SchemaTransformation.Transformation<DateTime.Tim
     encode: (tz) => tz.offset
   })
 const timeZoneNamedFromString: SchemaTransformation.Transformation<DateTime.TimeZone.Named, string> =
-  SchemaTransformation.transformOrFail<DateTime.TimeZone.Named, string>({
+  SchemaTransformation.transformEffect<DateTime.TimeZone.Named, string>({
     decode: (s, options) => {
       return Option_.match(DateTime.zoneMakeNamed(s), {
         onNone: () =>
@@ -10733,7 +11034,7 @@ const timeZoneNamedFromString: SchemaTransformation.Transformation<DateTime.Time
     encode: (tz) => Effect.succeed(tz.id)
   })
 const timeZoneFromString: SchemaTransformation.Transformation<DateTime.TimeZone, string> = SchemaTransformation
-  .transformOrFail<DateTime.TimeZone, string>({
+  .transformEffect<DateTime.TimeZone, string>({
     decode: (s, options) => {
       return Option_.match(DateTime.zoneFromString(s), {
         onNone: () =>
@@ -10750,7 +11051,7 @@ const timeZoneFromString: SchemaTransformation.Transformation<DateTime.TimeZone,
     encode: (tz) => Effect.succeed(DateTime.zoneToString(tz))
   })
 const dateTimeUtcFromString: SchemaTransformation.Transformation<DateTime.Utc, string> = SchemaTransformation
-  .transformOrFail<DateTime.Utc, string>({
+  .transformEffect<DateTime.Utc, string>({
     decode: (s, options) => {
       return Option_.match(DateTime.make(s), {
         onNone: () =>
@@ -10767,7 +11068,7 @@ const dateTimeUtcFromString: SchemaTransformation.Transformation<DateTime.Utc, s
     encode: (utc) => Effect.succeed(DateTime.formatIso(utc))
   })
 const dateTimeZonedFromString: SchemaTransformation.Transformation<DateTime.Zoned, string> = SchemaTransformation
-  .transformOrFail<DateTime.Zoned, string>({
+  .transformEffect<DateTime.Zoned, string>({
     decode: (s, options) => {
       return Option_.match(DateTime.makeZonedFromString(s), {
         onNone: () =>
@@ -11291,7 +11592,7 @@ const netAddressFromString = <S extends declare<any>, E extends { readonly messa
 ) =>
   String.pipe(decodeTo(
     declaration,
-    SchemaTransformation.transformOrFail({
+    SchemaTransformation.transformEffect({
       decode: (input, options) => {
         const result = parse(input)
         return Result_.isSuccess(result)
@@ -11305,7 +11606,7 @@ const netAddressFromString = <S extends declare<any>, E extends { readonly messa
 /**
  * Type-level representation of {@link MacAddress}.
  *
- * @unstable
+ * @stability unstable
  * @category models
  * @since 4.0.0
  */
@@ -11316,7 +11617,7 @@ export interface MacAddress extends declare<NetAddress_.MacAddress> {
 /**
  * Schema for already-constructed MAC address values.
  *
- * @unstable
+ * @stability unstable
  * @category schemas
  * @since 4.0.0
  */
@@ -11327,7 +11628,7 @@ export const MacAddress: MacAddress = declare(NetAddress_.isMacAddress, {
 /**
  * Type-level representation of {@link MacAddressFromString}.
  *
- * @unstable
+ * @stability unstable
  * @category models
  * @since 4.0.0
  */
@@ -11338,7 +11639,7 @@ export interface MacAddressFromString extends decodeTo<MacAddress, String> {
 /**
  * Schema for MAC addresses encoded as canonical colon-separated hexadecimal strings.
  *
- * @unstable
+ * @stability unstable
  * @category schemas
  * @since 4.0.0
  */
@@ -11352,7 +11653,7 @@ export const MacAddressFromString: MacAddressFromString = netAddressFromString(
 /**
  * Type-level representation of {@link Ipv4Address}.
  *
- * @unstable
+ * @stability unstable
  * @category models
  * @since 4.0.0
  */
@@ -11363,7 +11664,7 @@ export interface Ipv4Address extends declare<NetAddress_.Ipv4Address> {
 /**
  * Schema for already-constructed IPv4 address values.
  *
- * @unstable
+ * @stability unstable
  * @category schemas
  * @since 4.0.0
  */
@@ -11374,7 +11675,7 @@ export const Ipv4Address: Ipv4Address = declare(NetAddress_.isIpv4Address, {
 /**
  * Type-level representation of {@link Ipv4AddressFromString}.
  *
- * @unstable
+ * @stability unstable
  * @category models
  * @since 4.0.0
  */
@@ -11385,7 +11686,7 @@ export interface Ipv4AddressFromString extends decodeTo<Ipv4Address, String> {
 /**
  * Schema for IPv4 addresses encoded as canonical dotted-decimal strings.
  *
- * @unstable
+ * @stability unstable
  * @category schemas
  * @since 4.0.0
  */
@@ -11399,7 +11700,7 @@ export const Ipv4AddressFromString: Ipv4AddressFromString = netAddressFromString
 /**
  * Type-level representation of {@link Ipv6Address}.
  *
- * @unstable
+ * @stability unstable
  * @category models
  * @since 4.0.0
  */
@@ -11410,7 +11711,7 @@ export interface Ipv6Address extends declare<NetAddress_.Ipv6Address> {
 /**
  * Schema for already-constructed IPv6 address values.
  *
- * @unstable
+ * @stability unstable
  * @category schemas
  * @since 4.0.0
  */
@@ -11421,7 +11722,7 @@ export const Ipv6Address: Ipv6Address = declare(NetAddress_.isIpv6Address, {
 /**
  * Type-level representation of {@link Ipv6AddressFromString}.
  *
- * @unstable
+ * @stability unstable
  * @category models
  * @since 4.0.0
  */
@@ -11432,7 +11733,7 @@ export interface Ipv6AddressFromString extends decodeTo<Ipv6Address, String> {
 /**
  * Schema for IPv6 addresses encoded as canonical strings.
  *
- * @unstable
+ * @stability unstable
  * @category schemas
  * @since 4.0.0
  */
@@ -11446,7 +11747,7 @@ export const Ipv6AddressFromString: Ipv6AddressFromString = netAddressFromString
 /**
  * Type-level representation of {@link IpAddress}.
  *
- * @unstable
+ * @stability unstable
  * @category models
  * @since 4.0.0
  */
@@ -11457,7 +11758,7 @@ export interface IpAddress extends declare<NetAddress_.IpAddress> {
 /**
  * Schema for already-constructed IPv4 or IPv6 address values.
  *
- * @unstable
+ * @stability unstable
  * @category schemas
  * @since 4.0.0
  */
@@ -11468,7 +11769,7 @@ export const IpAddress: IpAddress = declare(NetAddress_.isIpAddress, {
 /**
  * Type-level representation of {@link IpAddressFromString}.
  *
- * @unstable
+ * @stability unstable
  * @category models
  * @since 4.0.0
  */
@@ -11479,7 +11780,7 @@ export interface IpAddressFromString extends decodeTo<IpAddress, String> {
 /**
  * Schema for IP addresses encoded as canonical numeric strings.
  *
- * @unstable
+ * @stability unstable
  * @category schemas
  * @since 4.0.0
  */
@@ -11490,10 +11791,713 @@ export const IpAddressFromString: IpAddressFromString = netAddressFromString(
   "IpAddressFromString"
 )
 
+const netAddressRefinement = <S extends Constraint, T extends S["Type"]>(
+  schema: S,
+  guard: (value: S["Type"]) => value is T,
+  expected: string,
+  identifier: string
+): refine<T, S> => refine(guard, { expected })(schema).annotate({ identifier })
+
+/**
+ * Type-level representation of {@link IpMulticastAddress}.
+ *
+ * @stability unstable
+ * @category models
+ * @since 4.0.0
+ */
+export interface IpMulticastAddress extends refine<NetAddress_.MulticastAddress<NetAddress_.IpAddress>, IpAddress> {
+  readonly "Rebuild": IpMulticastAddress
+}
+
+/**
+ * Schema for already-constructed multicast IP addresses.
+ *
+ * @stability unstable
+ * @category schemas
+ * @since 4.0.0
+ */
+export const IpMulticastAddress: IpMulticastAddress = netAddressRefinement(
+  IpAddress,
+  NetAddress_.isMulticast,
+  "a multicast address",
+  "IpMulticastAddress"
+)
+
+/**
+ * Type-level representation of {@link IpMulticastAddressFromString}.
+ *
+ * @stability unstable
+ * @category models
+ * @since 4.0.0
+ */
+export interface IpMulticastAddressFromString
+  extends refine<NetAddress_.MulticastAddress<NetAddress_.IpAddress>, IpAddressFromString>
+{
+  readonly "Rebuild": IpMulticastAddressFromString
+}
+
+/**
+ * Schema for multicast IP addresses encoded as numeric strings.
+ *
+ * **Example** (Decoding a validated multicast address)
+ *
+ * ```ts import.meta.vitest
+ * import { assert } from "@effect/vitest"
+ * import { Schema } from "effect"
+ * import { NetAddress } from "effect/net"
+ *
+ * const address = Schema.decodeUnknownSync(Schema.IpMulticastAddressFromString)("239.255.0.1")
+ * assert.isTrue(NetAddress.isMulticast(address))
+ * ```
+ *
+ * @stability unstable
+ * @category schemas
+ * @since 4.0.0
+ */
+export const IpMulticastAddressFromString: IpMulticastAddressFromString = netAddressRefinement(
+  IpAddressFromString,
+  NetAddress_.isMulticast,
+  "a multicast address",
+  "IpMulticastAddressFromString"
+)
+
+/**
+ * Type-level representation of {@link MacMulticastAddress}.
+ *
+ * @stability unstable
+ * @category models
+ * @since 4.0.0
+ */
+export interface MacMulticastAddress extends refine<NetAddress_.MulticastAddress<NetAddress_.MacAddress>, MacAddress> {
+  readonly "Rebuild": MacMulticastAddress
+}
+
+/**
+ * Schema for already-constructed multicast MAC addresses.
+ *
+ * @stability unstable
+ * @category schemas
+ * @since 4.0.0
+ */
+export const MacMulticastAddress: MacMulticastAddress = netAddressRefinement(
+  MacAddress,
+  NetAddress_.isMulticast,
+  "a multicast address",
+  "MacMulticastAddress"
+)
+
+/**
+ * Type-level representation of {@link MacMulticastAddressFromString}.
+ *
+ * @stability unstable
+ * @category models
+ * @since 4.0.0
+ */
+export interface MacMulticastAddressFromString
+  extends refine<NetAddress_.MulticastAddress<NetAddress_.MacAddress>, MacAddressFromString>
+{
+  readonly "Rebuild": MacMulticastAddressFromString
+}
+
+/**
+ * Schema for multicast MAC addresses encoded as canonical strings.
+ *
+ * @stability unstable
+ * @category schemas
+ * @since 4.0.0
+ */
+export const MacMulticastAddressFromString: MacMulticastAddressFromString = netAddressRefinement(
+  MacAddressFromString,
+  NetAddress_.isMulticast,
+  "a multicast address",
+  "MacMulticastAddressFromString"
+)
+
+/**
+ * Type-level representation of {@link IpUnicastAddress}.
+ *
+ * @stability unstable
+ * @category models
+ * @since 4.0.0
+ */
+export interface IpUnicastAddress extends refine<NetAddress_.UnicastAddress<NetAddress_.IpAddress>, IpAddress> {
+  readonly "Rebuild": IpUnicastAddress
+}
+
+/**
+ * Schema for already-constructed syntactic unicast IP addresses.
+ *
+ * @stability unstable
+ * @category schemas
+ * @since 4.0.0
+ */
+export const IpUnicastAddress: IpUnicastAddress = netAddressRefinement(
+  IpAddress,
+  NetAddress_.isUnicast,
+  "a unicast address",
+  "IpUnicastAddress"
+)
+
+/**
+ * Type-level representation of {@link IpUnicastAddressFromString}.
+ *
+ * @stability unstable
+ * @category models
+ * @since 4.0.0
+ */
+export interface IpUnicastAddressFromString
+  extends refine<NetAddress_.UnicastAddress<NetAddress_.IpAddress>, IpAddressFromString>
+{
+  readonly "Rebuild": IpUnicastAddressFromString
+}
+
+/**
+ * Schema for syntactic unicast IP addresses encoded as numeric strings.
+ *
+ * @stability unstable
+ * @category schemas
+ * @since 4.0.0
+ */
+export const IpUnicastAddressFromString: IpUnicastAddressFromString = netAddressRefinement(
+  IpAddressFromString,
+  NetAddress_.isUnicast,
+  "a unicast address",
+  "IpUnicastAddressFromString"
+)
+
+/**
+ * Type-level representation of {@link MacUnicastAddress}.
+ *
+ * @stability unstable
+ * @category models
+ * @since 4.0.0
+ */
+export interface MacUnicastAddress extends refine<NetAddress_.UnicastAddress<NetAddress_.MacAddress>, MacAddress> {
+  readonly "Rebuild": MacUnicastAddress
+}
+
+/**
+ * Schema for already-constructed unicast MAC addresses.
+ *
+ * @stability unstable
+ * @category schemas
+ * @since 4.0.0
+ */
+export const MacUnicastAddress: MacUnicastAddress = netAddressRefinement(
+  MacAddress,
+  NetAddress_.isMacUnicast,
+  "a unicast address",
+  "MacUnicastAddress"
+)
+
+/**
+ * Type-level representation of {@link MacUnicastAddressFromString}.
+ *
+ * @stability unstable
+ * @category models
+ * @since 4.0.0
+ */
+export interface MacUnicastAddressFromString
+  extends refine<NetAddress_.UnicastAddress<NetAddress_.MacAddress>, MacAddressFromString>
+{
+  readonly "Rebuild": MacUnicastAddressFromString
+}
+
+/**
+ * Schema for unicast MAC addresses encoded as canonical strings.
+ *
+ * @stability unstable
+ * @category schemas
+ * @since 4.0.0
+ */
+export const MacUnicastAddressFromString: MacUnicastAddressFromString = netAddressRefinement(
+  MacAddressFromString,
+  NetAddress_.isMacUnicast,
+  "a unicast address",
+  "MacUnicastAddressFromString"
+)
+
+/**
+ * Type-level representation of {@link Ipv4BroadcastAddress}.
+ *
+ * @stability unstable
+ * @category models
+ * @since 4.0.0
+ */
+export interface Ipv4BroadcastAddress
+  extends refine<NetAddress_.BroadcastAddress<NetAddress_.Ipv4Address>, Ipv4Address>
+{
+  readonly "Rebuild": Ipv4BroadcastAddress
+}
+
+/**
+ * Schema for the already-constructed IPv4 limited broadcast address.
+ *
+ * @stability unstable
+ * @category schemas
+ * @since 4.0.0
+ */
+export const Ipv4BroadcastAddress: Ipv4BroadcastAddress = netAddressRefinement(
+  Ipv4Address,
+  NetAddress_.isBroadcast,
+  "a broadcast address",
+  "Ipv4BroadcastAddress"
+)
+
+/**
+ * Type-level representation of {@link Ipv4BroadcastAddressFromString}.
+ *
+ * @stability unstable
+ * @category models
+ * @since 4.0.0
+ */
+export interface Ipv4BroadcastAddressFromString
+  extends refine<NetAddress_.BroadcastAddress<NetAddress_.Ipv4Address>, Ipv4AddressFromString>
+{
+  readonly "Rebuild": Ipv4BroadcastAddressFromString
+}
+
+/**
+ * Schema for the IPv4 limited broadcast address encoded as a string.
+ *
+ * @stability unstable
+ * @category schemas
+ * @since 4.0.0
+ */
+export const Ipv4BroadcastAddressFromString: Ipv4BroadcastAddressFromString = netAddressRefinement(
+  Ipv4AddressFromString,
+  NetAddress_.isBroadcast,
+  "a broadcast address",
+  "Ipv4BroadcastAddressFromString"
+)
+
+/**
+ * Type-level representation of {@link MacBroadcastAddress}.
+ *
+ * @stability unstable
+ * @category models
+ * @since 4.0.0
+ */
+export interface MacBroadcastAddress extends refine<NetAddress_.BroadcastAddress<NetAddress_.MacAddress>, MacAddress> {
+  readonly "Rebuild": MacBroadcastAddress
+}
+
+/**
+ * Schema for the already-constructed MAC all-ones broadcast address.
+ *
+ * @stability unstable
+ * @category schemas
+ * @since 4.0.0
+ */
+export const MacBroadcastAddress: MacBroadcastAddress = netAddressRefinement(
+  MacAddress,
+  NetAddress_.isMacBroadcast,
+  "a broadcast address",
+  "MacBroadcastAddress"
+)
+
+/**
+ * Type-level representation of {@link MacBroadcastAddressFromString}.
+ *
+ * @stability unstable
+ * @category models
+ * @since 4.0.0
+ */
+export interface MacBroadcastAddressFromString
+  extends refine<NetAddress_.BroadcastAddress<NetAddress_.MacAddress>, MacAddressFromString>
+{
+  readonly "Rebuild": MacBroadcastAddressFromString
+}
+
+/**
+ * Schema for the MAC all-ones broadcast address encoded as a string.
+ *
+ * @stability unstable
+ * @category schemas
+ * @since 4.0.0
+ */
+export const MacBroadcastAddressFromString: MacBroadcastAddressFromString = netAddressRefinement(
+  MacAddressFromString,
+  NetAddress_.isMacBroadcast,
+  "a broadcast address",
+  "MacBroadcastAddressFromString"
+)
+
+/**
+ * Type-level representation of {@link IpLoopbackAddress}.
+ *
+ * @stability unstable
+ * @category models
+ * @since 4.0.0
+ */
+export interface IpLoopbackAddress extends refine<NetAddress_.LoopbackAddress<NetAddress_.IpAddress>, IpAddress> {
+  readonly "Rebuild": IpLoopbackAddress
+}
+
+/**
+ * Schema for already-constructed loopback IP addresses.
+ *
+ * @stability unstable
+ * @category schemas
+ * @since 4.0.0
+ */
+export const IpLoopbackAddress: IpLoopbackAddress = netAddressRefinement(
+  IpAddress,
+  NetAddress_.isLoopback,
+  "a loopback address",
+  "IpLoopbackAddress"
+)
+
+/**
+ * Type-level representation of {@link IpLoopbackAddressFromString}.
+ *
+ * @stability unstable
+ * @category models
+ * @since 4.0.0
+ */
+export interface IpLoopbackAddressFromString
+  extends refine<NetAddress_.LoopbackAddress<NetAddress_.IpAddress>, IpAddressFromString>
+{
+  readonly "Rebuild": IpLoopbackAddressFromString
+}
+
+/**
+ * Schema for loopback IP addresses encoded as numeric strings.
+ *
+ * @stability unstable
+ * @category schemas
+ * @since 4.0.0
+ */
+export const IpLoopbackAddressFromString: IpLoopbackAddressFromString = netAddressRefinement(
+  IpAddressFromString,
+  NetAddress_.isLoopback,
+  "a loopback address",
+  "IpLoopbackAddressFromString"
+)
+
+/**
+ * Type-level representation of {@link IpLinkLocalAddress}.
+ *
+ * @stability unstable
+ * @category models
+ * @since 4.0.0
+ */
+export interface IpLinkLocalAddress extends refine<NetAddress_.LinkLocalAddress<NetAddress_.IpAddress>, IpAddress> {
+  readonly "Rebuild": IpLinkLocalAddress
+}
+
+/**
+ * Schema for already-constructed link-local IP addresses.
+ *
+ * @stability unstable
+ * @category schemas
+ * @since 4.0.0
+ */
+export const IpLinkLocalAddress: IpLinkLocalAddress = netAddressRefinement(
+  IpAddress,
+  NetAddress_.isLinkLocal,
+  "a link-local address",
+  "IpLinkLocalAddress"
+)
+
+/**
+ * Type-level representation of {@link IpLinkLocalAddressFromString}.
+ *
+ * @stability unstable
+ * @category models
+ * @since 4.0.0
+ */
+export interface IpLinkLocalAddressFromString
+  extends refine<NetAddress_.LinkLocalAddress<NetAddress_.IpAddress>, IpAddressFromString>
+{
+  readonly "Rebuild": IpLinkLocalAddressFromString
+}
+
+/**
+ * Schema for link-local IP addresses encoded as numeric strings.
+ *
+ * @stability unstable
+ * @category schemas
+ * @since 4.0.0
+ */
+export const IpLinkLocalAddressFromString: IpLinkLocalAddressFromString = netAddressRefinement(
+  IpAddressFromString,
+  NetAddress_.isLinkLocal,
+  "a link-local address",
+  "IpLinkLocalAddressFromString"
+)
+
+/**
+ * Type-level representation of {@link IpUnspecifiedAddress}.
+ *
+ * @stability unstable
+ * @category models
+ * @since 4.0.0
+ */
+export interface IpUnspecifiedAddress extends refine<NetAddress_.UnspecifiedAddress<NetAddress_.IpAddress>, IpAddress> {
+  readonly "Rebuild": IpUnspecifiedAddress
+}
+
+/**
+ * Schema for already-constructed unspecified IP addresses.
+ *
+ * @stability unstable
+ * @category schemas
+ * @since 4.0.0
+ */
+export const IpUnspecifiedAddress: IpUnspecifiedAddress = netAddressRefinement(
+  IpAddress,
+  NetAddress_.isUnspecified,
+  "an unspecified address",
+  "IpUnspecifiedAddress"
+)
+
+/**
+ * Type-level representation of {@link IpUnspecifiedAddressFromString}.
+ *
+ * @stability unstable
+ * @category models
+ * @since 4.0.0
+ */
+export interface IpUnspecifiedAddressFromString
+  extends refine<NetAddress_.UnspecifiedAddress<NetAddress_.IpAddress>, IpAddressFromString>
+{
+  readonly "Rebuild": IpUnspecifiedAddressFromString
+}
+
+/**
+ * Schema for unspecified IP addresses encoded as numeric strings.
+ *
+ * @stability unstable
+ * @category schemas
+ * @since 4.0.0
+ */
+export const IpUnspecifiedAddressFromString: IpUnspecifiedAddressFromString = netAddressRefinement(
+  IpAddressFromString,
+  NetAddress_.isUnspecified,
+  "an unspecified address",
+  "IpUnspecifiedAddressFromString"
+)
+
+/**
+ * Type-level representation of {@link Ipv4PrivateAddress}.
+ *
+ * @stability unstable
+ * @category models
+ * @since 4.0.0
+ */
+export interface Ipv4PrivateAddress extends refine<NetAddress_.PrivateAddress<NetAddress_.Ipv4Address>, Ipv4Address> {
+  readonly "Rebuild": Ipv4PrivateAddress
+}
+
+/**
+ * Schema for already-constructed RFC 1918 private-use addresses.
+ *
+ * @stability unstable
+ * @category schemas
+ * @since 4.0.0
+ */
+export const Ipv4PrivateAddress: Ipv4PrivateAddress = netAddressRefinement(
+  Ipv4Address,
+  NetAddress_.isPrivate,
+  "a private address",
+  "Ipv4PrivateAddress"
+)
+
+/**
+ * Type-level representation of {@link Ipv4PrivateAddressFromString}.
+ *
+ * @stability unstable
+ * @category models
+ * @since 4.0.0
+ */
+export interface Ipv4PrivateAddressFromString
+  extends refine<NetAddress_.PrivateAddress<NetAddress_.Ipv4Address>, Ipv4AddressFromString>
+{
+  readonly "Rebuild": Ipv4PrivateAddressFromString
+}
+
+/**
+ * Schema for RFC 1918 private-use addresses encoded as strings.
+ *
+ * @stability unstable
+ * @category schemas
+ * @since 4.0.0
+ */
+export const Ipv4PrivateAddressFromString: Ipv4PrivateAddressFromString = netAddressRefinement(
+  Ipv4AddressFromString,
+  NetAddress_.isPrivate,
+  "a private address",
+  "Ipv4PrivateAddressFromString"
+)
+
+/**
+ * Type-level representation of {@link Ipv6UniqueLocalAddress}.
+ *
+ * @stability unstable
+ * @category models
+ * @since 4.0.0
+ */
+export interface Ipv6UniqueLocalAddress
+  extends refine<NetAddress_.UniqueLocalAddress<NetAddress_.Ipv6Address>, Ipv6Address>
+{
+  readonly "Rebuild": Ipv6UniqueLocalAddress
+}
+
+/**
+ * Schema for already-constructed IPv6 unique-local addresses.
+ *
+ * @stability unstable
+ * @category schemas
+ * @since 4.0.0
+ */
+export const Ipv6UniqueLocalAddress: Ipv6UniqueLocalAddress = netAddressRefinement(
+  Ipv6Address,
+  NetAddress_.isUniqueLocal,
+  "a unique-local address",
+  "Ipv6UniqueLocalAddress"
+)
+
+/**
+ * Type-level representation of {@link Ipv6UniqueLocalAddressFromString}.
+ *
+ * @stability unstable
+ * @category models
+ * @since 4.0.0
+ */
+export interface Ipv6UniqueLocalAddressFromString
+  extends refine<NetAddress_.UniqueLocalAddress<NetAddress_.Ipv6Address>, Ipv6AddressFromString>
+{
+  readonly "Rebuild": Ipv6UniqueLocalAddressFromString
+}
+
+/**
+ * Schema for IPv6 unique-local addresses encoded as strings.
+ *
+ * @stability unstable
+ * @category schemas
+ * @since 4.0.0
+ */
+export const Ipv6UniqueLocalAddressFromString: Ipv6UniqueLocalAddressFromString = netAddressRefinement(
+  Ipv6AddressFromString,
+  NetAddress_.isUniqueLocal,
+  "a unique-local address",
+  "Ipv6UniqueLocalAddressFromString"
+)
+
+/**
+ * Type-level representation of {@link MacLocallyAdministeredAddress}.
+ *
+ * @stability unstable
+ * @category models
+ * @since 4.0.0
+ */
+export interface MacLocallyAdministeredAddress
+  extends refine<NetAddress_.LocallyAdministeredAddress<NetAddress_.MacAddress>, MacAddress>
+{
+  readonly "Rebuild": MacLocallyAdministeredAddress
+}
+
+/**
+ * Schema for already-constructed locally administered MAC addresses.
+ *
+ * @stability unstable
+ * @category schemas
+ * @since 4.0.0
+ */
+export const MacLocallyAdministeredAddress: MacLocallyAdministeredAddress = netAddressRefinement(
+  MacAddress,
+  NetAddress_.isMacLocallyAdministered,
+  "a locally administered address",
+  "MacLocallyAdministeredAddress"
+)
+
+/**
+ * Type-level representation of {@link MacLocallyAdministeredAddressFromString}.
+ *
+ * @stability unstable
+ * @category models
+ * @since 4.0.0
+ */
+export interface MacLocallyAdministeredAddressFromString
+  extends refine<NetAddress_.LocallyAdministeredAddress<NetAddress_.MacAddress>, MacAddressFromString>
+{
+  readonly "Rebuild": MacLocallyAdministeredAddressFromString
+}
+
+/**
+ * Schema for locally administered MAC addresses encoded as strings.
+ *
+ * @stability unstable
+ * @category schemas
+ * @since 4.0.0
+ */
+export const MacLocallyAdministeredAddressFromString: MacLocallyAdministeredAddressFromString = netAddressRefinement(
+  MacAddressFromString,
+  NetAddress_.isMacLocallyAdministered,
+  "a locally administered address",
+  "MacLocallyAdministeredAddressFromString"
+)
+
+/**
+ * Type-level representation of {@link MacUniversallyAdministeredAddress}.
+ *
+ * @stability unstable
+ * @category models
+ * @since 4.0.0
+ */
+export interface MacUniversallyAdministeredAddress
+  extends refine<NetAddress_.UniversallyAdministeredAddress<NetAddress_.MacAddress>, MacAddress>
+{
+  readonly "Rebuild": MacUniversallyAdministeredAddress
+}
+
+/**
+ * Schema for already-constructed universally administered MAC addresses.
+ *
+ * @stability unstable
+ * @category schemas
+ * @since 4.0.0
+ */
+export const MacUniversallyAdministeredAddress: MacUniversallyAdministeredAddress = netAddressRefinement(
+  MacAddress,
+  NetAddress_.isMacUniversallyAdministered,
+  "a universally administered address",
+  "MacUniversallyAdministeredAddress"
+)
+
+/**
+ * Type-level representation of {@link MacUniversallyAdministeredAddressFromString}.
+ *
+ * @stability unstable
+ * @category models
+ * @since 4.0.0
+ */
+export interface MacUniversallyAdministeredAddressFromString
+  extends refine<NetAddress_.UniversallyAdministeredAddress<NetAddress_.MacAddress>, MacAddressFromString>
+{
+  readonly "Rebuild": MacUniversallyAdministeredAddressFromString
+}
+
+/**
+ * Schema for universally administered MAC addresses encoded as strings.
+ *
+ * @stability unstable
+ * @category schemas
+ * @since 4.0.0
+ */
+export const MacUniversallyAdministeredAddressFromString: MacUniversallyAdministeredAddressFromString =
+  netAddressRefinement(
+    MacAddressFromString,
+    NetAddress_.isMacUniversallyAdministered,
+    "a universally administered address",
+    "MacUniversallyAdministeredAddressFromString"
+  )
+
 /**
  * Type-level representation of {@link Ipv4Interface}.
  *
- * @unstable
+ * @stability unstable
  * @category models
  * @since 4.0.0
  */
@@ -11504,7 +12508,7 @@ export interface Ipv4Interface extends declare<IpInterface_.Ipv4Interface> {
 /**
  * Schema for already-constructed IPv4 interface address values.
  *
- * @unstable
+ * @stability unstable
  * @category schemas
  * @since 4.0.0
  */
@@ -11515,7 +12519,7 @@ export const Ipv4Interface: Ipv4Interface = declare(IpInterface_.isIpv4Interface
 /**
  * Type-level representation of {@link Ipv4InterfaceFromString}.
  *
- * @unstable
+ * @stability unstable
  * @category models
  * @since 4.0.0
  */
@@ -11526,7 +12530,7 @@ export interface Ipv4InterfaceFromString extends decodeTo<Ipv4Interface, String>
 /**
  * Schema for IPv4 interface addresses encoded as an address and prefix length.
  *
- * @unstable
+ * @stability unstable
  * @category schemas
  * @since 4.0.0
  */
@@ -11540,7 +12544,7 @@ export const Ipv4InterfaceFromString: Ipv4InterfaceFromString = netAddressFromSt
 /**
  * Type-level representation of {@link Ipv6Interface}.
  *
- * @unstable
+ * @stability unstable
  * @category models
  * @since 4.0.0
  */
@@ -11551,7 +12555,7 @@ export interface Ipv6Interface extends declare<IpInterface_.Ipv6Interface> {
 /**
  * Schema for already-constructed IPv6 interface address values.
  *
- * @unstable
+ * @stability unstable
  * @category schemas
  * @since 4.0.0
  */
@@ -11562,7 +12566,7 @@ export const Ipv6Interface: Ipv6Interface = declare(IpInterface_.isIpv6Interface
 /**
  * Type-level representation of {@link Ipv6InterfaceFromString}.
  *
- * @unstable
+ * @stability unstable
  * @category models
  * @since 4.0.0
  */
@@ -11573,7 +12577,7 @@ export interface Ipv6InterfaceFromString extends decodeTo<Ipv6Interface, String>
 /**
  * Schema for IPv6 interface addresses encoded as an address and prefix length.
  *
- * @unstable
+ * @stability unstable
  * @category schemas
  * @since 4.0.0
  */
@@ -11587,7 +12591,7 @@ export const Ipv6InterfaceFromString: Ipv6InterfaceFromString = netAddressFromSt
 /**
  * Type-level representation of {@link IpInterface}.
  *
- * @unstable
+ * @stability unstable
  * @category models
  * @since 4.0.0
  */
@@ -11598,7 +12602,7 @@ export interface IpInterface extends declare<IpInterface_.IpInterface> {
 /**
  * Schema for already-constructed IPv4 or IPv6 interface address values.
  *
- * @unstable
+ * @stability unstable
  * @category schemas
  * @since 4.0.0
  */
@@ -11609,7 +12613,7 @@ export const IpInterface: IpInterface = declare(IpInterface_.isIpInterface, {
 /**
  * Type-level representation of {@link IpInterfaceFromString}.
  *
- * @unstable
+ * @stability unstable
  * @category models
  * @since 4.0.0
  */
@@ -11620,7 +12624,7 @@ export interface IpInterfaceFromString extends decodeTo<IpInterface, String> {
 /**
  * Schema for IPv4 or IPv6 interface addresses encoded as an address and prefix length.
  *
- * @unstable
+ * @stability unstable
  * @category schemas
  * @since 4.0.0
  */
@@ -11634,7 +12638,7 @@ export const IpInterfaceFromString: IpInterfaceFromString = netAddressFromString
 /**
  * Type-level representation of {@link Ipv4Network}.
  *
- * @unstable
+ * @stability unstable
  * @category models
  * @since 4.0.0
  */
@@ -11645,7 +12649,7 @@ export interface Ipv4Network extends declare<IpNetwork_.Ipv4Network> {
 /**
  * Schema for already-constructed canonical IPv4 network prefixes.
  *
- * @unstable
+ * @stability unstable
  * @category schemas
  * @since 4.0.0
  */
@@ -11656,7 +12660,7 @@ export const Ipv4Network: Ipv4Network = declare(IpNetwork_.isIpv4Network, {
 /**
  * Type-level representation of {@link Ipv4NetworkFromString}.
  *
- * @unstable
+ * @stability unstable
  * @category models
  * @since 4.0.0
  */
@@ -11667,7 +12671,7 @@ export interface Ipv4NetworkFromString extends decodeTo<Ipv4Network, String> {
 /**
  * Schema for canonical IPv4 network prefixes encoded in CIDR notation.
  *
- * @unstable
+ * @stability unstable
  * @category schemas
  * @since 4.0.0
  */
@@ -11681,7 +12685,7 @@ export const Ipv4NetworkFromString: Ipv4NetworkFromString = netAddressFromString
 /**
  * Type-level representation of {@link Ipv6Network}.
  *
- * @unstable
+ * @stability unstable
  * @category models
  * @since 4.0.0
  */
@@ -11692,7 +12696,7 @@ export interface Ipv6Network extends declare<IpNetwork_.Ipv6Network> {
 /**
  * Schema for already-constructed canonical IPv6 network prefixes.
  *
- * @unstable
+ * @stability unstable
  * @category schemas
  * @since 4.0.0
  */
@@ -11703,7 +12707,7 @@ export const Ipv6Network: Ipv6Network = declare(IpNetwork_.isIpv6Network, {
 /**
  * Type-level representation of {@link Ipv6NetworkFromString}.
  *
- * @unstable
+ * @stability unstable
  * @category models
  * @since 4.0.0
  */
@@ -11714,7 +12718,7 @@ export interface Ipv6NetworkFromString extends decodeTo<Ipv6Network, String> {
 /**
  * Schema for canonical IPv6 network prefixes encoded in CIDR notation.
  *
- * @unstable
+ * @stability unstable
  * @category schemas
  * @since 4.0.0
  */
@@ -11728,7 +12732,7 @@ export const Ipv6NetworkFromString: Ipv6NetworkFromString = netAddressFromString
 /**
  * Type-level representation of {@link IpNetwork}.
  *
- * @unstable
+ * @stability unstable
  * @category models
  * @since 4.0.0
  */
@@ -11739,7 +12743,7 @@ export interface IpNetwork extends declare<IpNetwork_.IpNetwork> {
 /**
  * Schema for already-constructed canonical IPv4 or IPv6 network prefixes.
  *
- * @unstable
+ * @stability unstable
  * @category schemas
  * @since 4.0.0
  */
@@ -11750,7 +12754,7 @@ export const IpNetwork: IpNetwork = declare(IpNetwork_.isIpNetwork, {
 /**
  * Type-level representation of {@link IpNetworkFromString}.
  *
- * @unstable
+ * @stability unstable
  * @category models
  * @since 4.0.0
  */
@@ -11761,7 +12765,7 @@ export interface IpNetworkFromString extends decodeTo<IpNetwork, String> {
 /**
  * Schema for canonical IPv4 or IPv6 network prefixes encoded in CIDR notation.
  *
- * @unstable
+ * @stability unstable
  * @category schemas
  * @since 4.0.0
  */
@@ -11775,7 +12779,7 @@ export const IpNetworkFromString: IpNetworkFromString = netAddressFromString(
 /**
  * Type-level representation of {@link InetAddressV4}.
  *
- * @unstable
+ * @stability unstable
  * @category models
  * @since 4.0.0
  */
@@ -11786,7 +12790,7 @@ export interface InetAddressV4 extends declare<NetAddress_.InetAddressV4> {
 /**
  * Schema for already-constructed resolved IPv4 internet addresses.
  *
- * @unstable
+ * @stability unstable
  * @category schemas
  * @since 4.0.0
  */
@@ -11797,7 +12801,7 @@ export const InetAddressV4: InetAddressV4 = declare(NetAddress_.isInetAddressV4,
 /**
  * Type-level representation of {@link InetAddressV6}.
  *
- * @unstable
+ * @stability unstable
  * @category models
  * @since 4.0.0
  */
@@ -11808,7 +12812,7 @@ export interface InetAddressV6 extends declare<NetAddress_.InetAddressV6> {
 /**
  * Schema for already-constructed resolved IPv6 internet addresses.
  *
- * @unstable
+ * @stability unstable
  * @category schemas
  * @since 4.0.0
  */
@@ -11819,7 +12823,7 @@ export const InetAddressV6: InetAddressV6 = declare(NetAddress_.isInetAddressV6,
 /**
  * Type-level representation of {@link InetAddress}.
  *
- * @unstable
+ * @stability unstable
  * @category models
  * @since 4.0.0
  */
@@ -11830,7 +12834,7 @@ export interface InetAddress extends declare<NetAddress_.InetAddress> {
 /**
  * Schema for already-constructed resolved internet addresses.
  *
- * @unstable
+ * @stability unstable
  * @category schemas
  * @since 4.0.0
  */
@@ -11841,7 +12845,7 @@ export const InetAddress: InetAddress = declare(NetAddress_.isInetAddress, {
 /**
  * Type-level representation of {@link InetAddressFromString}.
  *
- * @unstable
+ * @stability unstable
  * @category models
  * @since 4.0.0
  */
@@ -11852,7 +12856,7 @@ export interface InetAddressFromString extends decodeTo<InetAddress, String> {
 /**
  * Schema for resolved internet addresses encoded as numeric socket strings.
  *
- * @unstable
+ * @stability unstable
  * @category schemas
  * @since 4.0.0
  */
@@ -11866,7 +12870,7 @@ export const InetAddressFromString: InetAddressFromString = netAddressFromString
 /**
  * Type-level representation of {@link UnixPathAddress}.
  *
- * @unstable
+ * @stability unstable
  * @category models
  * @since 4.0.0
  */
@@ -11877,7 +12881,7 @@ export interface UnixPathAddress extends declare<NetAddress_.UnixPathAddress> {
 /**
  * Schema for already-constructed Unix-domain filesystem addresses.
  *
- * @unstable
+ * @stability unstable
  * @category schemas
  * @since 4.0.0
  */
@@ -11889,7 +12893,7 @@ export const UnixPathAddress: UnixPathAddress = declare(
 /**
  * Type-level representation of {@link UnixPathAddressFromString}.
  *
- * @unstable
+ * @stability unstable
  * @category models
  * @since 4.0.0
  */
@@ -11900,7 +12904,7 @@ export interface UnixPathAddressFromString extends decodeTo<UnixPathAddress, Str
 /**
  * Schema for Unix-domain filesystem addresses encoded as opaque path strings.
  *
- * @unstable
+ * @stability unstable
  * @category schemas
  * @since 4.0.0
  */
@@ -11915,7 +12919,7 @@ export const UnixPathAddressFromString: UnixPathAddressFromString = String.pipe(
 /**
  * Type-level representation of {@link SocketAddress}.
  *
- * @unstable
+ * @stability unstable
  * @category models
  * @since 4.0.0
  */
@@ -11926,7 +12930,7 @@ export interface SocketAddress extends declare<NetAddress_.SocketAddress> {
 /**
  * Schema for already-constructed portable concrete socket addresses.
  *
- * @unstable
+ * @stability unstable
  * @category schemas
  * @since 4.0.0
  */
@@ -11939,7 +12943,7 @@ export const SocketAddress: SocketAddress = declare(NetAddress_.isSocketAddress,
 // -----------------------------------------------------------------------------
 
 const durationFromString: SchemaTransformation.Transformation<Duration_.Duration, string> = SchemaTransformation
-  .transformOrFail<Duration_.Duration, string>({
+  .transformEffect<Duration_.Duration, string>({
     decode: (s, options) =>
       Option_.match(Duration_.fromInput(s as Duration_.Input), {
         onNone: () =>
@@ -11955,7 +12959,7 @@ const durationFromString: SchemaTransformation.Transformation<Duration_.Duration
     encode: (duration) => Effect.succeed(globalThis.String(duration))
   })
 const durationFromNanos: SchemaTransformation.Transformation<Duration_.Duration, bigint> = SchemaTransformation
-  .transformOrFail({
+  .transformEffect({
     decode: (i) => Effect.succeed(Duration_.nanos(i)),
     encode: (a, options) =>
       Option_.match(Duration_.toNanos(a), {
@@ -12531,7 +13535,7 @@ export function Graph<T extends Graph_.Kind, Node extends Constraint, Edge exten
       toCodec: ([node, edge]) =>
         link<Graph_.Graph<Node["Encoded"], Edge["Encoded"], T>>()(
           graphEncodedSchema(type, node, edge),
-          SchemaTransformation.transformOrFail({
+          SchemaTransformation.transformEffect({
             decode: graphDecode,
             encode: (graph, options) => graphEncode(graph, type, options)
           })
@@ -12911,7 +13915,7 @@ export function OptionFromNullishOr<S extends Constraint>(
 /**
  * Type-level representation of {@link Cookie}.
  *
- * @unstable
+ * @stability unstable
  * @category models
  * @since 4.0.0
  */
@@ -12922,7 +13926,7 @@ export interface Cookie extends declare<Cookies_.Cookie> {
 /**
  * Schema for HTTP cookie values.
  *
- * @unstable
+ * @stability unstable
  * @category schemas
  * @since 4.0.0
  */
@@ -12936,7 +13940,7 @@ export const Cookie: Cookie = declare(
     toCode: () => ({
       runtime: "Schema.Cookie",
       Type: "Cookies.Cookie",
-      importDeclarations: [`import * as Cookies from "effect/unstable/http/Cookies"`]
+      importDeclarations: [`import * as Cookies from "effect/http/Cookies"`]
     }),
     expected: "Cookie"
   }
@@ -12945,7 +13949,7 @@ export const Cookie: Cookie = declare(
 /**
  * Type-level representation of {@link Cookies}.
  *
- * @unstable
+ * @stability unstable
  * @category models
  * @since 4.0.0
  */
@@ -12966,7 +13970,7 @@ export interface Cookies extends
  * JSON encoding uses `Set-Cookie` header strings, while isomorphic encoding uses
  * a readonly record of cookie values.
  *
- * @unstable
+ * @stability unstable
  * @category schemas
  * @since 4.0.0
  */
@@ -12980,7 +13984,7 @@ export const Cookies: Cookies = declare(
     toCode: () => ({
       runtime: "Schema.Cookies",
       Type: "Cookies.Cookies",
-      importDeclarations: [`import * as Cookies from "effect/unstable/http/Cookies"`]
+      importDeclarations: [`import * as Cookies from "effect/http/Cookies"`]
     }),
     expected: "Cookies",
     toCodecJson: () =>
@@ -13005,7 +14009,7 @@ export const Cookies: Cookies = declare(
 /**
  * Type-level representation of {@link RecordFromCookies}.
  *
- * @unstable
+ * @stability unstable
  * @category models
  * @since 4.0.0
  */
@@ -13017,7 +14021,7 @@ export interface RecordFromCookies extends decodeTo<$Record<String, String>, Coo
  * Schema that decodes HTTP cookies into a record of decoded string values keyed
  * by cookie name.
  *
- * @unstable
+ * @stability unstable
  * @category schemas
  * @since 4.0.0
  */
@@ -13037,7 +14041,7 @@ export const RecordFromCookies: RecordFromCookies = Cookies.pipe(
 /**
  * Type-level representation of {@link Headers}.
  *
- * @unstable
+ * @stability unstable
  * @category models
  * @since 4.0.0
  */
@@ -13052,7 +14056,7 @@ export interface Headers extends declare<Headers_.Headers, { readonly [x: string
  *
  * Decoding normalizes header names; encoding returns a plain record.
  *
- * @unstable
+ * @stability unstable
  * @category schemas
  * @since 4.0.0
  */
@@ -13066,7 +14070,7 @@ export const Headers: Headers = declare(
     toCode: () => ({
       runtime: "Schema.Headers",
       Type: "Headers.Headers",
-      importDeclarations: [`import * as Headers from "effect/unstable/http/Headers"`]
+      importDeclarations: [`import * as Headers from "effect/http/Headers"`]
     }),
     expected: "Headers",
     toEquivalence: () => Headers_.Equivalence,
@@ -13084,7 +14088,7 @@ export const Headers: Headers = declare(
 /**
  * Type-level representation of {@link UrlParams}.
  *
- * @unstable
+ * @stability unstable
  * @category models
  * @since 4.0.0
  */
@@ -13104,7 +14108,7 @@ export interface UrlParams extends
  *
  * The encoded representation is an array of string key-value tuples.
  *
- * @unstable
+ * @stability unstable
  * @category schemas
  * @since 4.0.0
  */
@@ -13118,7 +14122,7 @@ export const UrlParams: UrlParams = declare(
     toCode: () => ({
       runtime: "Schema.UrlParams",
       Type: "UrlParams.UrlParams",
-      importDeclarations: [`import * as UrlParams from "effect/unstable/http/UrlParams"`]
+      importDeclarations: [`import * as UrlParams from "effect/http/UrlParams"`]
     }),
     expected: "UrlParams",
     toEquivalence: () => UrlParams_.Equivalence,
@@ -13136,7 +14140,7 @@ export const UrlParams: UrlParams = declare(
 /**
  * Type-level representation of {@link JsonFromUrlParamsField}.
  *
- * @unstable
+ * @stability unstable
  * @category models
  * @since 4.0.0
  */
@@ -13152,7 +14156,7 @@ export interface JsonFromUrlParamsField extends decodeTo<fromJsonString<Unknown>
  *
  * ```ts import.meta.vitest
  * import { Schema } from "effect"
- * import { UrlParams } from "effect/unstable/http"
+ * import { UrlParams } from "effect/http"
  *
  * const extractFoo = Schema.JsonFromUrlParamsField("foo").pipe(
  *   Schema.decodeTo(Schema.Struct({
@@ -13168,7 +14172,7 @@ export interface JsonFromUrlParamsField extends decodeTo<fromJsonString<Unknown>
  * const result = [decoded.some, decoded.number] // => ["bar", 42]
  * ```
  *
- * @unstable
+ * @stability unstable
  * @category schemas
  * @since 4.0.0
  */
@@ -13179,7 +14183,7 @@ export const JsonFromUrlParamsField = (
   UrlParams.pipe(
     decodeTo(
       fromJsonString(Unknown, options),
-      SchemaTransformation.transformOrFail({
+      SchemaTransformation.transformEffect({
         decode: (params) =>
           Option_.match(UrlParams_.getFirst(params, field), {
             onNone: () => Effect.fail(new SchemaIssue.Pointer([field], new SchemaIssue.MissingKey(undefined))),
@@ -13193,7 +14197,7 @@ export const JsonFromUrlParamsField = (
 /**
  * Type-level representation of {@link RecordFromUrlParams}.
  *
- * @unstable
+ * @stability unstable
  * @category models
  * @since 4.0.0
  */
@@ -13220,7 +14224,7 @@ export interface RecordFromUrlParams extends
  *
  * ```ts import.meta.vitest
  * import { Schema } from "effect"
- * import { UrlParams } from "effect/unstable/http"
+ * import { UrlParams } from "effect/http"
  *
  * const toStruct = Schema.RecordFromUrlParams.pipe(
  *   Schema.decodeTo(Schema.Struct({
@@ -13236,7 +14240,7 @@ export interface RecordFromUrlParams extends
  * const result = [decoded.some, decoded.number] // => ["value", 42]
  * ```
  *
- * @unstable
+ * @stability unstable
  * @category schemas
  * @since 4.0.0
  */
@@ -13427,7 +14431,7 @@ export function Redacted<S extends Constraint>(value: S, options?: {
             Effect.mapBothEager(
               SchemaParser.decodeUnknownEffect(value)(Redacted_.value(input), poptions),
               {
-                onSuccess: () => input,
+                onSuccess: (value) => Redacted_.make(value, { label: input.label }),
                 onFailure: () => {
                   return new SchemaIssue.Composite(
                     ast,
@@ -13640,6 +14644,10 @@ export interface Class<Self, S extends Constraint & { readonly fields: Struct.Fi
       S["~encoded.optionality"]
     >
 {
+  /**
+   * `make`, `makeOption`, and `makeEffect` preserve an existing instance of
+   * this class. Use `new` when a distinct instance is required.
+   */
   readonly "Type": Self
   readonly "Encoded": S["Encoded"]
   readonly "DecodingServices": S["DecodingServices"]
@@ -13774,7 +14782,7 @@ function makeClass<
       return getClassSchema(this).rebuild(ast)
     }
     static make(input: S["~type.make.in"], options?: MakeOptions): Self {
-      return new this(input, options)
+      return SchemaParser.make(getClassSchema(this) as any)(input ?? {}, options) as Self
     }
     static makeOption(input: S["~type.make.in"], options?: MakeOptions): Option_.Option<Self> {
       return SchemaParser.makeOption(getClassSchema(this) as any)(input ?? {}, options) as any
@@ -14260,6 +15268,8 @@ export function toEquivalence<T>(schema: Schema<T>): Equivalence.Equivalence<T> 
  * Use {@link toType} before this function to represent the type side instead.
  * The optional reference policy controls which candidates are extracted into the document's reference table. By
  * default, only candidates with a resolved identifier become references; recursive candidates always require one.
+ * TypeScript-only distinctions such as those added by {@link brand} are not
+ * part of the schema AST and are therefore omitted.
  *
  * @see {@link SchemaRepresentation.toRepresentation} for converting a `SchemaAST.AST` directly
  *
@@ -14291,17 +15301,23 @@ export function toRepresentation(
  */
 export interface ToJsonSchemaOptions extends SchemaRepresentation.ToRepresentationOptions {
   /**
-   * Controls how additional properties are handled while resolving the JSON
-   * schema.
+   * Controls whether generated object schemas accept properties that are not
+   * modeled by the Effect schema.
    *
    * **Details**
    *
-   * Possible values include:
-   * - `false`: Disallow additional properties (default)
-   * - `true`: Allow additional properties
-   * - `JsonSchema`: Use the provided JSON Schema for additional properties
+   * The default, `"ignore"`, matches the decoder's default excess-property
+   * behavior and leaves unmodeled properties open. Use `"error"` together
+   * with the decoder option of the same name to reject unmodeled properties
+   * whenever the key space can be represented.
+   *
+   * Index signatures still determine the schema for properties they model.
+   * When an index-signature key cannot be used as a `patternProperties`
+   * selector, `"ignore"` leaves unmatched properties open. `"error"` instead
+   * constrains their names with `propertyNames` and uses the candidate index
+   * value schemas for `additionalProperties`.
    */
-  readonly additionalProperties?: boolean | JsonSchema.JsonSchema | undefined
+  readonly onExcessProperty?: "ignore" | "error" | undefined
   /**
    * Controls whether to generate descriptions for checks (if the user has not
    * provided them) based on the `expected` annotation of the check.
@@ -14360,30 +15376,63 @@ export interface ToJsonSchemaOptions extends SchemaRepresentation.ToRepresentati
  *
  * **Details**
  *
+ * The document describes the encoded side of `Schema.toCodecJson(schema)`.
+ * Use that codec to decode JSON inputs. For example, it decodes JSON `null`
+ * to JavaScript `undefined` for a field defined with `Schema.optional(Schema.String)`.
+ * Decoding the same input with the original schema rejects `null`.
+ *
  * The `options` parameter controls reference extraction and generation details
- * such as additional properties and synthesized check descriptions; it does
- * not change the draft target. The reference policy receives canonical JSON
- * encoded ASTs. By default, anonymous non-recursive candidates remain inline, while candidates with resolved identifiers
- * become definitions. Declarations are lowered through their `toCodecJson` or `toCodec`
- * annotation when available before the representation document is compiled.
- * For schemas whose codec JSON AST can be represented exactly in JSON Schema,
- * importing the emitted document reconstructs a schema that accepts the same
- * JSON values. This is a semantic round-trip guarantee; the reconstructed AST
- * may have a different shape.
+ * such as excess properties and synthesized check descriptions; it does not
+ * change the draft target. The reference policy receives canonical JSON
+ * encoded ASTs. By default, anonymous non-recursive candidates remain inline,
+ * while candidates with resolved identifiers become definitions. Declarations
+ * are lowered through their `toCodecJson` or `toCodec` annotation when
+ * available before the representation document is compiled.
+ *
+ * The generated document is intended for preliminary validation. JSON Schema
+ * and Effect checks do not always have identical semantics, so the Effect
+ * decoder remains the final authority. Passing JSON Schema validation does not
+ * guarantee that Effect decoding will succeed.
  *
  * **Gotchas**
  *
- * JSON Schema generation is best-effort. Some Effect schema semantics cannot
- * be represented exactly in JSON Schema, and importing an emitted JSON Schema
- * may produce an equivalent approximation rather than the original schema
- * shape. Such schemas are outside the exact round-trip subset. When canonical
- * JSON derivation adds an artificial transformation, checks and annotations on
- * its source node are not copied to the JSON target, so they do not appear in
- * the emitted document. Opaque declarations without a structural codec are
- * represented by an unconstrained JSON Schema. Effect decoding may discard
- * excess object properties by default; use `onExcessProperty: "error"` when
- * comparing validation semantics with an emitted JSON Schema.
+ * JSON Schema generation is best-effort. String length uses Unicode code points
+ * in JSON Schema and UTF-16 code units in Effect. A generated `pattern` cannot
+ * retain JavaScript RegExp flags. Object property checks apply to the original
+ * input in JSON Schema but to the decoded object in Effect. When a `oneOf`
+ * branch contains a known approximation, the compiler emits `anyOf` so that
+ * the approximation cannot create a false rejection. Unions with only exact
+ * branches retain `oneOf`. Custom `toJsonSchema` callbacks return `[schema, true]` for safe,
+ * looser approximations and are responsible for the semantics they declare. When
+ * canonical JSON derivation adds an artificial transformation, checks and
+ * annotations on its source node are not copied to the JSON target, so they do
+ * not appear in the emitted document. Opaque declarations without a structural
+ * codec are represented by an unconstrained JSON Schema. The default
+ * `onExcessProperty: "ignore"` matches the decoder default and leaves
+ * index-signature keys without exact selectors open. In `"error"` mode, the compiler
+ * constrains those keys with `propertyNames` and applies a permissive choice of
+ * candidate index value schemas. The Effect decoder enforces the exact
+ * key-value association.
  *
+ * **Example** (Decoding JSON with the matching codec)
+ *
+ * ```ts import.meta.vitest
+ * import { Schema } from "effect"
+ *
+ * const schema = Schema.Struct({
+ *   name: Schema.optional(Schema.String)
+ * })
+ *
+ * const document = Schema.toJsonSchemaDocument(schema)
+ * const jsonCodec = Schema.toCodecJson(schema)
+ *
+ * Schema.decodeUnknownResult(schema)({ name: null })._tag // => "Failure"
+ * Schema.decodeUnknownSync(jsonCodec)({ name: null }) // => { name: undefined }
+ * Schema.decodeUnknownSync(jsonCodec)({}) // => {}
+ * Schema.encodeSync(jsonCodec)({ name: undefined }) // => { name: null }
+ * ```
+ *
+ * @see {@link toCodecJson} for decoding and encoding the canonical JSON representation
  * @see {@link SchemaRepresentation.toJsonSchemaDocument} for compiling an existing live representation document
  *
  * @category converting
@@ -14703,7 +15752,7 @@ export function overrideToCodecIso<S extends Constraint, Iso>(
   return (schema: S): overrideToCodecIso<S, Iso> => {
     return make(
       SchemaAST.annotate(schema.ast, {
-        toCodecIso: () => new SchemaAST.Link(to.ast, SchemaTransformation.make(transformation))
+        toCodecIso: () => new SchemaAST.Link(to.ast, SchemaTransformation.makeTransformation(transformation))
       }),
       { schema }
     )
@@ -14909,9 +15958,6 @@ export function resolveAnnotations<S extends Constraint>(
 export function resolveAnnotationsKey<S extends Constraint>(schema: S): Annotations.Key<S["Type"]> | undefined {
   return schema.ast.context?.annotations
 }
-/** @internal */
-type AnnotationSchemaConstraint = Constraint
-
 /**
  * The `Annotations` namespace groups all annotation interfaces used to attach
  * metadata to schemas. Annotations control documentation, validation messages,
@@ -15027,8 +16073,8 @@ export declare namespace Annotations {
   }
   /**
    * Base annotations shared by all composite schema nodes. Extends
-   * {@link Documentation} with error messages, branding, parse options, and
-   * arbitrary generation hooks. {@link Declaration} and other annotation
+   * {@link Documentation} with error messages and arbitrary generation hooks.
+   * {@link Declaration} and other annotation
    * interfaces build on top of this.
    *
    * @category models
@@ -15066,11 +16112,6 @@ export declare namespace Annotations {
      * filter/refinement instead.
      */
     readonly identifier?: string | undefined
-    readonly parseOptions?: SchemaAST.ParseOptions | undefined
-    /**
-     * Accumulated brands when multiple brands are added with `Schema.brand`.
-     */
-    readonly brands?: ReadonlyArray<string> | undefined
   }
   /**
    * Helpers for projecting declaration type-parameter schemas into decoded or
@@ -15193,11 +16234,21 @@ export declare namespace Annotations {
     /**
      * Compiles this filter to a JSON Schema fragment.
      *
+     * **Details**
+     *
+     * Return the fragment directly for an exact translation or `[fragment, true]`
+     * for a safe, looser approximation. Use `[{}, true]` to omit the constraint.
+     * Approximation propagates from `representation.schemas` automatically. It
+     * makes enclosing `oneOf` unions export as `anyOf` and prevents approximate
+     * record-key patterns from selecting `patternProperties` values.
+     *
      * **Gotchas**
      *
-     * Treat the input schemas as immutable. The returned value must be a valid JSON Schema object graph and must not be
-     * mutated after this function returns. Return a new object graph to produce different output during a later
-     * compilation.
+     * The compiler trusts the declared semantics. Treat the input schemas as immutable. The returned fragment must be
+     * a valid JSON Schema object graph and must not be mutated after this function returns. Return a new object graph
+     * to produce different output during a later compilation.
+     *
+     * @see {@link SchemaRepresentation.ToJsonSchema.CheckOutput} for the result contract
      */
     readonly toJsonSchema?: SchemaRepresentation.ToJsonSchema.Check | undefined
     readonly toCode?: SchemaRepresentation.Generation.Check | undefined
@@ -15231,7 +16282,7 @@ export declare namespace Annotations {
      *
      * @since 4.0.0
      */
-    readonly arbitraryConstraint?: ToArbitrary.Constraint<any> | undefined
+    readonly arbitraryConstraint?: ToArbitrary.FilterConstraint<any> | undefined
     /**
      * Marks the filter as *structural*, meaning it applies to the shape or
      * structure of the container (e.g., array length, object keys) rather than
@@ -15278,6 +16329,8 @@ export declare namespace Annotations {
       readonly exclusiveMaximum?: true | undefined
       readonly minLength?: number | undefined
       readonly maxLength?: number | undefined
+      readonly minCodePoints?: number | undefined
+      readonly maxCodePoints?: number | undefined
       readonly minSize?: number | undefined
       readonly maxSize?: number | undefined
       readonly minProperties?: number | undefined
@@ -15297,7 +16350,7 @@ export declare namespace Annotations {
      * @category models
      * @since 4.0.0
      */
-    interface Constraint<T = unknown> extends GenerationConstraint<T> {
+    interface FilterConstraint<T = unknown> extends GenerationConstraint<T> {
       readonly order?: Order.Order<T> | undefined
     }
     /**
@@ -15306,7 +16359,7 @@ export declare namespace Annotations {
      * @category models
      * @since 4.0.0
      */
-    interface DeclarationInput<T, Parameters extends ReadonlyArray<AnnotationSchemaConstraint>> {
+    interface DeclarationInput<T, Parameters extends ReadonlyArray<Constraint>> {
       readonly typeParameters: TypeParameters.Type<Parameters>
       readonly constraint: GenerationConstraint<T> | undefined
     }
@@ -15316,7 +16369,7 @@ export declare namespace Annotations {
      * @category models
      * @since 4.0.0
      */
-    interface Declaration<T, Parameters extends ReadonlyArray<AnnotationSchemaConstraint>> {
+    interface Declaration<T, Parameters extends ReadonlyArray<Constraint>> {
       (input: DeclarationInput<T, Parameters>): SchemaAST.Link
     }
   }

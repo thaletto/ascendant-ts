@@ -21,7 +21,7 @@ import type * as Filter from "./Filter.ts"
 import type { LazyArg } from "./Function.ts"
 import { constant, constTrue, constVoid, dual, identity as identity_ } from "./Function.ts"
 import * as Count from "./internal/count.ts"
-import { ClockRef, endSpan, scopeFinalizerCountUnsafe } from "./internal/effect.ts"
+import { ClockRef, endSpan } from "./internal/effect.ts"
 import { addSpanStackTrace } from "./internal/tracer.ts"
 import * as Iterable from "./Iterable.ts"
 import * as Latch from "./Latch.ts"
@@ -2035,7 +2035,7 @@ export const mapDoneEffect: {
 )
 
 const concurrencyIsSequential = (
-  concurrency: number | "unbounded" | undefined
+  concurrency: Types.Concurrency | undefined
 ) => concurrency === undefined || (concurrency !== "unbounded" && concurrency <= 1)
 
 /**
@@ -2074,7 +2074,7 @@ export const mapEffect: {
   <OutElem, OutElem1, OutErr1, Env1>(
     f: (d: OutElem, i: number) => Effect.Effect<OutElem1, OutErr1, Env1>,
     options?: {
-      readonly concurrency?: number | "unbounded" | undefined
+      readonly concurrency?: Types.Concurrency | undefined
       readonly unordered?: boolean | undefined
     }
   ): <OutErr, OutDone, InElem, InErr, InDone, Env>(
@@ -2084,7 +2084,7 @@ export const mapEffect: {
     self: Channel<OutElem, OutErr, OutDone, InElem, InErr, InDone, Env>,
     f: (d: OutElem, i: number) => Effect.Effect<OutElem1, OutErr1, Env1>,
     options?: {
-      readonly concurrency?: number | "unbounded" | undefined
+      readonly concurrency?: Types.Concurrency | undefined
       readonly unordered?: boolean | undefined
     }
   ): Channel<OutElem1, OutErr | OutErr1, OutDone, InElem, InErr, InDone, Env | Env1>
@@ -2094,7 +2094,7 @@ export const mapEffect: {
     self: Channel<OutElem, OutErr, OutDone, InElem, InErr, InDone, Env>,
     f: (d: OutElem, i: number) => Effect.Effect<OutElem1, OutErr1, Env1>,
     options?: {
-      readonly concurrency?: number | "unbounded" | undefined
+      readonly concurrency?: Types.Concurrency | undefined
       readonly unordered?: boolean | undefined
     }
   ): Channel<OutElem1, OutErr | OutErr1, OutDone, InElem, InErr, InDone, Env | Env1> =>
@@ -2138,7 +2138,7 @@ const mapEffectConcurrent = <
   self: Channel<OutElem, OutErr, OutDone, InElem, InErr, InDone, Env>,
   f: (o: OutElem, i: number) => Effect.Effect<OutElem2, EX, RX>,
   options: {
-    readonly concurrency: number | "unbounded"
+    readonly concurrency: Types.Concurrency
     readonly unordered?: boolean | undefined
   }
 ): Channel<OutElem2, OutErr | EX, OutDone, InElem, InErr, InDone, Env | RX> =>
@@ -2165,7 +2165,8 @@ const mapEffectConcurrent = <
         yield* semaphore.take(1).pipe(
           Effect.flatMap(() => pull),
           Effect.flatMap((value) => {
-            trackFiber(runFork(handle(f(value, i++))))
+            const index = i++
+            trackFiber(runFork(handle(Effect.suspend(() => f(value, index)))))
             return Effect.void
           }),
           Effect.forever({ disableYield: true }),
@@ -2203,7 +2204,8 @@ const mapEffectConcurrent = <
         yield* pull.pipe(
           Effect.flatMap((value) => {
             if (errorCause) return Effect.failCause(errorCause)
-            const fiber = runFork(f(value, i++))
+            const index = i++
+            const fiber = runFork(Effect.suspend(() => f(value, index)))
             trackFiber(fiber)
             fiber.addObserver(onExit)
             return Queue.offer(effects, Fiber.join(fiber))
@@ -2320,7 +2322,7 @@ export const tap: {
   <OutElem, X, OutErr1, Env1>(
     f: (d: Types.NoInfer<OutElem>) => Effect.Effect<X, OutErr1, Env1>,
     options?: {
-      readonly concurrency?: number | "unbounded" | undefined
+      readonly concurrency?: Types.Concurrency | undefined
     }
   ): <OutErr, OutDone, InElem, InErr, InDone, Env>(
     self: Channel<OutElem, OutErr, OutDone, InElem, InErr, InDone, Env>
@@ -2329,7 +2331,7 @@ export const tap: {
     self: Channel<OutElem, OutErr, OutDone, InElem, InErr, InDone, Env>,
     f: (d: Types.NoInfer<OutElem>) => Effect.Effect<X, OutErr1, Env1>,
     options?: {
-      readonly concurrency?: number | "unbounded" | undefined
+      readonly concurrency?: Types.Concurrency | undefined
     }
   ): Channel<OutElem, OutErr | OutErr1, OutDone, InElem, InErr, InDone, Env | Env1>
 } = dual(
@@ -2338,7 +2340,7 @@ export const tap: {
     self: Channel<OutElem, OutErr, OutDone, InElem, InErr, InDone, Env>,
     f: (d: Types.NoInfer<OutElem>) => Effect.Effect<X, OutErr1, Env1>,
     options?: {
-      readonly concurrency?: number | "unbounded" | undefined
+      readonly concurrency?: Types.Concurrency | undefined
     }
   ): Channel<OutElem, OutErr | OutErr1, OutDone, InElem, InErr, InDone, Env | Env1> =>
     mapEffect(self, (a) => Effect.as(f(a), a), options)
@@ -2384,7 +2386,7 @@ export const flatMap: {
   <OutElem, OutElem1, OutErr1, OutDone1, InElem1, InErr1, InDone1, Env1>(
     f: (d: OutElem) => Channel<OutElem1, OutErr1, OutDone1, InElem1, InErr1, InDone1, Env1>,
     options?: {
-      readonly concurrency?: number | "unbounded" | undefined
+      readonly concurrency?: Types.Concurrency | undefined
       readonly bufferSize?: number | undefined
     }
   ): <OutErr, OutDone, InElem, InErr, InDone, Env>(
@@ -2417,7 +2419,7 @@ export const flatMap: {
     self: Channel<OutElem, OutErr, OutDone, InElem, InErr, InDone, Env>,
     f: (d: OutElem) => Channel<OutElem1, OutErr1, OutDone1, InElem1, InErr1, InDone1, Env1>,
     options?: {
-      readonly concurrency?: number | "unbounded" | undefined
+      readonly concurrency?: Types.Concurrency | undefined
       readonly bufferSize?: number | undefined
     }
   ): Channel<
@@ -2450,7 +2452,7 @@ export const flatMap: {
     self: Channel<OutElem, OutErr, OutDone, InElem, InErr, InDone, Env>,
     f: (d: OutElem) => Channel<OutElem1, OutErr1, OutDone1, InElem1, InErr1, InDone1, Env1>,
     options?: {
-      readonly concurrency?: number | "unbounded" | undefined
+      readonly concurrency?: Types.Concurrency | undefined
       readonly bufferSize?: number | undefined
     }
   ): Channel<
@@ -2512,8 +2514,8 @@ const flatMapSequential = <
       })
       const catchHalt = Pull.catchDone((_) => {
         childPull = undefined
-        // we can reuse the scope if the only finalizer is the "fork" one
-        if (childScope!.state._tag === "Open" && scopeFinalizerCountUnsafe(childScope!) === 1) {
+        // the scope can be reused if the inner channel left no finalizers behind
+        if (childScope!.state._tag === "Empty") {
           return makePull
         }
         const close = Scope.close(childScope!, Exit.void)
@@ -2543,7 +2545,7 @@ const flatMapConcurrent = <
   self: Channel<OutElem, OutErr, OutDone, InElem, InErr, InDone, Env>,
   f: (d: OutElem) => Channel<OutElem1, OutErr1, OutDone1, InElem1, InErr1, InDone1, Env1>,
   options: {
-    readonly concurrency: number | "unbounded"
+    readonly concurrency: Types.Concurrency
     readonly bufferSize?: number | undefined
   }
 ): Channel<
@@ -3219,30 +3221,41 @@ export const repeat: {
   Schedule.toStepWithMetadata(typeof schedule === "function" ? schedule(identity_) : schedule).pipe(
     Effect.map((step) => {
       let meta = Schedule.CurrentMetadata.defaultValue()
-      const loop: Channel<
-        OutElem,
-        OutErr | SE,
-        OutDone,
-        InElem,
-        InErr,
-        InDone,
-        Env | SR
-      > = concatWith(
+      return repeatLoop(
         provideServiceEffect(self, Schedule.CurrentMetadata, Effect.sync(() => meta)),
         (done) =>
           step(done).pipe(
             Effect.map((meta_) => {
               meta = meta_
-              return loop
             }),
-            Pull.catchDone(() => Effect.succeed(end(done))),
-            unwrap
+            Pull.catchDone(() => Cause.done(done))
           )
       )
-      return loop
     }),
     unwrap
   ))
+
+const repeatLoop = <OutElem, OutErr, OutDone, InElem, InErr, InDone, Env, E, OutDone2, R>(
+  self: Channel<OutElem, OutErr, OutDone, InElem, InErr, InDone, Env>,
+  onDone: (done: OutDone) => Pull.Pull<void, E, OutDone2, R>
+): Channel<OutElem, OutErr | E, OutDone2, InElem, InErr, InDone, Env | R> =>
+  fromTransform((upstream, scope) =>
+    Effect.sync(() => {
+      let currentPull: Pull.Pull<OutElem, OutErr | E, OutDone2, Env | R> | undefined
+      const makePull = (): Pull.Pull<OutElem, OutErr | E, OutDone2, Env | R> => {
+        const runScope = Scope.forkUnsafe(scope)
+        return Effect.flatMap(toTransform(self)(upstream, runScope), (pull) => {
+          currentPull = Pull.catchDone(pull, (done) =>
+            Scope.close(runScope, Exit.void).pipe(
+              Effect.flatMap(() => onDone(done as OutDone)),
+              Effect.flatMap(makePull)
+            ))
+          return currentPull
+        })
+      }
+      return Effect.suspend(() => currentPull ?? makePull())
+    })
+  )
 
 /**
  * Repeats this channel forever.
@@ -3252,7 +3265,7 @@ export const repeat: {
  */
 export const forever = <OutElem, OutErr, OutDone, InElem, InErr, InDone, Env>(
   self: Channel<OutElem, OutErr, OutDone, InElem, InErr, InDone, Env>
-): Channel<OutElem, OutErr, never, InElem, InErr, InDone, Env> => concatWith(self, () => forever(self))
+): Channel<OutElem, OutErr, never, InElem, InErr, InDone, Env> => repeatLoop(self, () => Effect.void)
 
 /**
  * Runs a schedule step for each output element while preserving the emitted
@@ -6074,7 +6087,7 @@ export const switchMap: {
   <OutElem, OutElem1, OutErr1, OutDone1, InElem1, InErr1, InDone1, Env1>(
     f: (d: OutElem) => Channel<OutElem1, OutErr1, OutDone1, InElem1, InErr1, InDone1, Env1>,
     options?: {
-      readonly concurrency?: number | "unbounded" | undefined
+      readonly concurrency?: Types.Concurrency | undefined
       readonly bufferSize?: number | undefined
     }
   ): <OutErr, OutDone, InElem, InErr, InDone, Env>(
@@ -6107,7 +6120,7 @@ export const switchMap: {
     self: Channel<OutElem, OutErr, OutDone, InElem, InErr, InDone, Env>,
     f: (d: OutElem) => Channel<OutElem1, OutErr1, OutDone1, InElem1, InErr1, InDone1, Env1>,
     options?: {
-      readonly concurrency?: number | "unbounded" | undefined
+      readonly concurrency?: Types.Concurrency | undefined
       readonly bufferSize?: number | undefined
     }
   ): Channel<
@@ -6140,7 +6153,7 @@ export const switchMap: {
     self: Channel<OutElem, OutErr, OutDone, InElem, InErr, InDone, Env>,
     f: (d: OutElem) => Channel<OutElem1, OutErr1, OutDone1, InElem1, InErr1, InDone1, Env1>,
     options?: {
-      readonly concurrency?: number | "unbounded" | undefined
+      readonly concurrency?: Types.Concurrency | undefined
       readonly bufferSize?: number | undefined
     }
   ): Channel<
@@ -6200,7 +6213,7 @@ export const switchMap: {
  */
 export const mergeAll: {
   (options: {
-    readonly concurrency: number | "unbounded"
+    readonly concurrency: Types.Concurrency
     readonly bufferSize?: number | undefined
     readonly switch?: boolean | undefined
   }): <OutElem, OutErr1, OutDone1, InElem1, InErr1, InDone1, Env1, OutErr, OutDone, InElem, InErr, InDone, Env>(
@@ -6233,7 +6246,7 @@ export const mergeAll: {
       Env
     >,
     options: {
-      readonly concurrency: number | "unbounded"
+      readonly concurrency: Types.Concurrency
       readonly bufferSize?: number | undefined
       readonly switch?: boolean | undefined
     }
@@ -6259,7 +6272,7 @@ export const mergeAll: {
       Env
     >,
     { bufferSize = 16, concurrency, switch: switch_ = false }: {
-      readonly concurrency: number | "unbounded"
+      readonly concurrency: Types.Concurrency
       readonly bufferSize?: number | undefined
       readonly switch?: boolean | undefined
     }
@@ -7787,7 +7800,7 @@ export const bind: {
     name: Exclude<N, keyof OutElem>,
     f: (a: NoInfer<OutElem>) => Channel<B, OutErr2, OutDone2, InElem2, InErr2, InDone2, Env2>,
     options?: {
-      readonly concurrency?: number | "unbounded" | undefined
+      readonly concurrency?: Types.Concurrency | undefined
       readonly bufferSize?: number | undefined
     }
   ): <OutErr, OutDone, InElem, InErr, InDone, Env>(
@@ -7822,7 +7835,7 @@ export const bind: {
     name: Exclude<N, keyof OutElem>,
     f: (a: NoInfer<OutElem>) => Channel<B, OutErr2, OutDone2, InElem2, InErr2, InDone2, Env2>,
     options?: {
-      readonly concurrency?: number | "unbounded" | undefined
+      readonly concurrency?: Types.Concurrency | undefined
       readonly bufferSize?: number | undefined
     }
   ): Channel<
@@ -7855,7 +7868,7 @@ export const bind: {
   name: Exclude<N, keyof OutElem>,
   f: (a: NoInfer<OutElem>) => Channel<B, OutErr2, OutDone2, InElem2, InErr2, InDone2, Env2>,
   options?: {
-    readonly concurrency?: number | "unbounded" | undefined
+    readonly concurrency?: Types.Concurrency | undefined
     readonly bufferSize?: number | undefined
   }
 ): Channel<
@@ -8862,8 +8875,9 @@ export const runIntoPubSubArray: {
  * **Details**
  *
  * Emitted non-empty arrays are published as output `Take` values. When the
- * channel ends, its final `Exit` is published so subscribers can observe
- * completion or failure.
+ * channel ends, the `PubSub` is ended with its final `Exit`, so every
+ * subscriber, including one that subscribes later, observes completion or
+ * failure once it has consumed its buffered values.
  *
  * @category destructors
  * @since 4.0.0
@@ -8915,7 +8929,7 @@ export const toPubSubTake: {
   ) {
     const pubsub = yield* makePubSub<Take.Take<OutElem, OutErr, OutDone>>(options)
     yield* runForEach(self, (value) => PubSub.publish(pubsub, value)).pipe(
-      Effect.onExit((exit) => PubSub.publish(pubsub, exit)),
+      Effect.onExit((exit) => PubSub.end(pubsub, exit)),
       Effect.forkScoped
     )
     return pubsub

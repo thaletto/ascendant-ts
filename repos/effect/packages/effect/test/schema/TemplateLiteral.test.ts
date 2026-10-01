@@ -57,7 +57,7 @@ describe("TemplateLiteral", () => {
     )
   })
 
-  it.effect("preserves brands, supported checks, and explicit projections", () =>
+  it.effect("supports branded parts, checks, and explicit projections", () =>
     Effect.gen(function*() {
       const schema = Schema.TemplateLiteral([
         Schema.NonEmptyString.pipe(Schema.brand("Prefix")),
@@ -167,8 +167,8 @@ describe("TemplateLiteralParser", () => {
       class DecodeScale extends Context.Service<DecodeScale, number>()("TemplateLiteral/DecodeScale") {}
       class EncodeScale extends Context.Service<EncodeScale, number>()("TemplateLiteral/EncodeScale") {}
       const part = Schema.Number.pipe(Schema.decode({
-        decode: SchemaGetter.transformOrFail((value) => Effect.map(DecodeScale, (scale) => value * scale)),
-        encode: SchemaGetter.transformOrFail((value) => Effect.map(EncodeScale, (scale) => value / scale))
+        decode: SchemaGetter.transformEffect((value) => Effect.map(DecodeScale, (scale) => value * scale)),
+        encode: SchemaGetter.transformEffect((value) => Effect.map(EncodeScale, (scale) => value / scale))
       }))
       const schema = Schema.TemplateLiteralParser(["value:", part])
       assert.deepStrictEqual(

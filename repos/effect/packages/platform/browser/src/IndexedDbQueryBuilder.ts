@@ -24,6 +24,7 @@ import type * as MutableRef from "effect/MutableRef"
 import * as Option from "effect/Option"
 import * as Pipeable from "effect/Pipeable"
 import type * as Queue from "effect/Queue"
+import type * as Reactivity from "effect/reactivity/Reactivity"
 import type * as Record from "effect/Record"
 import * as References from "effect/References"
 import * as Schema from "effect/Schema"
@@ -31,7 +32,6 @@ import * as SchemaIssue from "effect/SchemaIssue"
 import * as SchemaParser from "effect/SchemaParser"
 import type * as Scope from "effect/Scope"
 import * as Stream from "effect/Stream"
-import type * as Reactivity from "effect/unstable/reactivity/Reactivity"
 import * as Utils from "effect/Utils"
 import type * as IndexedDb from "./IndexedDb.ts"
 import type * as IndexedDbDatabase from "./IndexedDbDatabase.ts"
@@ -106,7 +106,7 @@ export interface IndexedDbQueryBuilder<
 > extends Pipeable.Pipeable, Inspectable {
   readonly tables: ReadonlyMap<string, IndexedDbVersion.Tables<Source>>
   readonly database: MutableRef.MutableRef<globalThis.IDBDatabase>
-  readonly reactivity: Reactivity.Reactivity["Service"]
+  readonly reactivity: Reactivity.Reactivity
   readonly IDBKeyRange: typeof globalThis.IDBKeyRange
   readonly IDBTransaction: globalThis.IDBTransaction | undefined
 
@@ -268,7 +268,7 @@ export declare namespace IndexedDbQuery {
     readonly table: Table
     readonly database: MutableRef.MutableRef<globalThis.IDBDatabase>
     readonly IDBKeyRange: typeof globalThis.IDBKeyRange
-    readonly reactivity: Reactivity.Reactivity["Service"]
+    readonly reactivity: Reactivity.Reactivity
 
     readonly clear: Effect.Effect<void, IndexedDbQueryError>
 
@@ -1413,7 +1413,7 @@ const makeFrom = <
   readonly table: Table
   readonly database: MutableRef.MutableRef<globalThis.IDBDatabase>
   readonly IDBKeyRange: typeof globalThis.IDBKeyRange
-  readonly reactivity: Reactivity.Reactivity["Service"]
+  readonly reactivity: Reactivity.Reactivity
 }): IndexedDbQuery.From<Table> => {
   const self = Object.create(FromProto)
   self.table = options.table
@@ -2055,7 +2055,7 @@ export const make = <Source extends IndexedDbVersion.AnyWithProps>({
   readonly database: MutableRef.MutableRef<globalThis.IDBDatabase>
   readonly IDBKeyRange: typeof globalThis.IDBKeyRange
   readonly tables: ReadonlyMap<string, IndexedDbVersion.Tables<Source>>
-  readonly reactivity: Reactivity.Reactivity["Service"]
+  readonly reactivity: Reactivity.Reactivity
 }): IndexedDbQueryBuilder<Source> => {
   const self = Object.create(QueryBuilderProto)
   self.tables = tables
