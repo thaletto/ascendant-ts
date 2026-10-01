@@ -1,9 +1,9 @@
 import { Console, Effect, Record } from "effect";
 
-import { Chart, SAV } from "../src/index.ts";
-import type { ExampleInput } from "./input.ts";
+import { Chart, SAV } from "../src/index.js";
+import type { ExampleInput } from "./input.js";
 
-const printSAV = Effect.fn("Examples.printSAV")(function* (result: SAV.AshtakavargaResult) {
+const printSAV = Effect.fn(function* (result: SAV.AshtakavargaResult) {
   yield* Console.log("Bhinnashtakavarga and Sarvashtakavarga");
   yield* Console.table(
     Record.keys(result.sarva).map((rashi) => ({
@@ -48,11 +48,7 @@ const printSAV = Effect.fn("Examples.printSAV")(function* (result: SAV.Ashtakava
   yield* Console.table([result.totals]);
 });
 
-export const savExample = Effect.fn("Examples.sav")(function* ({
-  moment,
-  latitude,
-  longitude,
-}: ExampleInput) {
+export const savExample = Effect.fn(function* ({ moment, latitude, longitude }: ExampleInput) {
   const calculation = yield* Chart.generate(
     Chart.LocatedMoment.make({
       moment,
