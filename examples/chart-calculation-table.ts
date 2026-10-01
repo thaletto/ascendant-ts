@@ -1,7 +1,7 @@
 import { Console, Effect, Record as EffectRecord } from "effect";
 
-import { starOf, subLordOf } from "../src/chart/helper.ts";
-import type { ChartCalculation, Chart } from "../src/chart/index.ts";
+import { starOf, subLordOf } from "../src/chart/helper.js";
+import type { ChartCalculation, Chart } from "../src/chart/index.js";
 
 type TableValue = string | number | boolean;
 type TableRow = Readonly<Record<string, TableValue>>;
@@ -14,7 +14,7 @@ function displayOptionalLongitude(longitude: number | undefined): TableValue {
   return longitude === undefined ? "—" : displayLongitude(longitude);
 }
 
-const houseRows = Effect.fn("Examples.houseRows")(function* (chart: Chart) {
+const houseRows = Effect.fn(function* (chart: Chart) {
   const rows: TableRow[] = [];
 
   for (const [houseNumber, houseData] of EffectRecord.toEntries(chart.houses)) {
@@ -115,7 +115,7 @@ export interface PrintChartOptions {
   readonly includeRulingPlanets?: boolean;
 }
 
-export const printChartCalculation = Effect.fn("Examples.printChartCalculation")(function* (
+export const printChartCalculation = Effect.fn(function* (
   calculation: ChartCalculation,
   options: PrintChartOptions = {},
 ) {
