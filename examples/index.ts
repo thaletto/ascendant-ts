@@ -1,9 +1,13 @@
 import { BunRuntime } from "@effect/platform-bun";
-import { Effect } from "effect";
+import { Effect, Layer } from "effect";
 
-import { runSelectedExample } from "./input";
-import { runtimeLayer } from "./runtime";
+import { runSelectedExample } from "./input.js";
+import { runtimeLayer } from "./runtime.js";
 
-const examples = runSelectedExample().pipe(Effect.provide(runtimeLayer));
+const examples = Effect.scoped(
+  Effect.flatMap(Layer.build(runtimeLayer), (context) =>
+    Effect.provide(runSelectedExample, context),
+  ),
+);
 
 BunRuntime.runMain(examples);
