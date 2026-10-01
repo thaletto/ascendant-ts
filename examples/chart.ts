@@ -1,14 +1,10 @@
-import { Console, Effect } from "effect";
+import { Console, Effect, Layer } from "effect";
 
-import { AstroParams, Chart } from "../src/index.ts";
-import { printChartCalculation } from "./chart-calculation-table.ts";
-import type { ExampleInput } from "./input.ts";
+import { AstroParams, Chart } from "../src/index.js";
+import { printChartCalculation } from "./chart-calculation-table.js";
+import type { ExampleInput } from "./input.js";
 
-export const chartExample = Effect.fn("Examples.chart")(function* ({
-  moment,
-  latitude,
-  longitude,
-}: ExampleInput) {
+export const chartExample = Effect.fn(function* ({ moment, latitude, longitude }: ExampleInput) {
   const located = Chart.LocatedMoment.make({
     moment,
     latitude,
@@ -23,18 +19,16 @@ export const chartExample = Effect.fn("Examples.chart")(function* ({
     houseSystem: "Placidus",
   });
 
-  const vedicCalculation = yield* Chart.generate(located, [9]).pipe(
-    Effect.provide(AstroParams.layer(vedicParams)),
-  );
+  const vedicContext = yield* Effect.scoped(Layer.build(AstroParams.layer(vedicParams)));
+  const vedicCalculation = yield* Effect.provide(Chart.generate(located, [9]), vedicContext);
   yield* Console.log("Vedic D1 and D9 (Lahiri + WholeSign)");
   yield* printChartCalculation(vedicCalculation, {
     includeSignificators: false,
     includeRulingPlanets: false,
   });
 
-  const kpCalculation = yield* Chart.generate(located, []).pipe(
-    Effect.provide(AstroParams.layer(kpParams)),
-  );
+  const kpContext = yield* Effect.scoped(Layer.build(AstroParams.layer(kpParams)));
+  const kpCalculation = yield* Effect.provide(Chart.generate(located, []), kpContext);
   yield* Console.log("");
   yield* Console.log("KP Chart D1 (KrishnamurtiVP291 + Placidus)");
   yield* printChartCalculation(kpCalculation);
