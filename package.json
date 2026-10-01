@@ -3,9 +3,32 @@
   "displayName": "ascendant",
   "version": "4.0.1",
   "description": "Effect-Native TypeScript library for sidereal astrology calculations.",
+  "keywords": [
+    "ashtakavarga",
+    "astrology",
+    "chart",
+    "dasha",
+    "effect",
+    "ephemeris",
+    "jaimini",
+    "sidereal",
+    "transit",
+    "vedic"
+  ],
   "homepage": "https://ascendant-docs.vercel.app",
-  "author": {},
+  "bugs": {
+    "url": "https://github.com/thaletto/ascendant-ts/issues"
+  },
   "license": "AGPL-3.0-or-later",
+  "author": {
+    "name": "Laxman K R",
+    "email": "krlaxman03@gmail.com",
+    "url": "https://thaletto.vercel.app"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thaletto/ascendant-ts.git"
+  },
   "files": [
     "dist",
     "README.md",
