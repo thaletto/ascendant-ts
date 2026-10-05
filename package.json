@@ -137,6 +137,7 @@
     "format:check": "oxfmt --check .",
     "fmt": "oxfmt .",
     "fmt:check": "oxfmt --check .",
+    "docgen": "docgen",
     "package:check": "bun run build && tsc -p tsconfig.package.json && bun tests/package/runtime.mjs && bun pm pack --dry-run",
     "check": "bun run typecheck && bun run test && bun run lint && bun run format:check && bun run build"
   },
@@ -145,6 +146,7 @@
   },
   "devDependencies": {
     "@changesets/cli": "^3.0.3",
+    "@effect/docgen": "^4.0.1",
     "@effect/platform-bun": "^4.0.0",
     "@effect/tsgo": "0.47.2",
     "@effect/vitest": "^4.0.0",
