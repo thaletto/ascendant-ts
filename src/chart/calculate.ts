@@ -95,28 +95,16 @@ const planetSignificationOf = Effect.fn(function* (
     ? Option.some((yield* starOf(item.value.longitude)).lord)
     : Option.none();
 
-  // One-level node expansion at the star-lord boundary: a node star lord
-  // has no sign ownership of its own, so level3 carries its agent's
-  // ownership. Occupancy (level1) stays the node's own house.
-  let starAgent: Option.Option<Planets> = Option.none();
-  if (Option.isSome(starLord) && (starLord.value === "Rahu" || starLord.value === "Ketu")) {
-    const nodeItem = HashMap.get(byName, starLord.value);
-    if (Option.isSome(nodeItem)) {
-      starAgent = Option.some(yield* agentOf(nodeItem.value, allHouses));
-    }
-  }
-
+  // AstroSage parity: ownership levels use the lord itself with no
+  // node-agent expansion. Rahu/Ketu own no signs, so level3 is empty
+  // when the star lord is a node and level4 is empty when the planet
+  // itself is a node. The agent is still recorded on the result.
   const level1 = Option.isSome(starLord) ? [yield* houseOfPlanet(starLord.value, allHouses)] : [];
   const level2 = [yield* houseOfPlanet(planet, allHouses)];
   const level3 = Option.isSome(starLord)
-    ? yield* ownedHouses(
-        Option.getOrElse(starAgent, () => starLord.value),
-        allHouses,
-      )
+    ? yield* ownedHouses(starLord.value, allHouses)
     : [];
-  const level4 = Option.isSome(agent)
-    ? yield* ownedHouses(agent.value, allHouses)
-    : yield* ownedHouses(planet, allHouses);
+  const level4 = yield* ownedHouses(planet, allHouses);
 
   return [
     planet,

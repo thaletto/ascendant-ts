@@ -29,18 +29,15 @@ export const subLordOf = Effect.fn(function* (longitude: Longitude) {
   const position = offset / STAR_SPAN;
   const cyclePlanet = (index: number): Planets =>
     Option.getOrElse(Array.get(index)(STAR_LORD_CYCLE), () => star.lord);
-  const lord = Array.findFirstWithIndex(
-    Array.range(0, STAR_LORD_CYCLE.length - 1).map((index) =>
-      cyclePlanet((sequenceStart + index) % STAR_LORD_CYCLE.length),
-    ),
-    (planet, index) => {
-      const elapsed = Array.range(0, index).reduce((total, priorIndex) => {
-        const priorPlanet = cyclePlanet((sequenceStart + priorIndex) % STAR_LORD_CYCLE.length);
-        return total + VIMSHOTTARI_YEARS[priorPlanet] / VIMSHOTTARI_CYCLE_YEARS;
-      }, 0);
-      return position < elapsed + VIMSHOTTARI_YEARS[planet] / VIMSHOTTARI_CYCLE_YEARS;
-    },
+  const ordered = Array.range(0, STAR_LORD_CYCLE.length - 1).map((index) =>
+    cyclePlanet((sequenceStart + index) % STAR_LORD_CYCLE.length),
   );
+  const lord = Array.findFirstWithIndex(ordered, (planet, index) => {
+    const elapsed = ordered
+      .slice(0, index)
+      .reduce((total, priorPlanet) => total + VIMSHOTTARI_YEARS[priorPlanet] / VIMSHOTTARI_CYCLE_YEARS, 0);
+    return position < elapsed + VIMSHOTTARI_YEARS[planet] / VIMSHOTTARI_CYCLE_YEARS;
+  });
 
   return Option.match(lord, {
     onNone: () => star.lord,
