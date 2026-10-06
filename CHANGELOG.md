@@ -1,5 +1,11 @@
 # astro-ascendant
 
+## 4.0.4
+
+### Patch Changes
+
+- Republish 4.0.3 contents as 4.0.4: the 4.0.3 tarball never reached the registry and the version number is now burned and cannot be reused.
+
 ## 4.0.3
 
 ### Patch Changes

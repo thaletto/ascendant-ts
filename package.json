@@ -1,7 +1,7 @@
 {
   "name": "astro-ascendant",
   "displayName": "ascendant",
-  "version": "4.0.3",
+  "version": "4.0.4",
   "description": "Effect-Native TypeScript library for sidereal astrology calculations.",
   "keywords": [
     "ashtakavarga",
