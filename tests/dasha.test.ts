@@ -2,7 +2,25 @@ import { describe, expect, it } from "@effect/vitest";
 import { Array, DateTime, Effect, Equal } from "effect";
 
 import * as Dasha from "../src/dasha/index.js";
+import * as Model from "../src/chart/index.js";
 import { fixtures } from "./support/fixtures.js";
+
+function placementsWithMoonStar(name: Model.Stars, lord: Model.Planets, pada: 1 | 2 | 3 | 4) {
+  const base = fixtures.placementsFromLongitudes();
+  return Model.Placements.make({
+    lagna: base.lagna,
+    planets: base.planets.map((planet) =>
+      planet.name === "Moon"
+        ? Model.SourcePlanet.make({
+          name: planet.name,
+          longitude: planet.longitude,
+          is_retrograde: planet.is_retrograde,
+          star: Model.Star.make({ name, lord, pada }),
+        })
+        : planet
+    ),
+  });
+}
 
 describe("Dasha", () => {
   it.effect("derives nine ordered Mahadashas with typed UTC intervals", () =>
@@ -21,6 +39,64 @@ describe("Dasha", () => {
       expect(
         timeline.every(({ start, end }) => start.epochMilliseconds < end.epochMilliseconds),
       ).toBe(true);
+    }),
+  );
+
+  it.effect("starts Mahadasha and Antardasha sequences from the Moon's nakshatra lord", () =>
+    Effect.gen(function* () {
+      const venus = yield* Dasha.calculate(
+        fixtures.moment(),
+        placementsWithMoonStar("Bharani", "Venus", 4),
+      );
+      const rahu = yield* Dasha.calculate(
+        fixtures.moment(),
+        placementsWithMoonStar("Ardra", "Rahu", 1),
+      );
+
+      expect(venus.map(({ mahadasha }) => mahadasha)).toEqual([
+        "Venus",
+        "Sun",
+        "Moon",
+        "Mars",
+        "Rahu",
+        "Jupiter",
+        "Saturn",
+        "Mercury",
+        "Ketu",
+      ]);
+      expect(rahu.map(({ mahadasha }) => mahadasha)).toEqual([
+        "Rahu",
+        "Jupiter",
+        "Saturn",
+        "Mercury",
+        "Ketu",
+        "Venus",
+        "Sun",
+        "Moon",
+        "Mars",
+      ]);
+      expect(venus[0]?.antardashas.map(({ antardasha }) => antardasha)).toEqual([
+        "Venus",
+        "Sun",
+        "Moon",
+        "Mars",
+        "Rahu",
+        "Jupiter",
+        "Saturn",
+        "Mercury",
+        "Ketu",
+      ]);
+      expect(rahu[0]?.antardashas.map(({ antardasha }) => antardasha)).toEqual([
+        "Rahu",
+        "Jupiter",
+        "Saturn",
+        "Mercury",
+        "Ketu",
+        "Venus",
+        "Sun",
+        "Moon",
+        "Mars",
+      ]);
     }),
   );
 

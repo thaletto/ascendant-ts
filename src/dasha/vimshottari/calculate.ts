@@ -30,11 +30,17 @@ const moonOf = Effect.fn("astro-ascendant/dasha/vimshottari/moonOf")(function* (
 });
 
 /** Derives the Mahadasha order from the Moon's nakshatra lord and the balance of its period left at birth. */
+function rotateLeft<A>(sequence: ReadonlyArray<A>, index: number): Array<A> {
+  const start = ((index % sequence.length) + sequence.length) % sequence.length;
+  return [...sequence.slice(start), ...sequence.slice(0, start)];
+}
+
+/** Derives the Mahadasha order from the Moon's nakshatra lord and the balance of its period left at birth. */
 function balanceOf(moon: SourcePlanet) {
   return pipe(
     moon,
     (placement) => ({
-      sequence: Arr.rotate(STAR_LORD_CYCLE, STAR_LORD_CYCLE.indexOf(placement.star.lord)),
+      sequence: rotateLeft(STAR_LORD_CYCLE, STAR_LORD_CYCLE.indexOf(placement.star.lord)),
       elapsedArcMinutes:
         Math.round(placement.longitude * 60 * 100) / 100 -
         Math.floor(placement.longitude / (360 / 27)) * STAR_ARC_MINUTES,
@@ -56,7 +62,7 @@ function antardashasOf(
 ) {
   const mahadashaYears = VIMSHOTTARI_YEARS[mahadasha];
   const mahadashaEnd = Calendar.shiftDate(mahadashaStart, mahadashaYears, 1);
-  const antardashaSequence = Arr.rotate(sequence, sequence.indexOf(mahadasha));
+  const antardashaSequence = rotateLeft(sequence, sequence.indexOf(mahadasha));
   return pipe(
     antardashaSequence,
     Arr.reduce(
