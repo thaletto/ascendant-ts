@@ -23,7 +23,7 @@ export const placementsFromEvidence = Effect.fn("astro-ascendant/chart/placement
         SourcePlanet.make({
           name,
           longitude,
-          is_retrograde: position.longitudeSpeed < 0,
+          is_retrograde: name === "Rahu" ? false : position.longitudeSpeed < 0,
           star,
         }),
       );
@@ -53,7 +53,7 @@ export const placementsFromEvidence = Effect.fn("astro-ascendant/chart/placement
         SourcePlanet.make({
           name: "Ketu",
           longitude: ketuLongitude,
-          is_retrograde: rahu.is_retrograde,
+          is_retrograde: false,
           star: ketuStar,
         }),
       ],
