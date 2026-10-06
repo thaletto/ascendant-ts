@@ -88,21 +88,35 @@ const planetSignificationOf = Effect.fn(function* (
       ? Option.some(yield* agentOf(item.value, allHouses))
       : Option.none();
 
-  const effective = Option.getOrElse(agent, () => planet);
-  const source = Option.isSome(agent) ? HashMap.get(byName, agent.value) : item;
-  const starLord = Option.isSome(source)
-    ? Option.some((yield* starOf(source.value.longitude)).lord)
+  // Star lord always comes from the planet's own longitude. Using the
+  // agent's longitude here would attribute the agent's nakshatra to the
+  // node instead of the node's own star (e.g. Rahu in Krittika/Sun).
+  const starLord = Option.isSome(item)
+    ? Option.some((yield* starOf(item.value.longitude)).lord)
     : Option.none();
 
+  // One-level node expansion at the star-lord boundary: a node star lord
+  // has no sign ownership of its own, so level3 carries its agent's
+  // ownership. Occupancy (level1) stays the node's own house.
+  let starAgent: Option.Option<Planets> = Option.none();
+  if (Option.isSome(starLord) && (starLord.value === "Rahu" || starLord.value === "Ketu")) {
+    const nodeItem = HashMap.get(byName, starLord.value);
+    if (Option.isSome(nodeItem)) {
+      starAgent = Option.some(yield* agentOf(nodeItem.value, allHouses));
+    }
+  }
+
   const level1 = Option.isSome(starLord) ? [yield* houseOfPlanet(starLord.value, allHouses)] : [];
-  const level2 = [yield* houseOfPlanet(effective, allHouses)];
+  const level2 = [yield* houseOfPlanet(planet, allHouses)];
   const level3 = Option.isSome(starLord)
     ? yield* ownedHouses(
-        Option.getOrElse(agent, () => starLord.value),
+        Option.getOrElse(starAgent, () => starLord.value),
         allHouses,
       )
     : [];
-  const level4 = yield* ownedHouses(effective, allHouses);
+  const level4 = Option.isSome(agent)
+    ? yield* ownedHouses(agent.value, allHouses)
+    : yield* ownedHouses(planet, allHouses);
 
   return [
     planet,
