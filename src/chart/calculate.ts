@@ -8,7 +8,7 @@ import type { MappedPositions } from "./charts.js";
 import { angularDistance, distributePlanets, forwardDistance } from "./cusp.js";
 import { getDivisionalTarget } from "./divisional-mapping/calculate.js";
 import { ChartCalculationError } from "./error.js";
-import { starOf, subLordOf } from "./helper.js";
+import { starOf, subLordOf, subSubLordOf } from "./helper.js";
 import { SIGN_LORDS } from "./internal/constants.js";
 import { dayLord, signAt, signLordOf } from "./internal/position.js";
 import {
@@ -101,9 +101,7 @@ const planetSignificationOf = Effect.fn(function* (
   // itself is a node. The agent is still recorded on the result.
   const level1 = Option.isSome(starLord) ? [yield* houseOfPlanet(starLord.value, allHouses)] : [];
   const level2 = [yield* houseOfPlanet(planet, allHouses)];
-  const level3 = Option.isSome(starLord)
-    ? yield* ownedHouses(starLord.value, allHouses)
-    : [];
+  const level3 = Option.isSome(starLord) ? yield* ownedHouses(starLord.value, allHouses) : [];
   const level4 = yield* ownedHouses(planet, allHouses);
 
   return [
@@ -272,6 +270,7 @@ export const chartFromHouseData = Effect.fn("astro-ascendant/chart/chartFromHous
     const signLord = yield* signLordOf(cusp);
     const starLord = (yield* starOf(cusp)).lord;
     const subLord = yield* subLordOf(cusp);
+    const subSubLord = yield* subSubLordOf(cusp);
 
     houseEntries.push([
       String(houseNumber),
@@ -281,6 +280,7 @@ export const chartFromHouseData = Effect.fn("astro-ascendant/chart/chartFromHous
         signLord,
         starLord,
         subLord,
+        subSubLord,
         significations: HOUSE_SIGNIFICATIONS[houseNumber],
         planets: housePlanets,
         lagna: index === 0 ? lagna : null,

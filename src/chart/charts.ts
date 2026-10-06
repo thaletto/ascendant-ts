@@ -5,7 +5,7 @@ import { Zodiac } from "../utils/index.js";
 import { normalizeLongitude } from "../utils/position.js";
 import { getDivisionalTarget } from "./divisional-mapping/calculate.js";
 import { ChartCalculationError } from "./error.js";
-import { inSignStatus, starOf, subLordOf } from "./helper.js";
+import { inSignStatus, starOf, subLordOf, subSubLordOf } from "./helper.js";
 import { SIGN_LORDS } from "./internal/constants.js";
 import {
   Chart,
@@ -48,6 +48,7 @@ const chartFromMappedPlacements = Effect.fn(function* ({
         signLord: SIGN_LORDS[houseSign],
         starLord: (yield* starOf(cusp)).lord,
         subLord: yield* subLordOf(cusp),
+        subSubLord: yield* subSubLordOf(cusp),
         significations: HOUSE_SIGNIFICATIONS[house],
         planets: planets.filter((planet) => planet.sign.name === houseSign),
         lagna: house === 1 ? lagna : null,

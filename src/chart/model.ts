@@ -84,6 +84,7 @@ export class House extends Schema.Class<House>("House")({
   signLord: PlanetsLagna,
   starLord: PlanetsLagna,
   subLord: PlanetsLagna,
+  subSubLord: PlanetsLagna,
   significations: Schema.Array(Schema.String),
   planets: Schema.Array(Planet),
   lagna: Schema.NullOr(Lagna),

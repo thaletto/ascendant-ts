@@ -1,6 +1,6 @@
 import { Console, Effect, Record as EffectRecord } from "effect";
 
-import { starOf, subLordOf } from "../src/chart/helper.js";
+import { starOf, subLordOf, subSubLordOf } from "../src/chart/helper.js";
 import type { ChartCalculation, Chart } from "../src/chart/index.js";
 
 type TableValue = string | number | boolean;
@@ -31,6 +31,7 @@ const houseRows = Effect.fn(function* (chart: Chart) {
         "Sign Lord": lagna.sign.lord,
         "Star Lord": (yield* starOf(lagna.longitude)).lord,
         "Sub Lord": yield* subLordOf(lagna.longitude),
+        "Sub-Sub Lord": yield* subSubLordOf(lagna.longitude),
         Longitude: displayLongitude(lagna.longitude),
         Degree: displayLongitude(lagna.degree),
         Sign: lagna.sign.name,
@@ -47,6 +48,7 @@ const houseRows = Effect.fn(function* (chart: Chart) {
         "Sign Lord": planet.sign.lord,
         "Star Lord": (yield* starOf(planet.longitude)).lord,
         "Sub Lord": yield* subLordOf(planet.longitude),
+        "Sub-Sub Lord": yield* subSubLordOf(planet.longitude),
         Longitude: displayLongitude(planet.longitude),
         Degree: displayLongitude(planet.degree),
         Sign: planet.sign.name,
@@ -63,6 +65,7 @@ const houseRows = Effect.fn(function* (chart: Chart) {
         "Sign Lord": houseData.signLord ?? "—",
         "Star Lord": houseData.starLord ?? "—",
         "Sub Lord": houseData.subLord ?? "—",
+        "Sub-Sub Lord": houseData.subSubLord ?? "—",
         Longitude: "—",
         Degree: "—",
         Sign: "—",
@@ -82,6 +85,7 @@ function significationRows(chart: Chart): readonly TableRow[] {
     "Sign Lord": houseData.signLord ?? "—",
     "Star Lord": houseData.starLord ?? "—",
     "Sub Lord": houseData.subLord ?? "—",
+    "Sub-Sub Lord": houseData.subSubLord ?? "—",
     Significations: houseData.significations?.join(", ") ?? "—",
   }));
 }

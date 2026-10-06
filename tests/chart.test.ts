@@ -121,6 +121,7 @@ describe("Chart projections", () => {
         expect(d1.planetSignifications?.Ketu.agent).toBeDefined();
         expect(d1.houses[1]?.starLord).toBe("Ketu");
         expect(d1.houses[1]?.subLord).toBe("Ketu");
+        expect(d1.houses[1]?.subSubLord).toBe("Ketu");
         expect(d1.houses[1]?.signLord).toBe("Mars");
         expect(
           Equal.equals(

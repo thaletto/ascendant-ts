@@ -22,27 +22,57 @@ export const starOf = Effect.fn(function* (longitude: Longitude) {
   });
 });
 
+function spanOf(planet: Planets): number {
+  return VIMSHOTTARI_YEARS[planet] / VIMSHOTTARI_CYCLE_YEARS;
+}
+
+function orderedSequence(start: Planets, cyclePlanet: (index: number) => Planets): Array<Planets> {
+  const startIndex = STAR_LORD_CYCLE.indexOf(start);
+  return Array.range(0, STAR_LORD_CYCLE.length - 1).map((index) =>
+    cyclePlanet((startIndex + index) % STAR_LORD_CYCLE.length),
+  );
+}
+
+function pickLord(
+  position: number,
+  ordered: Array<Planets>,
+): { readonly lord: Planets; readonly elapsed: number } | undefined {
+  for (const [index, planet] of ordered.entries()) {
+    const elapsed = ordered
+      .slice(0, index)
+      .reduce((total, priorPlanet) => total + spanOf(priorPlanet), 0);
+    if (position < elapsed + spanOf(planet)) {
+      return { lord: planet, elapsed };
+    }
+  }
+  return undefined;
+}
+
 export const subLordOf = Effect.fn(function* (longitude: Longitude) {
   const star = yield* starOf(longitude);
   const offset = (yield* normalizeLongitude(longitude)) % STAR_SPAN;
-  const sequenceStart = STAR_LORD_CYCLE.indexOf(star.lord);
   const position = offset / STAR_SPAN;
   const cyclePlanet = (index: number): Planets =>
     Option.getOrElse(Array.get(index)(STAR_LORD_CYCLE), () => star.lord);
-  const ordered = Array.range(0, STAR_LORD_CYCLE.length - 1).map((index) =>
-    cyclePlanet((sequenceStart + index) % STAR_LORD_CYCLE.length),
-  );
-  const lord = Array.findFirstWithIndex(ordered, (planet, index) => {
-    const elapsed = ordered
-      .slice(0, index)
-      .reduce((total, priorPlanet) => total + VIMSHOTTARI_YEARS[priorPlanet] / VIMSHOTTARI_CYCLE_YEARS, 0);
-    return position < elapsed + VIMSHOTTARI_YEARS[planet] / VIMSHOTTARI_CYCLE_YEARS;
-  });
+  const picked = pickLord(position, orderedSequence(star.lord, cyclePlanet));
 
-  return Option.match(lord, {
-    onNone: () => star.lord,
-    onSome: ([planet]) => planet,
-  });
+  return picked === undefined ? star.lord : picked.lord;
+});
+
+export const subSubLordOf = Effect.fn(function* (longitude: Longitude) {
+  const star = yield* starOf(longitude);
+  const offset = (yield* normalizeLongitude(longitude)) % STAR_SPAN;
+  const position = offset / STAR_SPAN;
+  const cyclePlanet = (index: number): Planets =>
+    Option.getOrElse(Array.get(index)(STAR_LORD_CYCLE), () => star.lord);
+  const subPicked = pickLord(position, orderedSequence(star.lord, cyclePlanet));
+  if (subPicked === undefined) {
+    return star.lord;
+  }
+  const positionInSub = (position - subPicked.elapsed) / spanOf(subPicked.lord);
+  const sslPicked = pickLord(positionInSub, orderedSequence(subPicked.lord, cyclePlanet));
+
+  return sslPicked === undefined ? subPicked.lord : sslPicked.lord;
 });
 
 export const inSignStatus = Function.dual<
