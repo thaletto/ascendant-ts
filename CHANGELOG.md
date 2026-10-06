@@ -1,5 +1,11 @@
 # astro-ascendant
 
+## 4.0.5
+
+### Patch Changes
+
+- 50c6a45: Fix KP significators dropping node-agent houses: the star lord now always comes from the planet's own longitude, and a Rahu/Ketu star lord expands one level into its agent's ownership for level3. Node occupancy (level2) is the node's own house and node ownership (level4) is the agent's ownership.
+
 ## 4.0.4
 
 ### Patch Changes
